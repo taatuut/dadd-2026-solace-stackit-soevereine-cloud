@@ -1,8 +1,11 @@
-# stm -- publieke data (AWS)
+# stm -- alle 3 dataklassen (via één tool)
 
 Gebruikt [Solace Try-Me CLI](https://github.com/SolaceLabs/solace-tryme-cli)
-(`stm`) om publieke Enewable-data te publiceren: day-ahead energieprijzen en
-publieke weerdata voor opwekvoorspelling. Geen persoonsgegevens.
+(`stm`) om Enewable-data te publiceren. Publiceert standaard **alle drie**
+de dataklassen -- publiek, niet-persoonlijk EU, en gevoelige PII -- elk met
+zijn eigen topic en zijn eigen scoped client-username, om te laten zien dat
+de bestemming door de topic wordt bepaald, niet door de tool (zie
+`../README.md`).
 
 ## Installatie
 
@@ -17,7 +20,17 @@ stm --version
 ./publish-public.sh
 ```
 
-Of handmatig, één bericht:
+Publiceert, in volgorde: publiek (`enewable/public/market/price`, als
+`pub-public`) -> niet-persoonlijk EU (`enewable/eu/ops/grid/load`, als
+`pub-eu-ops`) -> gevoelige PII (`enewable/eu/pii/meter/reading`, als
+`pub-eu-pii`). Beperk tot één klasse met `--class`:
+
+```bash
+./publish-public.sh --class eu-pii        # alleen de PII-klasse
+./publish-public.sh --class public 20     # alleen publiek, 20 berichten
+```
+
+Of handmatig, één klasse, één bericht:
 
 ```bash
 stm send \
@@ -25,7 +38,7 @@ stm send \
   --vpn enewable \
   --username pub-public --password "$PUB_PUBLIC_PASSWORD" \
   --topic enewable/public/market/price \
-  --file sample-payload.json \
+  --file ../sample-payloads/public.json \
   --delivery-mode DIRECT
 ```
 
@@ -36,7 +49,6 @@ guaranteed message is not allowed by router for this client") omdat het
 heeft -- deze demo is expliciet op DIRECT-publiceren + automatische
 queue-promotion gebouwd (zie `PLAN.md` sectie 13, punt 22).
 
-Verifieer op de AWS-broker (Solace Cloud console van de AWS-service, tab
-"Try Me!") dat je hier de berichten ziet binnenkomen op
-`enewable/public/>`, en dat er **niets** binnenkomt op de Azure- of
-STACKIT-broker.
+Verifieer op de AWS-, Azure- en STACKIT-broker (Solace Cloud console, tab
+"Try Me!" van elke service) dat elke klasse alleen op zijn EIGEN
+cloud-broker aankomt, en nergens anders.

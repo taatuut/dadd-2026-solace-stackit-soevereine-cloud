@@ -6,10 +6,18 @@
 # manually re-running each script every time it finishes.
 #
 # Each cycle calls, in order:
-#   1. demo-apps/stm-public/publish-public.sh        -> enewable/public/>      -> AWS
-#   2. demo-apps/python-eu-nonpersonal/publisher.py  -> enewable/eu/ops/>      -> Azure
-#   3. demo-apps/sdkperf-pii/publish-pii.sh          -> enewable/eu/pii/>      -> STACKIT
-# then either sleeps INTERVAL seconds (default 30) or, with --interval 0,
+#   1. demo-apps/stm-public/publish-public.sh
+#   2. demo-apps/python-eu-nonpersonal/publisher.py
+#   3. demo-apps/sdkperf-pii/publish-pii.sh
+# and each of those 3 scripts, by default, publishes ALL 3 data classes
+# itself (public -> AWS, eu-ops -> Azure, eu-pii -> STACKIT), each with its
+# own scoped credential -- see PLAN.md section 13 for why (this used to be
+# one class per app; now every app demonstrates that the destination is
+# decided by TOPIC, not by which tool published the message). One full
+# cycle therefore sends 9 class-runs total (3 apps x 3 classes), so it
+# takes longer per cycle than before -- the default 30s INTERVAL below is
+# the pause AFTER a cycle finishes, not a budget for how long it takes.
+# Then either sleeps INTERVAL seconds (default 30) or, with --interval 0,
 # immediately starts the next cycle as soon as the previous one's 3 scripts
 # have all finished ("na aflopen van een run").
 #
@@ -26,8 +34,9 @@
 #   --interval SECONDS  Seconds to sleep between cycles (default: 30).
 #                        Use 0 to chain cycles back-to-back with no pause.
 #   --count N           Forward this burst size to all 3 scripts for this
-#                        cycle (default: each script's own built-in default
-#                        -- stm: 10, python: 20, sdkperf: 20).
+#                        cycle -- applies PER CLASS within each script, not
+#                        per script (default: each script's own built-in
+#                        default -- stm: 10, python: 20, sdkperf: 20).
 #   --once               Run exactly one cycle, then exit (no loop). Handy
 #                        to sanity-check your setup before leaving this
 #                        running unattended on a stand.

@@ -1,12 +1,12 @@
 flowchart LR
     subgraph LOCAL["Lokale broker (self-managed, single-AZ) - Docker, macOS"]
         L[("enewable\nMessage VPN")]
-        STM["stm CLI\n(publiek)"]
-        PY["Python-script\n(niet-persoonlijk EU)"]
-        SDK["SDKPerf\n(gevoelige PII)"]
-        STM -- "enewable/public/>" --> L
-        PY -- "enewable/eu/ops/>" --> L
-        SDK -- "enewable/eu/pii/>" --> L
+        STM["stm CLI"]
+        PY["Python-script"]
+        SDK["SDKPerf"]
+        STM --> L
+        PY --> L
+        SDK --> L
     end
 
     L -- "RDP: queue + REST-export\nenewable/public/>" --> AWS
@@ -30,6 +30,6 @@ flowchart LR
     classDef publiek fill:#c8e6c9,stroke:#2e7d32;
     classDef eu fill:#bbdefb,stroke:#1565c0;
     classDef pii fill:#ffcdd2,stroke:#c62828;
-    class STM,AWS,AWSVPN publiek
-    class PY,AZ,AZVPN eu
-    class SDK,ST,STVPN pii
+    class AWS,AWSVPN publiek
+    class AZ,AZVPN eu
+    class ST,STVPN pii

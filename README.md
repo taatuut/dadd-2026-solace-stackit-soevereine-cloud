@@ -8,9 +8,12 @@ Vier Solace-brokers (1 lokaal, self-managed + 3 Solace Cloud HA-services in
 AWS/Azure/STACKIT), verbonden via REST Delivery Points (RDP's), die laten
 zien hoe data op basis van classificatie (publiek / niet-persoonlijk EU /
 gevoelige PII) automatisch naar precies de juiste, en alleen de juiste,
-bestemming stroomt -- drie losse publicatie-tools publiceren allemaal naar
-dezelfde lokale broker, en de topic waarop ze publiceren bepaalt volledig
-(en uitsluitend) op welke cloud-broker het bericht landt.
+bestemming stroomt. Drie losse publicatie-tools (stm, een Python-script,
+SDKPerf) publiceren allemaal naar dezelfde lokale broker, en publiceren
+daarbij elk **alle drie de dataklassen** -- welke tool je gebruikt maakt
+voor de bestemming geen enkel verschil, alleen de topic (en de
+bijbehorende, per-klasse gescoped identiteit) bepaalt volledig (en
+uitsluitend) op welke cloud-broker een bericht landt.
 
 **Voor de volledige achtergrond, afwegingen en de complete geschiedenis van
 dit project: [`PLAN.md`](PLAN.md).** Dit README is de praktische
@@ -22,16 +25,18 @@ alternatieven zijn onderzocht en verlaten (o.a. Message VPN Bridges, zie
 ## Architectuur in één oogopslag
 
 ```
-stm (publiek)          --\                                    /--> AWS       (enewable/public/>)
-python (niet-pers. EU)  ---> lokale broker (enewable-VPN) -- RDP's ---> Azure     (enewable/eu/ops/>)
-sdkperf (PII)           --/                                    \--> STACKIT   (enewable/eu/pii/>)
+stm           --\                                                /--> AWS       (enewable/public/>)
+python-script  ---> lokale broker (enewable-VPN) -- RDP's per klasse ---> Azure     (enewable/eu/ops/>)
+sdkperf        --/     (elke tool publiceert alle 3 klassen)      \--> STACKIT   (enewable/eu/pii/>)
 ```
 
-Elke demo-app publiceert **DIRECT** naar de lokale broker, op zijn eigen
-topic-subtree, met een eigen client-username die (via een ACL-profiel)
-alleen op die subtree mag publiceren. Op de lokale broker vangt een
-**queue per subtree** dat bericht automatisch op ("message promotion"), en
-een **REST Delivery Point (RDP)** stuurt die queue één-op-één door naar het
+Elke demo-app publiceert **DIRECT** naar de lokale broker, op **alle drie**
+topic-subtrees, elk met zijn eigen ACL-gescoped client-username
+(`pub-public`/`pub-eu-ops`/`pub-eu-pii`) die (via een ACL-profiel) alleen op
+die ene subtree mag publiceren -- welke tool de afzender is, doet voor de
+bestemming niet ter zake. Op de lokale broker vangt een **queue per
+subtree** dat bericht automatisch op ("message promotion"), en een **REST
+Delivery Point (RDP)** stuurt die queue één-op-één door naar het
 REST-endpoint van de bijbehorende cloud-broker, op exact dezelfde topic.
 Zie [`docs/topologie.md`](docs/topologie.md) voor het volledige diagram en
 [`docs/lokale-broker.md`](docs/lokale-broker.md) voor de RDP-mechanica in
@@ -140,18 +145,22 @@ oorzaken die deze demo eerder heeft blootgelegd.
 
 ### 5. De 3 demo-apps installeren (eenmalig)
 
-Elke demo-app publiceert naar de lokale broker met zijn eigen, al
-aangemaakte client-username (stap 2) -- er is geen extra configuratie per
-app nodig, alleen de tool zelf installeren.
+Elke demo-app publiceert naar de lokale broker met de 3 al aangemaakte,
+per-klasse gescoped client-usernames (stap 2) -- er is geen extra
+configuratie per app nodig, alleen de tool zelf installeren. Elke tool
+publiceert standaard alle 3 dataklassen (publiek -> AWS, niet-persoonlijk
+EU -> Azure, PII -> STACKIT); zie
+[`demo-apps/README.md`](demo-apps/README.md) voor de `--class`-optie om een
+tool tot één klasse te beperken.
 
-**stm (publiek, `enewable/public/>`, -> AWS):**
+**stm:**
 
 ```bash
 npm install -g solace-tryme-cli
 stm --version
 ```
 
-**Python-script (niet-persoonlijk EU, `enewable/eu/ops/>`, -> Azure):**
+**Python-script:**
 
 ```bash
 cd demo-apps/python-eu-nonpersonal
@@ -160,7 +169,7 @@ pip install -r requirements.txt
 cd ../..
 ```
 
-**SDKPerf (gevoelige PII, `enewable/eu/pii/>`, -> STACKIT):**
+**SDKPerf:**
 
 Download SDKPerf voor je platform via
 [Solace Developer Tools](https://www.solace.dev/) (of de "Try Me!"-download
@@ -175,38 +184,47 @@ SDKPERF_BIN=/pad/naar/sdkperf-jcsmp-x.y.z/sdkperf_java.sh
 `demo-apps/sdkperf-pii/publish-pii.sh` leest dit automatisch (samen met de
 rest van `.env`) -- je hoeft `.env` zelf nergens handmatig te `source`'n.
 
-### 6. Elke demo-app één keer draaien en verifiëren
+### 6. Eén demo-app draaien en op alle 3 brokers verifiëren
 
 Open in de Solace Cloud console de "Try Me!"-tab van elke van de 3
 cloud-services (AWS/Azure/STACKIT), en laat ze het liefst naast elkaar open
-staan. Draai dan, één voor één:
+staan. Draai dan **één** van de drie tools -- bijvoorbeeld:
 
 ```bash
 ./demo-apps/stm-public/publish-public.sh
 ```
 
-Verifieer: de berichten komen aan op de **AWS**-broker, op
-`enewable/public/>` -- en nergens anders.
+Dit ene commando publiceert alle 3 dataklassen (elk met zijn eigen
+gescoped credential). Verifieer dat de berichten op alle 3 de brokers
+aankomen, elk op de juiste topic en nergens anders:
+
+- **AWS**: `enewable/public/>`
+- **Azure**: `enewable/eu/ops/>`
+- **STACKIT** (of de GCP-interim-stand-in): `enewable/eu/pii/>`
+
+Herhaal dit gerust met de andere twee tools (Python-script, SDKPerf) om te
+laten zien dat het geen toevalstreffer van één specifieke tool is -- alle
+drie doen precies hetzelfde:
 
 ```bash
 cd demo-apps/python-eu-nonpersonal && source .venv/bin/activate
-python publisher.py --count 20 --interval 1
+python publisher.py
 cd ../..
 ```
-
-Verifieer: de berichten komen aan op de **Azure**-broker, op
-`enewable/eu/ops/>` -- en nergens anders.
 
 ```bash
 ./demo-apps/sdkperf-pii/publish-pii.sh
 ```
 
-Verifieer: de berichten komen aan op de **STACKIT**-broker (of de
-GCP-interim-stand-in), op `enewable/eu/pii/>` -- en nergens anders.
+Gebruik `--class public|eu-ops|eu-pii` op elke tool om tot één dataklasse
+te beperken (handig om, bijvoorbeeld, alleen de PII-stroom naar STACKIT
+te laten zien). Zie [`demo-apps/README.md`](demo-apps/README.md) voor alle
+opties.
 
-Als alle drie kloppen, werkt de volledige governed-routing-keten end-to-end.
-Zie [`docs/demo-apps.md`](docs/demo-apps.md) voor het voorgestelde
-draaiboek voor de live presentatie zelf.
+Als alle drie de brokers berichten ontvangen op precies hun eigen topic,
+werkt de volledige governed-routing-keten end-to-end. Zie
+[`docs/demo-apps.md`](docs/demo-apps.md) voor het voorgestelde draaiboek
+voor de live presentatie zelf.
 
 ### 7. Doorlopend draaien (optioneel, bijv. voor een stand/booth)
 

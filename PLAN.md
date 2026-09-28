@@ -18,7 +18,7 @@ alleen wat gepland was.
 | Fase 3 -- Azure West Europe | ✅ Aangemaakt | Service `ez-dadd-2026-aks-westeurope`, zie [`cloud-setup/azure-west-europe/README.md`](cloud-setup/azure-west-europe/README.md) en `screenshots/Azure/` |
 | Fase 3 -- STACKIT / GCP-interim | ✅ Aangemaakt | Service `ez-dadd-2026-STACKIT-gke-gcp-europe-west1-b` (interim op GCP europe-west1), zie [`cloud-setup/gcp-europe-west1-interim/README.md`](cloud-setup/gcp-europe-west1-interim/README.md) en `screenshots/STACKIT-of-GCP-interim/` -- alle 3 cloud-broker services zijn nu aangemaakt |
 | Fase 4 -- Lokale broker + RDP-export | ✅✅ VOLLEDIG WERKEND, end-to-end bevestigd | Na de rdp-deliver-profiel-fix: alle 3 queue-bindings up:true met bindSuccessCount:1, RDP-aws leverde daadwerkelijk 21 berichten af (httpResponseSuccessRxMsgCount:21) en AWS "Try Me!" toont het echte bericht aankomen op enewable/public/market/price. Zie PLAN.md sectie 13, punt 28. Klaar voor volledige testronde (fase 5) |
-| Fase 5 -- Demo-apps valideren | ✅✅ 3/3 geslaagd | stm-public (AWS) ✅, python-eu-nonpersonal (Azure) ✅ (na een zsh-commentaar-instructiefout, zie sectie 13 punt 29), sdkperf-pii (STACKIT) ✅ (na een SDKPERF_BIN-fix, zie sectie 13 punt 30) -- volledige testronde afgerond, elke app landt uitsluitend op zijn eigen doelbroker |
+| Fase 5 -- Demo-apps valideren | ✅✅ 3/3 geslaagd | stm-public (AWS) ✅, python-eu-nonpersonal (Azure) ✅ (na een zsh-commentaar-instructiefout, zie sectie 13 punt 29), sdkperf-pii (STACKIT) ✅ (na een SDKPERF_BIN-fix, zie sectie 13 punt 30) -- volledige testronde afgerond. Sindsdien versterkt (punt 32): elke app publiceert nu alle 3 klassen per invocatie, dus elke app raakt inmiddels alle 3 doelbrokers, niet meer uitsluitend zijn eigen |
 | Fase 6 -- Draaiboek + fallback | Nog te doen | |
 
 ## Inhoud
@@ -204,10 +204,13 @@ Zie [`docs/demo-apps.md`](docs/demo-apps.md) en [`demo-apps/`](demo-apps/)
 |       `-- .env.example
 `-- demo-apps/
     |-- README.md
+    |-- sample-payloads/               <- gedeeld door alle 3 tools (elk publiceert alle 3 klassen)
+    |   |-- public.json
+    |   |-- eu-ops.json
+    |   `-- eu-pii.json
     |-- stm-public/
     |   |-- README.md
-    |   |-- publish-public.sh
-    |   `-- sample-payload.json
+    |   `-- publish-public.sh
     |-- python-eu-nonpersonal/
     |   |-- README.md
     |   |-- publisher.py
@@ -215,8 +218,7 @@ Zie [`docs/demo-apps.md`](docs/demo-apps.md) en [`demo-apps/`](demo-apps/)
     |   `-- .env.example
     `-- sdkperf-pii/
         |-- README.md
-        |-- publish-pii.sh
-        `-- sample-payload.json
+        `-- publish-pii.sh
 ```
 
 (`.env`-bestanden en `token-dadd-2026.txt` staan in `.gitignore` en worden
@@ -1038,6 +1040,80 @@ productieklaar systeem:
      probeert en een samenvatting print bij het stoppen). Bewust GEEN
      bash associative arrays gebruikt (zelfde macOS-bash-3.2-reden als
      `configure-local-broker.sh`, zie punt 5).
+  32. **Elke demo-app publiceert nu alle 3 dataklassen, niet meer maar
+     één (Emil, 28/09/2026, op verzoek).** Voorheen publiceerde elke tool
+     structureel maar één klasse (stm -> publiek, python -> niet-persoonlijk
+     EU, sdkperf -> PII), wat de indruk kon wekken dat de *tool* de
+     bestemming bepaalt. Op Emils voorstel is dit versterkt: alle 3
+     demo-apps publiceren nu **standaard alle 3 dataklassen** binnen één
+     invocatie, elke klasse met zijn eigen, al bestaande ACL-gescoped
+     client-username (`pub-public`/`pub-eu-ops`/`pub-eu-pii`) en eigen
+     topic -- zodat overtuigend blijkt dat uitsluitend de topic (en de
+     bijbehorende identiteit) de bestemming bepaalt, ongeacht welke tool
+     of bron het bericht publiceert. Concreet:
+     - Nieuwe map `demo-apps/sample-payloads/` (`public.json`, `eu-ops.json`,
+       `eu-pii.json`) vervangt de 2 losse per-app `sample-payload.json`-
+       bestanden (verwijderd uit `stm-public/` en `sdkperf-pii/`) -- gedeeld
+       door alle 3 tools, één voorbeeldbericht per dataklasse.
+     - `stm-public/publish-public.sh`, `python-eu-nonpersonal/publisher.py`
+       en `sdkperf-pii/publish-pii.sh` zijn herschreven: elk doorloopt
+       standaard alle 3 klassen (eigen credential + eigen topic + eigen
+       payload per klasse); een nieuwe `--class public|eu-ops|eu-pii`-vlag
+       beperkt een run tot één klasse, voor wie het oorspronkelijke
+       één-op-één-scenario nog eens wil laten zien.
+     - **Ontwerpfout zelf gevonden vóór het testen, en gefixt:** de eerste
+       versie van alle 3 scripts stopte de hele run zodra de EERSTE klasse
+       faalde (`set -euo pipefail` in bash, geen exception-afvang in
+       Python) -- dat zou het hele punt van deze wijziging ondermijnen
+       (nooit bewijzen dat de andere 2 klassen ook werken als de eerste
+       toevallig faalt). Gefixt met per-klasse foutisolatie: bash gebruikt
+       nu `set -uo pipefail` (zonder `-e`) plus een `try_class()`-wrapper
+       die een falende klasse als WARN logt en doorgaat naar de volgende;
+       Python vangt exceptions per klasse in de `for`-loop af, logt een
+       WARN en gaat door, met `sys.exit(1)` aan het eind als er één
+       mislukte. Bevestigd via echte dry-runs in de sandbox (inclusief het
+       daadwerkelijk installeren van `solace-pubsubplus` om een reëel
+       connectiepoging-gedrag te krijgen tegen een afwezige broker): alle
+       3 klassen worden nu onafhankelijk geprobeerd, in alle 3 scripts, en
+       `--class eu-pii` beperkt terecht tot precies die ene klasse.
+       **Niet in deze sandbox geverifieerd:** de nieuwe `sdkperf`
+       `-mf=<bestand>`-vlag (echte JSON-payload uit een bestand versturen,
+       in plaats van de oude `-msa=200`-auto-gegenereerde vulbytes) --
+       geen live broker beschikbaar om dit tegen te draaien; expliciet als
+       zodanig gemarkeerd in het scriptcommentaar.
+     - `python-eu-nonpersonal/.env.example` uitgebreid met
+       `PUB_PUBLIC_USER`/`PUB_PUBLIC_PASSWORD` en
+       `PUB_EU_PII_USER`/`PUB_EU_PII_PASSWORD` (voorheen alleen
+       `PUB_EU_OPS_*`) -- deze ene app heeft nu alle 3 credential-sets
+       nodig.
+     - `local-broker/scripts/run-demo-loop.sh` ongewijzigd qua logica
+       (was al voorbereid op scripts die zelf meerdere klassen afhandelen)
+       -- alleen het headercommentaar bijgewerkt: elke cyclus is nu 9
+       klasse-runs (3 tools x 3 klassen), en `--count N` geldt per klasse,
+       niet per script. Bevestigd via
+       `./local-broker/scripts/run-demo-loop.sh --once --count 1` dat de
+       twee foutisolatie-niveaus (per klasse binnen een app, per app
+       binnen een cyclus) samen correct werken.
+     - Documentatie bijgewerkt om dit weer te geven: `demo-apps/README.md`
+       (nieuwe uitleg "zelfde tool, drie bestemmingen" + klasse-tabel +
+       `--class`-vlag), de 3 per-app `README.md`'s, `docs/demo-apps.md`
+       ("Eén tool, drie bestemmingen" als hoofdscenario; de oorspronkelijke
+       3-apps-los-draaien-aanpak als optionele stap 2, om te laten zien
+       dat het geen toevalstreffer van één tool is), `docs/topologie.md`
+       (diagram: geen klasse-specifiek label meer per tool -- alle 3 tools
+       zien nu identiek uit in het diagram, met een nieuwe alinea die
+       uitlegt waarom -- én de `classDef`-kleurtoewijzing gecorrigeerd:
+       voorheen kregen `STM`/`PY`/`SDK` nog een klasse-kleur, wat na deze
+       wijziging misleidend was geworden; nu krijgen alleen de 3
+       cloud-brokers nog een klasse-kleur), `topology/topologie.mmd`
+       (zelfde diagram-aanpassing, 1-op-1 gesynchroniseerd met
+       `docs/topologie.md`), en het root-`README.md` (architectuurdiagram,
+       inleidende alinea, stap 5 en stap 6 herschreven: één script draaien
+       raakt nu alle 3 cloud-brokers, dus stap 6 verifieert nu alle 3
+       tegelijk in plaats van één broker per app-run).
+     `PLAN.md`'s directory-boom (sectie 9) bijgewerkt: de 2 verwijderde
+     per-app `sample-payload.json`-bestanden vervangen door de nieuwe
+     gedeelde `demo-apps/sample-payloads/`-map.
 - **Geen automatische provisioning van alle 4 brokers in één commando.**
   Er is bewust voor losse, leesbare stappen gekozen (console + scripts per
   onderdeel) omdat dat beter uit te leggen en te debuggen is vóór een
@@ -1165,4 +1241,12 @@ productieklaar systeem:
    `local-broker/scripts/run-demo-loop.sh` roept de 3 demo-apps herhaald
    aan (default: elke 30s een cyclus, of `--interval 0` voor direct
    achter elkaar).
-7. Draaiboek en fallback-opname voorbereiden (sectie 11, fase 6).
+8. ~~Elke demo-app alle 3 dataklassen laten publiceren (i.p.v. maar één per
+   app), zodat de topic -- niet de tool -- overtuigend de bestemming
+   bepaalt.~~ ✅ Zie sectie 13, punt 32: alle 3 scripts herschreven met
+   per-klasse credential/topic/payload en per-klasse foutisolatie, `--class`
+   -vlag toegevoegd, gedeelde `demo-apps/sample-payloads/` geïntroduceerd,
+   alle betrokken documentatie (READMEs, `docs/demo-apps.md`,
+   `docs/topologie.md` + `topology/topologie.mmd`, root-`README.md`)
+   bijgewerkt.
+9. Draaiboek en fallback-opname voorbereiden (sectie 11, fase 6).

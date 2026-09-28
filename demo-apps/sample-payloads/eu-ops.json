@@ -1,0 +1,9 @@
+{
+  "source": "enewable-grid-telemetry",
+  "type": "grid-load-aggregate",
+  "postcodeArea": "3500-NL",
+  "loadKw": 842.6,
+  "sampleSizeMeters": 214,
+  "classification": "non-personal-eu",
+  "timestamp": "2026-09-28T12:00:00Z"
+}

@@ -4,6 +4,6 @@
   "customerId": "ENW-NL-000482",
   "meterId": "SM-9931-77",
   "kwh": 3.482,
-  "timestamp": "2026-09-28T12:00:00Z",
-  "classification": "PII"
+  "classification": "PII",
+  "timestamp": "2026-09-28T12:00:00Z"
 }

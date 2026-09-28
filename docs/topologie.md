@@ -11,12 +11,12 @@ remote broker, niet exporteren -- zie "Waarom RDP's" hieronder.)
 flowchart LR
     subgraph LOCAL["Lokale broker (self-managed, single-AZ) - Docker, macOS"]
         L[("enewable\nMessage VPN")]
-        STM["stm CLI\n(publiek)"]
-        PY["Python-script\n(niet-persoonlijk EU)"]
-        SDK["SDKPerf\n(gevoelige PII)"]
-        STM -- "enewable/public/>" --> L
-        PY -- "enewable/eu/ops/>" --> L
-        SDK -- "enewable/eu/pii/>" --> L
+        STM["stm CLI"]
+        PY["Python-script"]
+        SDK["SDKPerf"]
+        STM --> L
+        PY --> L
+        SDK --> L
     end
 
     L -- "RDP: queue + REST-export\nenewable/public/>" --> AWS
@@ -40,13 +40,20 @@ flowchart LR
     classDef publiek fill:#c8e6c9,stroke:#2e7d32;
     classDef eu fill:#bbdefb,stroke:#1565c0;
     classDef pii fill:#ffcdd2,stroke:#c62828;
-    class STM,AWS,AWSVPN publiek
-    class PY,AZ,AZVPN eu
-    class SDK,ST,STVPN pii
+    class AWS,AWSVPN publiek
+    class AZ,AZVPN eu
+    class ST,STVPN pii
 ```
 
 (Bron: `topology/topologie.mmd` -- zelfde diagram, los renderbaar met elke
 Mermaid-viewer of `mmdc`.)
+
+**Alle 3 tools publiceren op alle 3 topic-subtrees** (elk met zijn eigen,
+ACL-gescoped client-username per klasse -- `pub-public`/`pub-eu-ops`/
+`pub-eu-pii`), niet één klasse per tool. Het diagram laat de 3 tools daarom
+bewust zonder klasse-specifiek label zien: welke tool je draait maakt voor
+de routering geen verschil, alleen de topic (en de bijbehorende identiteit)
+doet dat. Zie `../demo-apps/README.md`.
 
 ## Brokers
 

@@ -4,5 +4,6 @@
   "market": "NL",
   "currency": "EUR",
   "pricePerMWh": 84.37,
+  "classification": "public",
   "timestamp": "2026-09-28T12:00:00Z"
 }
