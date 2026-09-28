@@ -17,7 +17,7 @@ alleen wat gepland was.
 | Fase 3 -- AWS US East | ✅ Aangemaakt | Service `ez-dadd-2026-eks-us-east-1a`, zie [`cloud-setup/aws-us-east/README.md`](cloud-setup/aws-us-east/README.md) en `screenshots/AWS/` |
 | Fase 3 -- Azure West Europe | ✅ Aangemaakt | Service `ez-dadd-2026-aks-westeurope`, zie [`cloud-setup/azure-west-europe/README.md`](cloud-setup/azure-west-europe/README.md) en `screenshots/Azure/` |
 | Fase 3 -- STACKIT / GCP-interim | ✅ Aangemaakt | Service `ez-dadd-2026-STACKIT-gke-gcp-europe-west1-b` (interim op GCP europe-west1), zie [`cloud-setup/gcp-europe-west1-interim/README.md`](cloud-setup/gcp-europe-west1-interim/README.md) en `screenshots/STACKIT-of-GCP-interim/` -- alle 3 cloud-broker services zijn nu aangemaakt |
-| Fase 4 -- Lokale broker + RDP-export | 🔧 Geïmplementeerd + opgeruimd, testrun nodig | Emil koos "aangepaste optie 2": apps blijven DIRECT publiceren, 3 queues (`q-export-*`) vangen berichten op via Solace message promotion (automatisch, geen appwijziging nodig), 3 REST Delivery Points sturen elke queue native door naar de bijbehorende cloud-broker. Oude bridge-configuratie/scripts verwijderd. Nieuw script `local-broker/semp/configure-rdp-export.sh` -- wacht op Emils testrun + `*_REMOTE_REST_HOST/PORT` bevestiging in `.env` |
+| Fase 4 -- Lokale broker + RDP-export | 🔧 1 scriptbug gefixt na eerste testrun, opnieuw draaien | Queues/RDP's/queue-bindings maakten in de eerste run al schoon aan (0 WARN); de rest-consumers faalden op een verkeerde `authenticationScheme`-waarde (`"basic"` i.p.v. `"http-basic"`), nu gefixt in `configure-rdp-export.sh` (zie PLAN.md sectie 13, punt 13) -- Emil moet het script nogmaals draaien |
 | Fase 5 -- Demo-apps valideren | Nog te doen | |
 | Fase 6 -- Draaiboek + fallback | Nog te doen | |
 
@@ -225,7 +225,7 @@ nooit gecommit -- alleen `.env.example`-bestanden zitten in de repo.)
 | 1 | STACKIT-beschikbaarheid | ✅ Interim-broker op GCP europe-west1 (België) aangemaakt als stand-in; vlak vóór repetitie/DADD controleren of STACKIT al als datacenter-optie zichtbaar is en zo ja, overstappen | Interim: gereed; overstap-check: kort vóór fase 5/6 |
 | 2 | Solace Cloud account | Account + API-token aanmaken (indien nog niet aanwezig) | Week na fase 0 |
 | 3 | Cloud-brokers aanmaken | ✅ Alle 3 gereed: AWS (`ez-dadd-2026-eks-us-east-1a`), Azure (`ez-dadd-2026-aks-westeurope`), STACKIT/GCP-interim (`ez-dadd-2026-STACKIT-gke-gcp-europe-west1-b`); sovereign-node blijft STACKIT zodra GA, tot dan GCP europe-west1 interim | Gereed |
-| 4 | Lokale broker + RDP-export | 🔧 Aangepaste optie 2 (Emils keuze) geïmplementeerd + oude bridge-configuratie opgeruimd: queues + REST Delivery Points i.p.v. bridges voor export, apps ongewijzigd. Testrun + validatie door Emil nodig | Testrun nu |
+| 4 | Lokale broker + RDP-export | 🔧 Eerste testrun vond 1 scriptbug (authenticationScheme-waarde), nu gefixt. Script opnieuw draaien om de 3 rest-consumers alsnog aan te maken | Opnieuw draaien nu |
 | 5 | Demo-apps valideren | Alle 3 tools end-to-end testen (publiceren → juiste cloud-broker, nergens anders) | Meerdere keren voor DADD, niet pas op de dag zelf |
 | 6 | Draaiboek + fallback-opname | Live-timing oefenen, schermopname als fallback maken | Week vóór DADD |
 | 7 | Op de dag zelf | `docker-run.sh` + `configure-local-broker.sh` (of al draaiend laten staan), demo-apps klaarzetten | Vlak voor het slot |
@@ -542,6 +542,24 @@ productieklaar systeem:
      (punten 6-11) van *waarom* bridges niet werkten en *wat* er geprobeerd
      is -- dat is waardevolle context voor de presentatie/nagesprek, geen
      instructie om opnieuw te draaien.
+  13. **Eerste echte testrun van `configure-rdp-export.sh` (Emil, 28/09/2026)
+     vond meteen 1 scriptbug, nu gefixt.** De queues, RDP's en
+     queue-bindings werden alle 9 correct aangemaakt (0 WARN), maar de
+     `restConsumers`-POST gaf voor alle 3 RDP's SEMP-fout 11: `"Problem
+     with authenticationScheme: Invalid value. basic is not one of the
+     available options (['none', 'http-basic', 'client-certificate',
+     'http-header', 'oauth-client', 'oauth-jwt', 'transparent', 'aws'])"`.
+     Oorzaak: `"basic"` is de waarde die bridges gebruiken
+     (`remoteAuthenticationScheme`), maar een rest-consumer's
+     `authenticationScheme` gebruikt een ander enum, met koppeltekens:
+     `"http-basic"`. De Go-client die de VELDNAMEN bevestigde (zie punt 11)
+     bevestigde dus niet ook de geldige WAARDEN -- die kwamen deze keer pas
+     naar boven via de broker's eigen foutmelding, net als bij de eerdere
+     bridge-bugs. Gefixt in `configure-rdp-export.sh` (en met dit
+     bugverslag zelf gedocumenteerd, ook inline in het script). Script is
+     idempotent: de 9 al aangemaakte objecten worden overgeslagen
+     ("already exists"), alleen de 3 rest-consumers worden nu alsnog
+     aangemaakt bij een herhaalde run.
 - **Geen automatische provisioning van alle 4 brokers in één commando.**
   Er is bewust voor losse, leesbare stappen gekozen (console + scripts per
   onderdeel) omdat dat beter uit te leggen en te debuggen is vóór een

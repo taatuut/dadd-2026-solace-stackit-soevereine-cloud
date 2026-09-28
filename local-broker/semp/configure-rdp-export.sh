@@ -44,6 +44,14 @@
 # 8), TEST ONE BRIDGE FIRST if any WARN appears below rather than assuming
 # the whole batch is right.
 #
+# CONFIRMED BUG (first real run, 28/09/2026): authenticationScheme's value
+# is NOT "basic" (that's the bridge convention) -- the broker rejected it
+# with SEMP error 11, and its own error message gave the real enum:
+# ['none', 'http-basic', 'client-certificate', 'http-header',
+# 'oauth-client', 'oauth-jwt', 'transparent', 'aws']. Fixed to "http-basic".
+# The Go client's FIELD names were still right; only this one VALUE was
+# bridge-specific, not RDP-specific.
+#
 # Usage: ./configure-rdp-export.sh
 # Requires: curl, and a populated ../.env (same file configure-local-broker.sh
 # uses), PLUS the new *_REMOTE_REST_HOST / *_REMOTE_REST_PORT variables --
@@ -121,7 +129,7 @@ create_export_route() {
   #    broker for the bridge experiment -- see
   #    cloud-setup/solace-cloud-api/configure-remote-bridge-users.sh.
   semp POST "/msgVpns/${VPN}/restDeliveryPoints/${rdp}/restConsumers" \
-    "{\"restConsumerName\":\"${consumer}\",\"remoteHost\":\"${remote_host}\",\"remotePort\":${remote_port},\"tlsEnabled\":true,\"authenticationScheme\":\"basic\",\"authenticationHttpBasicUsername\":\"${remote_user}\",\"authenticationHttpBasicPassword\":\"${remote_pass}\",\"enabled\":true}"
+    "{\"restConsumerName\":\"${consumer}\",\"remoteHost\":\"${remote_host}\",\"remotePort\":${remote_port},\"tlsEnabled\":true,\"authenticationScheme\":\"http-basic\",\"authenticationHttpBasicUsername\":\"${remote_user}\",\"authenticationHttpBasicPassword\":\"${remote_pass}\",\"enabled\":true}"
 
   echo "  OK: ${queue} --[promote]--> ${rdp}/${consumer} --[POST /\${topic()}]--> https://${remote_host}:${remote_port}"
 }
