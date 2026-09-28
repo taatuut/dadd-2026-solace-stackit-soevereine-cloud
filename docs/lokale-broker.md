@@ -36,17 +36,30 @@ client-usernames en alle 3 bridge-objecten + hun `remoteMsgVpns`/
 `remoteSubscriptions` worden zonder SEMP-fout aangemaakt. Bevestigd via
 screenshots van Broker Manager > Bridges > Summary: elke bridge toont nu de
 juiste remote Message VPN-naam en `via: <ip>:55443`, dus de configuratie komt
-aan bij de broker. **Toch blijven alle 3 bridges "Down"** (Bridge Status,
-en Message Flow in beide richtingen). Dit is dus niet langer een
-SEMP-configuratiefout maar een probleem op het niveau van de daadwerkelijke
-bridge-verbindingspoging. Broker Manager toont zelf geen down-reden, dus is
-`../local-broker/semp/diagnose-bridges.sh` toegevoegd: een read-only script
-dat i.p.v. de SEMP v2 **Config**-API de **Monitor**-API opvraagt (die wel een
-verbindingsfout-detail bevat) voor alle 3 bridges. De output is lang, dus het
-script schrijft naar `output/diagnose-bridges.txt` (repo-root, gitignored) in
-plaats van naar stdout -- dat bestand kan als bijlage aangeleverd worden in
-plaats van de output te plakken. Volgende sub-stap: dit script draaien en het
-outputbestand beoordelen.
+aan bij de broker. **Toch bleven alle 3 bridges "Down"** (Bridge Status, en
+Message Flow in beide richtingen) -- ondanks dat `diagnose-bridges.sh` liet
+zien dat de onderliggende verbinding zelf prima werkte:
+`remoteMsgVpns[].up: true`, `lastConnectionFailureReason: ""`,
+`rxConnectionFailureCategory: "no-failure"`, uptime > 900s, TLS + basic-auth
+allebei geslaagd (`remoteRouterName` kwam terug van de cloud-broker). De
+oorzaak bleek geen verbindings- maar een **richtingsfout**: het bridge-object
+had `inboundState: "ready-subscribing"` en `outboundState: "not-applicable"`,
+en de `localSubscriptions`-collectie was leeg. Een bridge's
+**`remoteSubscription`** (wat het script tot dan toe alleen aanmaakte) laat de
+**lokale** broker juist berichten **importeren** vanaf de **remote** VPN --
+precies de verkeerde richting voor dit doel. Om lokaal gepubliceerde
+berichten over de bridge naar de cloud-broker te **exporteren**, moet het
+topic een **`localSubscription`** op de bridge zijn (een subscriptie die de
+bridge op de lokale broker zelf neemt; matches daarvan worden over de bridge
+naar de remote VPN gestuurd). Gefixt: `configure-local-broker.sh` maakt nu
+voor elk topic zowel de (onschadelijke, ongebruikte) `remoteSubscription` als
+-- de daadwerkelijk benodigde -- `localSubscription` aan. Broker Manager
+toonde overigens zelf geen down-reden; daarom blijft
+`../local-broker/semp/diagnose-bridges.sh` (schrijft naar
+`output/diagnose-bridges.txt`, gitignored) nuttig om dit soort dingen te
+verifiëren i.p.v. te gokken. Volgende sub-stap: script opnieuw draaien en
+controleren dat alle 3 bridges nu "Up" tonen mét actieve outbound message
+flow.
 
 ## Starten
 

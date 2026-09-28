@@ -4,7 +4,7 @@
 #   - 3 scoped publisher client-usernames (public / eu-ops / eu-pii), each
 #     restricted by an ACL profile to its own topic subtree
 #   - 3 bridges (local -> AWS, local -> Azure, local -> STACKIT), each with a
-#     remoteSubscription that exports exactly one topic subtree
+#     localSubscription that exports exactly one topic subtree
 #
 # This is a best-effort skeleton based on the SEMP v2 Config API reference
 # (https://docs.solace.com/SEMP/SEMP-API-Ref.htm). Field names are correct as of
@@ -100,11 +100,11 @@ create_bridge() {
   #
   # A bridge's SEMP identifier is the COMPOSITE key (bridgeName,
   # bridgeVirtualRouter), not bridgeName alone -- addressing a specific
-  # bridge's sub-collections (remoteMsgVpns, remoteSubscriptions) requires
-  # the comma-joined form "{bridgeName},{bridgeVirtualRouter}" in the path,
-  # confirmed after "/bridges/${name}/remoteMsgVpns" alone returned
-  # "535 INVALID_PATH -- No paths found" even though the bridge itself was
-  # created successfully.
+  # bridge's sub-collections (remoteMsgVpns, remoteSubscriptions,
+  # localSubscriptions) requires the comma-joined form
+  # "{bridgeName},{bridgeVirtualRouter}" in the path, confirmed after
+  # "/bridges/${name}/remoteMsgVpns" alone returned "535 INVALID_PATH -- No
+  # paths found" even though the bridge itself was created successfully.
   local vr="auto"
   semp POST "/msgVpns/${VPN}/bridges" \
     "{\"bridgeName\":\"${name}\",\"bridgeVirtualRouter\":\"${vr}\",\"enabled\":true,\"remoteConnectionRetryCount\":10,\"remoteConnectionRetryDelay\":3}"
@@ -122,8 +122,29 @@ create_bridge() {
   semp POST "/msgVpns/${VPN}/bridges/${name},${vr}/remoteMsgVpns" \
     "{\"remoteMsgVpnName\":\"${remote_vpn}\",\"remoteMsgVpnLocation\":\"${remote_host}\",\"remoteMsgVpnInterface\":\"\",\"tlsEnabled\":true,\"enabled\":true}"
 
+  # BUG FOUND via diagnose-bridges.sh (SEMP v2 MONITOR data), after the
+  # bridge connection itself came up cleanly (auth+TLS succeeded,
+  # remoteMsgVpns "up":true, uptime > 900s, "no-failure") but Broker
+  # Manager still showed "Bridge Status: Down" and 0 msg/s both ways:
+  # remoteSubscriptions is the WRONG direction for what we want. A
+  # bridge's remoteSubscription makes the LOCAL broker *subscribe to the
+  # REMOTE broker* -- i.e. it IMPORTS messages published directly on the
+  # remote (cloud) VPN into the local VPN. It does nothing to export what
+  # we publish locally. To export local publishes on a topic OUT across
+  # the bridge to the remote VPN, the topic must instead be a
+  # localSubscription (a subscription taken on the LOCAL broker itself,
+  # whose matches get forwarded across the bridge) -- confirmed via the
+  # monitor API showing "outboundState":"not-applicable" and an empty
+  # "localSubscriptions" collection on every bridge. Kept the
+  # remoteSubscriptions call below (harmless, and it's genuinely how you'd
+  # additionally import cloud-originated messages if that were ever
+  # needed) and added the localSubscriptions call, which is what actually
+  # makes the export/demo scenario work.
   semp POST "/msgVpns/${VPN}/bridges/${name},${vr}/remoteSubscriptions" \
     "{\"remoteSubscriptionTopic\":\"${export_topic}\",\"deliverAlwaysEnabled\":true}"
+
+  semp POST "/msgVpns/${VPN}/bridges/${name},${vr}/localSubscriptions" \
+    "{\"localSubscriptionTopic\":\"${export_topic}\"}"
 
   echo "  ${name}: exports '${export_topic}' -> vpn '${remote_vpn}' @ ${remote_host}"
 }

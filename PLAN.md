@@ -17,7 +17,7 @@ alleen wat gepland was.
 | Fase 3 -- AWS US East | ✅ Aangemaakt | Service `ez-dadd-2026-eks-us-east-1a`, zie [`cloud-setup/aws-us-east/README.md`](cloud-setup/aws-us-east/README.md) en `screenshots/AWS/` |
 | Fase 3 -- Azure West Europe | ✅ Aangemaakt | Service `ez-dadd-2026-aks-westeurope`, zie [`cloud-setup/azure-west-europe/README.md`](cloud-setup/azure-west-europe/README.md) en `screenshots/Azure/` |
 | Fase 3 -- STACKIT / GCP-interim | ✅ Aangemaakt | Service `ez-dadd-2026-STACKIT-gke-gcp-europe-west1-b` (interim op GCP europe-west1), zie [`cloud-setup/gcp-europe-west1-interim/README.md`](cloud-setup/gcp-europe-west1-interim/README.md) en `screenshots/STACKIT-of-GCP-interim/` -- alle 3 cloud-broker services zijn nu aangemaakt |
-| Fase 4 -- Lokale broker + bridges | 🔄 Bezig | ✅ `configure-local-broker.sh` draait volledig schoon (0 WARN-regels, ook `remoteMsgVpns` slaagt nu stil). ❗Toch blijven alle 3 bridges "Down" (bevestigd via screenshots: Remote Message VPN + "via: ip:poort" nu wel getoond, maar Bridge Status en Message Flow beide kanten "Down"). Dit is geen SEMP-schemafout meer maar een verbindingsprobleem (netwerk/TLS/credentials op het echte bridge-niveau). Nieuw: read-only diagnosescript `local-broker/semp/diagnose-bridges.sh` toegevoegd (haalt SEMP v2 MONITOR-data op, die het echte down-reden-veld bevat, iets wat Broker Manager zelf niet toont). 🔄 Emil draait dit diagnosescript en plakt de output terug |
+| Fase 4 -- Lokale broker + bridges | 🔄 Bezig | ✅ Root cause gevonden via `diagnose-bridges.sh`: de bridge-verbinding zelf was al gezond (TLS+auth ok, `up:true`, geen failure) -- de bug was een **richtingsfout**: het script gebruikte `remoteSubscriptions` (import, verkeerd) i.p.v. `localSubscriptions` (export, correct) om te bepalen welk topic over de bridge naar buiten gaat. 6e bug gefixt in `configure-local-broker.sh`. 🔄 Emil draait het script opnieuw en verifieert dat alle 3 bridges "Up" tonen mét actieve message flow |
 | Fase 5 -- Demo-apps valideren | Nog te doen | |
 | Fase 6 -- Draaiboek + fallback | Nog te doen | |
 
@@ -224,7 +224,7 @@ nooit gecommit -- alleen `.env.example`-bestanden zitten in de repo.)
 | 1 | STACKIT-beschikbaarheid | ✅ Interim-broker op GCP europe-west1 (België) aangemaakt als stand-in; vlak vóór repetitie/DADD controleren of STACKIT al als datacenter-optie zichtbaar is en zo ja, overstappen | Interim: gereed; overstap-check: kort vóór fase 5/6 |
 | 2 | Solace Cloud account | Account + API-token aanmaken (indien nog niet aanwezig) | Week na fase 0 |
 | 3 | Cloud-brokers aanmaken | ✅ Alle 3 gereed: AWS (`ez-dadd-2026-eks-us-east-1a`), Azure (`ez-dadd-2026-aks-westeurope`), STACKIT/GCP-interim (`ez-dadd-2026-STACKIT-gke-gcp-europe-west1-b`); sovereign-node blijft STACKIT zodra GA, tot dan GCP europe-west1 interim | Gereed |
-| 4 | Lokale broker + bridges | ✅ `configure-local-broker.sh` schoon (0 WARN); bridges blijven "Down" -- geen SEMP-fout meer, dus een verbindingsprobleem; 🔄 `diagnose-bridges.sh` (nieuw, read-only) draaien om de echte down-reden te vinden | Bezig |
+| 4 | Lokale broker + bridges | ✅ Root cause gevonden: `remoteSubscriptions` (import) i.p.v. `localSubscriptions` (export) gebruikt -- verbinding zelf was al gezond. Gefixt; 🔄 opnieuw draaien en bridges + message flow verifiëren | Bezig |
 | 5 | Demo-apps valideren | Alle 3 tools end-to-end testen (publiceren → juiste cloud-broker, nergens anders) | Meerdere keren voor DADD, niet pas op de dag zelf |
 | 6 | Draaiboek + fallback-opname | Live-timing oefenen, schermopname als fallback maken | Week vóór DADD |
 | 7 | Op de dag zelf | `docker-run.sh` + `configure-local-broker.sh` (of al draaiend laten staan), demo-apps klaarzetten | Vlak voor het slot |
@@ -351,22 +351,38 @@ productieklaar systeem:
      `remoteAuthenticationBasicPassword`) horen op het **bridge-object zelf**
      (`.../bridges/{naam},{vr}`, via PATCH), niet op het `remoteMsgVpns`-
      sub-object -- verplaatst.
-  6. **Nog open**: met alle 5 bovenstaande fixes toegepast draait het script
-     nu volledig schoon (0 WARN-regels -- ook `remoteMsgVpns` is voor het
-     eerst zonder fout aangemaakt). Toch blijven alle 3 bridges "Down".
-     Screenshots bevestigen dat de Remote Message VPN nu wel wordt getoond
-     (`via: <ip>:55443` + de juiste remote-VPN-naam per broker), dus de SEMP-
-     configuratie komt aan -- het is dus geen configuratie/schema-fout meer
-     zoals 1 t/m 5, maar een fout op het niveau van de daadwerkelijke
-     bridge-verbindingspoging (netwerkbereikbaarheid vanuit de lokale
-     Docker-container naar `<host>:55443`, TLS/CA-vertrouwen, of een
-     credential/ACL-mismatch van `enewable-local-bridge` op de cloud-broker).
-     Broker Manager toont zelf geen down-reden; daarom is
+  6. Met alle 5 bovenstaande fixes toegepast draaide het script volledig
+     schoon (0 WARN-regels), en screenshots bevestigden dat de Remote
+     Message VPN nu wel werd getoond (`via: <ip>:55443` + de juiste
+     remote-VPN-naam per broker) -- toch bleven alle 3 bridges "Down".
+     Broker Manager toont zelf geen down-reden, dus is
      `local-broker/semp/diagnose-bridges.sh` toegevoegd (read-only, haalt de
-     SEMP v2 **MONITOR**-API op i.p.v. de config-API, die het echte
-     verbindingsfout-veld bevat). Schrijft naar `output/diagnose-bridges.txt`
-     (gitignored) i.p.v. stdout, omdat de output te lang is om te plakken --
-     wacht op dat bestand.
+     SEMP v2 **MONITOR**-API op i.p.v. de config-API). Schrijft naar
+     `output/diagnose-bridges.txt` (gitignored) i.p.v. stdout, omdat de
+     output te lang is om te plakken.
+  7. **De output van `diagnose-bridges.sh` gaf de daadwerkelijke oorzaak.**
+     De onderliggende bridge-verbinding was al die tijd al gezond:
+     `remoteMsgVpns[].up: true`, `lastConnectionFailureReason: ""`,
+     `rxConnectionFailureCategory: "no-failure"`, uptime > 900s, en
+     `remoteRouterName` liet zien dat TLS + basic-auth allebei geslaagd
+     waren richting elke cloud-broker. Geen verbindingsfout dus, maar een
+     **richtingsfout**: het bridge-object had
+     `"inboundState": "ready-subscribing"` en
+     `"outboundState": "not-applicable"`, en de `localSubscriptions`-
+     collectie was leeg. Een bridge's **`remoteSubscription`** (het enige
+     wat het script tot dan toe aanmaakte) laat de **lokale** broker
+     berichten **importeren** vanaf de **remote** VPN -- exact de verkeerde
+     richting voor "lokaal publiceren -> naar de juiste cloud-broker
+     exporteren". Om lokaal gepubliceerde berichten over de bridge naar de
+     cloud-broker te **exporteren**, moet het topic een
+     **`localSubscription`** op de bridge zijn (een subscriptie die de
+     bridge zelf op de lokale broker neemt; matches daarvan worden over de
+     bridge naar de remote VPN gestuurd). Dit verklaart ook meteen waarom
+     de eerdere "clean run" niets opleverde: de configuratie werd wel
+     zonder fouten toegepast, maar configureerde domweg het verkeerde
+     mechanisme. Gefixt: `configure-local-broker.sh` maakt nu voor elk
+     topic zowel de (onschadelijke, ongebruikte) `remoteSubscription` als
+     -- de daadwerkelijk benodigde -- `localSubscription` aan.
 - **Geen automatische provisioning van alle 4 brokers in één commando.**
   Er is bewust voor losse, leesbare stappen gekozen (console + scripts per
   onderdeel) omdat dat beter uit te leggen en te debuggen is vóór een
