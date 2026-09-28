@@ -54,24 +54,25 @@ semp() {
 
 echo "== 1. Message VPN '${VPN}' =="
 semp POST "/msgVpns" "{\"msgVpnName\":\"${VPN}\",\"enabled\":true,\"maxMsgSpoolUsage\":1500}"
-semp PATCH "/msgVpns/${VPN}" '{"serviceSmfPlainTextEnabled":true,"serviceWebPlainTextEnabled":true,"serviceRestIncomingPlainTextEnabled":true}'
+# REST is not used anywhere in this demo (stm uses web-messaging, the Python
+# script and SDKPerf use SMF) -- only enable SMF + web-messaging. Enabling
+# serviceRestIncomingPlainTextEnabled would additionally require a REST
+# listen port to be configured first (SEMP error 89), which we'd otherwise
+# have to wire up in docker-run.sh for no benefit.
+semp PATCH "/msgVpns/${VPN}" '{"serviceSmfPlainTextEnabled":true,"serviceWebPlainTextEnabled":true}'
 
 echo "== 2. Scoped publisher client-usernames + ACL profiles =="
-declare -A TOPIC_FOR=(
-  [pub-public]="enewable/public/>"
-  [pub-eu-ops]="enewable/eu/ops/>"
-  [pub-eu-pii]="enewable/eu/pii/>"
-)
-declare -A PASSWORD_FOR=(
-  [pub-public]="${PUB_PUBLIC_PASSWORD:-pub-public-pw}"
-  [pub-eu-ops]="${PUB_EU_OPS_PASSWORD:-pub-eu-ops-pw}"
-  [pub-eu-pii]="${PUB_EU_PII_PASSWORD:-pub-eu-pii-pw}"
-)
+# Deliberately NOT using bash associative arrays (declare -A) here: macOS
+# ships bash 3.2 as /bin/bash (Apple has frozen it there for licensing
+# reasons since El Capitan), which predates bash 4's associative-array
+# support. Without -A, `[pub-public]=...` is parsed as an INDEXED array
+# subscript and evaluated arithmetically, which fails hard under `set -u`
+# ("pub: unbound variable"). Unrolled into 3 explicit calls instead, same
+# style as the create_bridge() calls below.
 
-for user in "${!TOPIC_FOR[@]}"; do
-  acl="acl-${user}"
-  topic="${TOPIC_FOR[$user]}"
-  pass="${PASSWORD_FOR[$user]}"
+create_scoped_publisher() {
+  local user="$1" topic="$2" pass="$3"
+  local acl="acl-${user}"
 
   semp POST "/msgVpns/${VPN}/aclProfiles" \
     "{\"aclProfileName\":\"${acl}\",\"clientConnectDefaultAction\":\"allow\",\"publishTopicDefaultAction\":\"disallow\",\"subscribeTopicDefaultAction\":\"disallow\"}"
@@ -80,7 +81,11 @@ for user in "${!TOPIC_FOR[@]}"; do
   semp POST "/msgVpns/${VPN}/clientUsernames" \
     "{\"clientUsername\":\"${user}\",\"password\":\"${pass}\",\"enabled\":true,\"aclProfileName\":\"${acl}\",\"clientProfileName\":\"default\"}"
   echo "  ${user} -> may only publish on ${topic}"
-done
+}
+
+create_scoped_publisher "pub-public"  "enewable/public/>"  "${PUB_PUBLIC_PASSWORD:-pub-public-pw}"
+create_scoped_publisher "pub-eu-ops"  "enewable/eu/ops/>"   "${PUB_EU_OPS_PASSWORD:-pub-eu-ops-pw}"
+create_scoped_publisher "pub-eu-pii"  "enewable/eu/pii/>"   "${PUB_EU_PII_PASSWORD:-pub-eu-pii-pw}"
 
 echo "== 3. Bridges to the 3 cloud brokers =="
 

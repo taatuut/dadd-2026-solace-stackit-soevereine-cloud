@@ -49,13 +49,24 @@ Zie `../local-broker/semp/configure-local-broker.sh`. Dit script (SEMP v2 /
 curl) doet, in volgorde:
 
 1. Message VPN `enewable` aanmaken en de benodigde services (SMF,
-   web-messaging voor `stm`, REST) inschakelen.
+   web-messaging voor `stm`) inschakelen. REST wordt bewust niet
+   ingeschakeld -- geen van de 3 demo-apps gebruikt het, en het vereist een
+   apart geconfigureerde listen-port (zie "Bekende risico's").
 2. Drie client-usernames aanmaken (`pub-public`, `pub-eu-ops`, `pub-eu-pii`),
    elk met een eigen ACL-profiel dat publiceren beperkt tot precies één
    topic-subtree (zie `../docs/topologie.md`).
 3. Drie bridges aanmaken (`bridge-to-aws`, `bridge-to-azure`,
    `bridge-to-stackit`), elk met een `remoteSubscription` die exact één
    topic-subtree exporteert naar de bijbehorende cloud-broker.
+
+**macOS-gebruikers**: dit script draait met `#!/usr/bin/env bash` maar
+gebruikt bewust **geen** bash associative arrays (`declare -A`) -- macOS'
+systeem-`/bin/bash` is bash 3.2 (Apple heeft dit bevroren sinds El Capitan om
+licentieredenen) en bash 4 is nodig voor `-A`. Bevestigd op Emils machine:
+zonder `-A` faalt zoiets als `[pub-public]=...` hard onder `set -u`
+("pub: unbound variable"), omdat het als een indexed-array-subscript
+arithmetisch wordt geëvalueerd. Het script is inmiddels herschreven zonder
+associative arrays.
 
 ## Bekende risico's / dingen om te verifiëren voor de live demo
 
