@@ -13,15 +13,15 @@
 # See PLAN.md section 13 for the reasoning behind this change (Emil's
 # review of the original, one-class-per-app demo).
 #
-# Message content: attempts to send the class-appropriate JSON from
-# ../sample-payloads/<class>.json via SDKPerf's "-mf" (message-file) flag.
-# NOT RUNTIME-VERIFIED in this session (the assistant's sandbox cannot run
-# SDKPerf against a real broker) -- if "-mf" turns out not to be the right
-# flag for your SDKPerf version, the messages will still get the right
-# topic/credential/routing (the point of this script), just with SDKPerf's
-# own auto-generated filler content (-msa) instead of the nice-looking JSON
-# in "Try Me!". Check with -md (which prints each sent message) and report
-# back if the payload isn't the JSON you expect.
+# Message content: sends the class-appropriate JSON from
+# ../sample-payloads/<class>.json as the raw binary attachment, via
+# SDKPerf's "-pal" (payload-attachment-list) flag -- NOT "-mf", which
+# doesn't exist ("Unrecognized option: -mf", confirmed by Emil,
+# 28/09/2026, against a real SDKPerf 8.4.17.5 install). "-pal=<file>"
+# sends the file's raw UTF-8 content as the message's binary attachment,
+# same as "-msa" would auto-generate but with real content instead of
+# filler bytes. See PLAN.md section 13 for how "-mf" was found (community
+# thread on SDKPerf's "-sdm"/"-pal" flags).
 #
 # Assumes sdkperf_java.sh is on PATH -- override with SDKPERF_BIN if not.
 #
@@ -69,7 +69,7 @@ publish_class() {
     -cu="${user}@${LOCAL_MSG_VPN}" \
     -cp="${pass}" \
     -ptl="${topic}" \
-    -mf="${file}" \
+    -pal="${file}" \
     -mt=direct -mn="${COUNT}" -mr=2 -md
 }
 

@@ -36,9 +36,14 @@ geparametriseerde versie):
 
 ```bash
 sdkperf_java.sh -cip=localhost:55554 -cu=pub-eu-pii@enewable -cp="$PUB_EU_PII_PASSWORD" \
-  -ptl=enewable/eu/pii/meter/reading -mf=../sample-payloads/eu-pii.json \
+  -ptl=enewable/eu/pii/meter/reading -pal=../sample-payloads/eu-pii.json \
   -mn=20 -mr=2 -mt=direct -md   # -md drukt elk verzonden bericht af, handig live op het podium
 ```
+
+(`-pal` = payload-attachment-list: stuurt de ruwe inhoud van het bestand
+als binary attachment. Niet `-mf` -- die optie bestaat niet en geeft
+"Unrecognized option: -mf", bevestigd door Emil op een echte SDKPerf
+8.4.17.5-installatie.)
 
 > Let op: dit is met opzet **fictieve, gesynthetiseerde** klantdata (zie
 > `../sample-payloads/eu-pii.json`) -- gebruik nooit echte persoonsgegevens

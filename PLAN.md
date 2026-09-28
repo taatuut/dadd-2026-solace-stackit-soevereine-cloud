@@ -1161,6 +1161,27 @@ productieklaar systeem:
      zelf aanpassen naar `enewable/>` vóór het (opnieuw) klikken op
      "Start/Subscribe". `README.md`, sectie "Verkeer visualiseren",
      uitgebreid met deze toelichting.
+  35. **`-mf` was geen echte SDKPerf-vlag -- gefixt naar `-pal` (Emil,
+     28/09/2026, bevestigd door een echte fout tegen SDKPerf 8.4.17.5).**
+     Punt 32 markeerde de `-mf`-vlag in `sdkperf-pii/publish-pii.sh`
+     expliciet als "niet in deze sandbox geverifieerd" -- terecht: Emil
+     kreeg `Parsing failed. Reason: Unrecognized option: -mf` in de
+     praktijk. `-mf` bestaat niet in SDKPerf; de officiële
+     command-line-referentie kent alleen `-msa` (auto-gegenereerde
+     vulbytes) voor payload-grootte, geen vlag voor payload uit een
+     bestand. Uitgezocht via de Solace-communitythread "sdkperf file
+     input format": de juiste vlag is `-pal=<bestand>`
+     (payload-attachment-list) -- stuurt de ruwe inhoud van het bestand
+     als binary attachment, precies wat we willen voor
+     `../sample-payloads/<class>.json` (in tegenstelling tot `-sdm`, dat
+     een apart, getypeerd structured-data-formaat verwacht, niet ruwe
+     JSON). Gefixt in `demo-apps/sdkperf-pii/publish-pii.sh` (alle 3
+     `publish_class()`-aanroepen) en in
+     `demo-apps/sdkperf-pii/README.md`'s handmatige voorbeeldcommando.
+     **Nog niet opnieuw end-to-end bevestigd** met een echte broker na
+     deze fix (dat vereist een volgende testronde door Emil); wel
+     bevestigd dat `-pal` de door de Solace-community gedocumenteerde,
+     juiste vlag is voor dit doel.
 - **Geen automatische provisioning van alle 4 brokers in één commando.**
   Er is bewust voor losse, leesbare stappen gekozen (console + scripts per
   onderdeel) omdat dat beter uit te leggen en te debuggen is vóór een
