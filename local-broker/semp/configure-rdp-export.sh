@@ -44,13 +44,34 @@
 # 8), TEST ONE BRIDGE FIRST if any WARN appears below rather than assuming
 # the whole batch is right.
 #
-# CONFIRMED BUG (first real run, 28/09/2026): authenticationScheme's value
-# is NOT "basic" (that's the bridge convention) -- the broker rejected it
-# with SEMP error 11, and its own error message gave the real enum:
-# ['none', 'http-basic', 'client-certificate', 'http-header',
+# CONFIRMED BUG #1 (first real run, 28/09/2026): authenticationScheme's
+# value is NOT "basic" (that's the bridge convention) -- the broker
+# rejected it with SEMP error 11, and its own error message gave the real
+# enum: ['none', 'http-basic', 'client-certificate', 'http-header',
 # 'oauth-client', 'oauth-jwt', 'transparent', 'aws']. Fixed to "http-basic".
 # The Go client's FIELD names were still right; only this one VALUE was
 # bridge-specific, not RDP-specific.
+#
+# CONFIRMED BUG #2, the real cause of the persistent HTTP 503 "Service
+# Unavailable" that made all 3 RDPs show "Down" for the rest of that day
+# (28/09/2026): "${topic()}" in postRequestTarget is NEVER evaluated
+# unless the queue-binding's requestTargetEvaluation attribute is
+# explicitly set to "substitution-expressions" -- it silently defaults to
+# "none" (confirmed via the solacebroker Terraform provider's resource
+# docs; this field isn't mentioned anywhere in Solace's CLI-only RDP
+# reference doc). Without it, every single message was POSTed to the
+# LITERAL, unevaluated path "/${topic()}", never the real topic. This
+# almost certainly explains the 503 too: a literal "${...}" in a URL path
+# is exactly the pattern Log4Shell-era WAF/CDN rules are tuned to reject,
+# and it explains why the REST consumer's httpRequestTxMsgCount counters
+# never moved even with real messages sitting in the queue (see PLAN.md
+# section 13, item 23 for the full trail: message promotion into the
+# queue was independently confirmed working via a real end-to-end publish
+# test -- spooledMsgCount going from 0 to 10 -- while delivery onward
+# stayed stuck at exactly this bug). Fixed by adding
+# requestTargetEvaluation":"substitution-expressions" to the queueBindings
+# POST body, plus an unconditional PATCH so it also fixes bindings
+# created by an earlier, buggy run of this script.
 #
 # Usage: ./configure-rdp-export.sh
 # Requires: curl, and a populated ../.env (same file configure-local-broker.sh
@@ -120,8 +141,33 @@ create_export_route() {
   #    (relative to the rest-consumer's host:port) each drained message is
   #    POSTed to. "${topic()}" reconstructs the FULL original topic, so
   #    the message lands on the identical topic on the remote broker.
+  #
+  #    BUG FOUND AND FIXED (28/09/2026): postRequestTarget's substitution
+  #    expressions are NOT evaluated unless requestTargetEvaluation is
+  #    explicitly set to "substitution-expressions" -- it defaults to
+  #    "none" (confirmed via the solacebroker Terraform provider's own
+  #    resource docs; Solace's CLI-only RDP docs don't mention this field
+  #    at all). Without it, every queue-binding was POSTing to the
+  #    LITERAL, unevaluated path "/${topic()}" on every single message --
+  #    never the real topic -- which is almost certainly why the cloud
+  #    broker's REST gateway (behind AWS/Azure/GCP-style front-end
+  #    infrastructure) rejected it with HTTP 503 "Service Unavailable":
+  #    a literal "${...}" pattern in a URL path is exactly what
+  #    Log4Shell-era WAF/CDN rules are tuned to block. This also explains
+  #    why the REST consumer's own httpRequestTxMsgCount counters never
+  #    moved: whatever intercepted the "${topic()}" request likely never
+  #    let it register as a normal transmitted message. A direct curl
+  #    POST to a normal, real topic path never showed this because it
+  #    never contained the "${...}" pattern in the first place.
+  #    "substitution-expressions" makes the RDP evaluate it into the
+  #    actual topic (e.g. "enewable/public/market/price") before POSTing.
+  #    This PATCH is separate (unconditional, not idempotent-skipped)
+  #    from the queueBindings POST below so it also fixes bindings
+  #    created by an earlier run of this script, before this fix existed.
   semp POST "/msgVpns/${VPN}/restDeliveryPoints/${rdp}/queueBindings" \
-    "{\"queueBindingName\":\"${queue}\",\"postRequestTarget\":\"/\${topic()}\"}"
+    "{\"queueBindingName\":\"${queue}\",\"postRequestTarget\":\"/\${topic()}\",\"requestTargetEvaluation\":\"substitution-expressions\"}"
+  semp PATCH "/msgVpns/${VPN}/restDeliveryPoints/${rdp}/queueBindings/${queue}" \
+    "{\"requestTargetEvaluation\":\"substitution-expressions\"}"
 
   # 4. REST consumer: the actual remote endpoint the RDP POSTs to. Reuses
   #    the existing enewable-local-bridge credentials already created (and

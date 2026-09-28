@@ -17,7 +17,7 @@ alleen wat gepland was.
 | Fase 3 -- AWS US East | ✅ Aangemaakt | Service `ez-dadd-2026-eks-us-east-1a`, zie [`cloud-setup/aws-us-east/README.md`](cloud-setup/aws-us-east/README.md) en `screenshots/AWS/` |
 | Fase 3 -- Azure West Europe | ✅ Aangemaakt | Service `ez-dadd-2026-aks-westeurope`, zie [`cloud-setup/azure-west-europe/README.md`](cloud-setup/azure-west-europe/README.md) en `screenshots/Azure/` |
 | Fase 3 -- STACKIT / GCP-interim | ✅ Aangemaakt | Service `ez-dadd-2026-STACKIT-gke-gcp-europe-west1-b` (interim op GCP europe-west1), zie [`cloud-setup/gcp-europe-west1-interim/README.md`](cloud-setup/gcp-europe-west1-interim/README.md) en `screenshots/STACKIT-of-GCP-interim/` -- alle 3 cloud-broker services zijn nu aangemaakt |
-| Fase 4 -- Lokale broker + RDP-export | ✅ Alle bekende blokkerende bugs gefixt (RADIUS-auth + delivery-mode) | Verbinding werkt nu; `stm send` publiceerde standaard PERSISTENT i.p.v. DIRECT -- gefixt met `--delivery-mode DIRECT`. Klaar voor een schone publish-test + diagnose-rdp.sh (zie PLAN.md sectie 13, punt 22) |
+| Fase 4 -- Lokale broker + RDP-export | ✅ Root cause van de 503 gevonden en gefixt: requestTargetEvaluation stond op "none" | Message-promotion bevestigd werkend (queue vulde met 10 berichten), maar queue-binding postte al die tijd naar het letterlijke "/${topic()}" i.p.v. de echte topic -- vermoedelijk WAF-geblokkeerd. Gefixt in configure-rdp-export.sh (zie PLAN.md sectie 13, punt 23) |
 | Fase 5 -- Demo-apps valideren | Nog te doen | |
 | Fase 6 -- Draaiboek + fallback | Nog te doen | |
 
@@ -230,7 +230,7 @@ nooit gecommit -- alleen `.env.example`-bestanden zitten in de repo.)
 | 1 | STACKIT-beschikbaarheid | ✅ Interim-broker op GCP europe-west1 (België) aangemaakt als stand-in; vlak vóór repetitie/DADD controleren of STACKIT al als datacenter-optie zichtbaar is en zo ja, overstappen | Interim: gereed; overstap-check: kort vóór fase 5/6 |
 | 2 | Solace Cloud account | Account + API-token aanmaken (indien nog niet aanwezig) | Week na fase 0 |
 | 3 | Cloud-brokers aanmaken | ✅ Alle 3 gereed: AWS (`ez-dadd-2026-eks-us-east-1a`), Azure (`ez-dadd-2026-aks-westeurope`), STACKIT/GCP-interim (`ez-dadd-2026-STACKIT-gke-gcp-europe-west1-b`); sovereign-node blijft STACKIT zodra GA, tot dan GCP europe-west1 interim | Gereed |
-| 4 | Lokale broker + RDP-export | ✅ RADIUS-auth-bug gefixt; publish-test faalde daarna nog op delivery-mode (stm stuurt standaard PERSISTENT, moet DIRECT zijn) -- ook gefixt | Emil draait de publish-test + diagnose-rdp.sh opnieuw |
+| 4 | Lokale broker + RDP-export | ✅ Root cause gevonden: requestTargetEvaluation ontbrak, dus ${topic()} werd nooit geëvalueerd -- elke queue-binding postte naar het letterlijke pad "/${topic()}", vermoedelijk WAF-geblokkeerd (503). Gefixt in configure-rdp-export.sh | Emil herdraait configure-rdp-export.sh (patcht bestaande bindings), dan de publish-test + diagnose-rdp.sh |
 | 5 | Demo-apps valideren | Alle 3 tools end-to-end testen (publiceren → juiste cloud-broker, nergens anders) | Meerdere keren voor DADD, niet pas op de dag zelf |
 | 6 | Draaiboek + fallback-opname | Live-timing oefenen, schermopname als fallback maken | Week vóór DADD |
 | 7 | Op de dag zelf | `docker-run.sh` + `configure-local-broker.sh` (of al draaiend laten staan), demo-apps klaarzetten | Vlak voor het slot |
@@ -761,6 +761,38 @@ productieklaar systeem:
      demo-apps hadden dit probleem niet: `sdkperf-pii` gebruikte al
      `-mt=direct`, en `python-eu-nonpersonal` gebruikte al
      `create_direct_message_publisher_builder()`.
+  23. **Publish-test na de delivery-mode-fix: bericht landt eindelijk in
+     de lokale queue, maar komt niet aan op AWS (Emil, 28/09/2026).**
+     `diagnose-rdp.sh` (ronde 4) bevestigt: `q-export-public` heeft nu
+     `spooledMsgCount: 10`, `msgSpoolUsage: 1920`,
+     `highestMsgId: 10` -- de 10 gepubliceerde berichten zijn dus
+     daadwerkelijk in de queue beland via message-promotion (dit
+     mechanisme werkt dus gegarandeerd correct). Maar: de REST-consumer
+     se HTTP-tellers (`httpRequestTxMsgCount` etc.) staan nog steeds op
+     **0** voor alle 3, en de queue-binding blijft `"lastFailureReason":
+     "Service Unavailable"` tonen, met een `lastFailureTime` die exact
+     samenvalt met het moment van de diagnose-run (net als ronde 2/3) --
+     dus de queue-binding heeft nooit ook maar één poging gedaan om de
+     10 wachtende berichten daadwerkelijk te posten. Bevestigd met een
+     screenshot van de AWS "Try Me!"-tab: subscriber op `enewable/public/>`
+     toont 0 berichten. **Root cause gevonden** (via de
+     `solacebroker`-Terraform-provider se resource-documentatie, die dit
+     veld wél beschrijft waar Solace's CLI-only RDP-doc het niet doet):
+     `requestTargetEvaluation` op de queue-binding staat standaard op
+     `"none"` -- substitutie-expressies zoals `${topic()}` worden dan
+     **niet geëvalueerd**. `configure-rdp-export.sh` zette dit veld nooit,
+     dus elke queue-binding postte al die tijd naar het LETTERLIJKE,
+     niet-geëvalueerde pad `/${topic()}` -- nooit naar de echte topic.
+     Dit verklaart vermoedelijk ook de 503 zelf: een letterlijke
+     `${...}`-sequentie in een URL-pad is precies het patroon dat
+     Log4Shell-tijdperk WAF/CDN-regels blokkeren, en zou verklaren waarom
+     de REST-consumer se tellers nooit bewogen (wat er ook onderschepte,
+     liet het nooit als een normaal verzonden bericht registreren).
+     **Gefixt:** `configure-rdp-export.sh` zet nu
+     `requestTargetEvaluation: "substitution-expressions"` bij het
+     aanmaken van elke queue-binding, plus een aparte, onvoorwaardelijke
+     PATCH zodat ook de 3 al bestaande (foutieve) queue-bindings
+     gecorrigeerd worden.
 - **Geen automatische provisioning van alle 4 brokers in één commando.**
   Er is bewust voor losse, leesbare stappen gekozen (console + scripts per
   onderdeel) omdat dat beter uit te leggen en te debuggen is vóór een
@@ -827,15 +859,18 @@ productieklaar systeem:
    `enabled: true`. Gefixt in `configure-local-broker.sh` (PATCHt nu
    expliciet naar `"internal"`, zie sectie 13, punt 21). **Nu:**
    ~~`configure-local-broker.sh` opnieuw draaien.~~ ✅ -- verbinding werkt
-   nu. ~~Publish-test draaien.~~ 🔬 -- verbinding lukte, maar elk bericht
-   werd geweigerd met "Sending guaranteed message is not allowed by
-   router for this client": `stm send` publiceert standaard PERSISTENT,
-   niet DIRECT (deze demo is bewust op DIRECT + queue-promotion gebouwd).
-   Gefixt: `--delivery-mode DIRECT` toegevoegd aan
-   `demo-apps/stm-public/publish-public.sh` (zie sectie 13, punt 22).
-   **Nu:** `demo-apps/stm-public/publish-public.sh` opnieuw draaien en
-   meteen daarna `local-broker/semp/diagnose-rdp.sh` herhalen -- dit zou
-   nu daadwerkelijk moeten slagen.
+   nu. ~~Publish-test draaien.~~ ✅ (met delivery-mode-fix) -- bericht
+   landt eindelijk in de queue (`spooledMsgCount: 10`), maar komt niet
+   aan op AWS: de queue-binding postte al die tijd naar het letterlijke,
+   niet-geëvalueerde pad `/${topic()}` in plaats van de echte topic,
+   vermoedelijk WAF-geblokkeerd (503) -- root cause:
+   `requestTargetEvaluation` ontbrak. Gefixt in
+   `local-broker/semp/configure-rdp-export.sh` (zie sectie 13, punt 23).
+   **Nu:** `local-broker/semp/configure-rdp-export.sh` opnieuw draaien
+   (patcht de 3 bestaande queue-bindings), dan
+   `demo-apps/stm-public/publish-public.sh` en meteen daarna
+   `local-broker/semp/diagnose-rdp.sh` herhalen -- en controleren op de
+   AWS "Try Me!"-tab of het bericht nu daadwerkelijk aankomt.
 5. Eerste end-to-end testronde volgens sectie 12: publiceren met
    stm/python/sdkperf en in de Solace Cloud console van de DOELBROKER
    controleren dat het bericht op dezelfde topic aankomt, en nergens

@@ -247,6 +247,28 @@ dit niet: `sdkperf-pii` gebruikte al `-mt=direct`, `python-eu-nonpersonal`
 al `create_direct_message_publisher_builder()`. Zie `PLAN.md` sectie 13,
 punt 22.
 
+**✅ Root cause van de 503 gevonden: `requestTargetEvaluation` ontbrak.**
+Na de delivery-mode-fix landt het bericht eindelijk in de lokale queue
+(`spooledMsgCount: 10`, message-promotion dus bevestigd werkend), maar
+komt niet aan op AWS -- bevestigd met een screenshot van de AWS "Try
+Me!"-tab (0 berichten op `enewable/public/>`). De queue-binding se
+`httpRequestTxMsgCount`-tellers bleven op 0 en `lastFailureReason:
+"Service Unavailable"` bleef terugkomen, exact samenvallend met elke
+diagnose-run -- de binding heeft dus nooit ook maar één poging gedaan om
+de wachtende berichten te posten. Verklaring, gevonden via de
+`solacebroker`-Terraform-provider se documentatie (Solace's CLI-only
+RDP-doc noemt dit veld niet): `requestTargetEvaluation` staat standaard op
+`"none"`, waardoor substitutie-expressies zoals `${topic()}` in
+`postRequestTarget` **niet worden geëvalueerd**. Elke queue-binding
+postte dus al die tijd naar het letterlijke pad `/${topic()}`, nooit
+naar de echte topic -- en dat verklaart vermoedelijk ook de 503 zelf:
+een letterlijke `${...}`-sequentie in een URL-pad is precies wat
+Log4Shell-tijdperk WAF/CDN-regels blokkeren. Gefixt:
+`configure-rdp-export.sh` zet nu `requestTargetEvaluation:
+"substitution-expressions"` bij het aanmaken van elke queue-binding, plus
+een aparte PATCH die ook de 3 al bestaande, foutieve bindings
+corrigeert. Zie `PLAN.md` sectie 13, punt 23.
+
 **Gefixt (28/09/2026): `stm publish` bestaat niet.** De geïnstalleerde
 Solace Try-Me CLI (v1.0.0) heeft geen `publish`-subcommando -- de juiste
 is `stm send` (zelfde vlaggen). Gefixt in
