@@ -17,7 +17,7 @@ alleen wat gepland was.
 | Fase 3 -- AWS US East | ✅ Aangemaakt | Service `ez-dadd-2026-eks-us-east-1a`, zie [`cloud-setup/aws-us-east/README.md`](cloud-setup/aws-us-east/README.md) en `screenshots/AWS/` |
 | Fase 3 -- Azure West Europe | ✅ Aangemaakt | Service `ez-dadd-2026-aks-westeurope`, zie [`cloud-setup/azure-west-europe/README.md`](cloud-setup/azure-west-europe/README.md) en `screenshots/Azure/` |
 | Fase 3 -- STACKIT / GCP-interim | ✅ Aangemaakt | Service `ez-dadd-2026-STACKIT-gke-gcp-europe-west1-b` (interim op GCP europe-west1), zie [`cloud-setup/gcp-europe-west1-interim/README.md`](cloud-setup/gcp-europe-west1-interim/README.md) en `screenshots/STACKIT-of-GCP-interim/` -- alle 3 cloud-broker services zijn nu aangemaakt |
-| Fase 4 -- Lokale broker + RDP-export | 🔬 Nieuw, apart probleem: lokale broker wijst pub-public af ("RADIUS profile is shutdown") | Losstaand van het RDP/503-onderzoek -- gaat mis vóór de RDP zelfs bereikt wordt. Nieuw script diagnose-local-auth.sh checkt VPN-auth-type/client-username-status (zie PLAN.md sectie 13, punt 20) |
+| Fase 4 -- Lokale broker + RDP-export | ✅ Lokale auth-bug gevonden en gefixt (VPN stond op RADIUS-auth) | `configure-local-broker.sh` PATCHt de VPN nu naar `authenticationBasicType: "internal"`. Emil moet het script herdraaien, dan de echte publish-test + diagnose-rdp.sh (zie PLAN.md sectie 13, punt 21) |
 | Fase 5 -- Demo-apps valideren | Nog te doen | |
 | Fase 6 -- Draaiboek + fallback | Nog te doen | |
 
@@ -230,7 +230,7 @@ nooit gecommit -- alleen `.env.example`-bestanden zitten in de repo.)
 | 1 | STACKIT-beschikbaarheid | ✅ Interim-broker op GCP europe-west1 (België) aangemaakt als stand-in; vlak vóór repetitie/DADD controleren of STACKIT al als datacenter-optie zichtbaar is en zo ja, overstappen | Interim: gereed; overstap-check: kort vóór fase 5/6 |
 | 2 | Solace Cloud account | Account + API-token aanmaken (indien nog niet aanwezig) | Week na fase 0 |
 | 3 | Cloud-brokers aanmaken | ✅ Alle 3 gereed: AWS (`ez-dadd-2026-eks-us-east-1a`), Azure (`ez-dadd-2026-aks-westeurope`), STACKIT/GCP-interim (`ez-dadd-2026-STACKIT-gke-gcp-europe-west1-b`); sovereign-node blijft STACKIT zodra GA, tot dan GCP europe-west1 interim | Gereed |
-| 4 | Lokale broker + RDP-export | 🔬 Na de stm-fix: lokale broker wijst pub-public af, "The RADIUS profile is shutdown" -- een apart, eerder probleem dan de RDP-503 (gaat mis vóór de RDP bereikt wordt) | Emil draait diagnose-local-auth.sh vanuit eigen terminal |
+| 4 | Lokale broker + RDP-export | ✅ Oorzaak bevestigd (VPN op RADIUS-auth i.p.v. internal, geen RADIUS-profiel aanwezig) en gefixt in configure-local-broker.sh | Emil herdraait configure-local-broker.sh, dan de echte publish-test + diagnose-rdp.sh |
 | 5 | Demo-apps valideren | Alle 3 tools end-to-end testen (publiceren → juiste cloud-broker, nergens anders) | Meerdere keren voor DADD, niet pas op de dag zelf |
 | 6 | Draaiboek + fallback-opname | Live-timing oefenen, schermopname als fallback maken | Week vóór DADD |
 | 7 | Op de dag zelf | `docker-run.sh` + `configure-local-broker.sh` (of al draaiend laten staan), demo-apps klaarzetten | Vlak voor het slot |
@@ -721,6 +721,29 @@ productieklaar systeem:
      en alle 4 client-usernames se enabled-status) -- moet Emil draaien
      vanuit zijn eigen terminal (de sandbox van de assistent kan
      `localhost:8080` niet bereiken, andere VM dan waar Docker draait).
+  21. **`diagnose-local-auth.txt` (Emil, 28/09/2026) bevestigt de
+     RADIUS-theorie exact:** `authenticationBasicType` op de
+     `enewable`-VPN staat op `"radius"` (met een lege
+     `authenticationBasicRadiusDomain`, en er is helemaal geen RADIUS-
+     profiel geconfigureerd -- `GET .../authenticationRadiusProfiles`
+     geeft zelfs een `INVALID_PATH`-fout, wat past bij "geen radius-setup
+     aanwezig, maar de VPN denkt toch dat ze radius moet gebruiken"). Alle
+     4 client-usernames (`pub-public`, `pub-eu-ops`, `pub-eu-pii`) staan
+     gewoon op `enabled: true` met de juiste ACL/profile -- dit was dus
+     nooit een probleem met een individuele username. (`enewable-local-
+     bridge` bestaat terecht niet op de lokale broker -- die credential
+     hoort alleen bij de 3 cloud-brokers, als REST-consumer-auth voor de
+     RDP's; een 404 daarop is verwacht, geen fout.) **Gefixt:**
+     `configure-local-broker.sh` PATCHt de VPN nu expliciet naar
+     `authenticationBasicType: "internal"` (was nergens eerder expliciet
+     gezet) -- idempotent, dus voortaan zelfherstellend als dit ooit
+     opnieuw gebeurt. **Nog los te bevestigen, geen actie ondernomen:**
+     het `default` client-profile heeft
+     `allowGuaranteedMsgSendEnabled: false` -- dit zou normaliter geen rol
+     mogen spelen bij message-promotion van een DIRECT-publicatie naar een
+     queue (de publisher blijft op DIRECT QoS; de broker dupliceert
+     intern), maar als na de RADIUS-fix berichten nog steeds niet in de
+     queue belanden, is dit de volgende kandidaat om te checken.
 - **Geen automatische provisioning van alle 4 brokers in één commando.**
   Er is bewust voor losse, leesbare stappen gekozen (console + scripts per
   onderdeel) omdat dat beter uit te leggen en te debuggen is vóór een
@@ -780,11 +803,16 @@ productieklaar systeem:
    die fix loopt de test meteen vast op een nieuw, apart probleem: de
    lokale broker wijst `pub-public` af met "The RADIUS profile is
    shutdown" -- dit gaat mis vóór de RDP-keten zelfs bereikt wordt, dus
-   los van het 503-onderzoek (zie sectie 13, punt 20). **Nu:**
-   `local-broker/semp/diagnose-local-auth.sh` draaien (vanuit Emils eigen
-   terminal, niet de sandbox) om te zien of de `enewable`-VPN per ongeluk
-   op RADIUS-auth staat of een client-username/profiel is uitgeschakeld;
-   pas daarna is de echte end-to-end publish-test opnieuw te proberen.
+   los van het 503-onderzoek (zie sectie 13, punt 20).
+   ~~`diagnose-local-auth.sh` draaien.~~ ✅ -- bevestigt: de
+   `enewable`-VPN stond op `authenticationBasicType: "radius"` zonder
+   enig RADIUS-profiel; alle client-usernames waren zelf gewoon
+   `enabled: true`. Gefixt in `configure-local-broker.sh` (PATCHt nu
+   expliciet naar `"internal"`, zie sectie 13, punt 21). **Nu:**
+   `local-broker/semp/configure-local-broker.sh` opnieuw draaien (idempotent,
+   veilig), dan de echte end-to-end publish-test
+   (`demo-apps/stm-public/publish-public.sh`) en meteen daarna
+   `local-broker/semp/diagnose-rdp.sh` herhalen.
 5. Eerste end-to-end testronde volgens sectie 12: publiceren met
    stm/python/sdkperf en in de Solace Cloud console van de DOELBROKER
    controleren dat het bericht op dezelfde topic aankomt, en nergens

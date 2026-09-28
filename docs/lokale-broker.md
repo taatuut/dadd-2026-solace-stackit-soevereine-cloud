@@ -217,6 +217,22 @@ alle 4 client-usernames se enabled-status. Moet Emil vanuit zijn eigen
 terminal draaien (niet de sandbox -- die kan `localhost:8080` niet
 bereiken). Zie `PLAN.md` sectie 13, punt 20.
 
+**✅ Gefixt: de VPN stond op RADIUS-auth zonder RADIUS-profiel.**
+`diagnose-local-auth.sh` bevestigde het vermoeden exact:
+`authenticationBasicType` op de `enewable`-VPN stond op `"radius"`, met
+een lege `authenticationBasicRadiusDomain` en zonder enig geconfigureerd
+RADIUS-profiel (`GET .../authenticationRadiusProfiles` gaf zelfs een
+`INVALID_PATH`-fout). Alle 4 client-usernames zelf waren gewoon
+`enabled: true` met de juiste ACL/profile -- dit was dus nooit een
+individuele-username-probleem. `configure-local-broker.sh` PATCHt de VPN
+nu expliciet naar `authenticationBasicType: "internal"`, idempotent, dus
+zelfherstellend als dit ooit opnieuw gebeurt. Nog niet bevestigd (geen
+actie nodig tot het misgaat): het `default` client-profile heeft
+`allowGuaranteedMsgSendEnabled: false` -- zou geen rol moeten spelen bij
+message-promotion van een DIRECT-publicatie, maar is de volgende
+kandidaat als berichten na deze fix nog steeds niet in de queue
+belanden. Zie `PLAN.md` sectie 13, punt 21.
+
 **Gefixt (28/09/2026): `stm publish` bestaat niet.** De geïnstalleerde
 Solace Try-Me CLI (v1.0.0) heeft geen `publish`-subcommando -- de juiste
 is `stm send` (zelfde vlaggen). Gefixt in

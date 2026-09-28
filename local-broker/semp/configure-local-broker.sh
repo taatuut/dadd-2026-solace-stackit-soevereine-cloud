@@ -66,6 +66,16 @@ semp POST "/msgVpns" "{\"msgVpnName\":\"${VPN}\",\"enabled\":true,\"maxMsgSpoolU
 # listen port to be configured first (SEMP error 89), which we'd otherwise
 # have to wire up in docker-run.sh for no benefit.
 semp PATCH "/msgVpns/${VPN}" '{"serviceSmfPlainTextEnabled":true,"serviceWebPlainTextEnabled":true}'
+# FIX (28/09/2026): diagnose-local-auth.sh found this VPN's
+# authenticationBasicType set to "radius" (with no usable RADIUS profile),
+# which makes the broker reject EVERY client-username's basic-auth login
+# with "The RADIUS profile is shutdown", regardless of that username's own
+# password/enabled state. It is unclear how it got set that way -- this
+# script never set it explicitly before this fix -- so force it back to
+# "internal" (the normal default for basic-auth client-usernames like
+# pub-public/pub-eu-ops/pub-eu-pii) every time this script runs, so this
+# can't silently regress again.
+semp PATCH "/msgVpns/${VPN}" '{"authenticationBasicEnabled":true,"authenticationBasicType":"internal"}'
 
 echo "== 2. Scoped publisher client-usernames + ACL profiles =="
 # Deliberately NOT using bash associative arrays (declare -A) here: macOS
