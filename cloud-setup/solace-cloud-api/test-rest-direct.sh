@@ -5,20 +5,23 @@
 # own SEMP monitor data only exposes the terse
 # "lastFailureReason": "Service Unavailable" for a failing queue-binding --
 # it does not show the actual HTTP status line or response body the cloud
-# broker sent back. A direct curl call surfaces both, which should say
-# definitively whether this is (a) REST-incoming disabled on the VPN
-# (typically a 503 with a specific body, or connection refused if the
-# service-level protocol itself isn't provisioned), (b) an auth problem
-# (401/403), (c) something else entirely.
+# broker sent back.
 #
-# WHY THIS SCRIPT EXISTS (28/09/2026): after configure-rdp-export.sh ran
-# clean (0 WARN) and diagnose-rdp.sh confirmed the REST-consumer's
-# underlying connection is healthy and the queue's topic subscription is
-# present, the queue-binding itself still fails with HTTP 503 "Service
-# Unavailable" on every re-run of diagnose-rdp.sh -- including after
-# enable-rest-on-cloud-vpns.sh was expected to rule out "REST-incoming not
-# enabled" as the cause. This script gets the real HTTP response directly,
-# instead of continuing to guess from the RDP's internal state.
+# RESULT (Emil, 28/09/2026): all 3 cloud brokers returned HTTP 200 OK to a
+# direct curl POST with real content -- so REST-incoming, http-basic auth,
+# host:port and topic-from-path construction are all confirmed working,
+# independently of the RDP. This rules out those causes for the RDP's
+# persistent 503. The mystery deepens: local-broker/semp/diagnose-rdp.sh's
+# REST-consumer counters (httpRequestTxMsgCount etc.) are all 0, meaning
+# the RDP's consumer has never actually sent a real message POST -- so the
+# "Service Unavailable" the queue-binding reports is most likely NOT from
+# a failed real-message delivery (there hasn't been one yet), but from
+# some other RDP-internal readiness/probe step. See PLAN.md section 13,
+# item 18. Next step: an actual end-to-end publish test (see
+# demo-apps/stm-public/publish-public.sh), then re-check diagnose-rdp.sh's
+# REST-consumer counters and the queue's spooledMsgCount/msgSpoolUsage to
+# see whether a REAL message actually gets captured and delivered, versus
+# what the RDP's Down/Up status alone says.
 #
 # This script must be run by Emil, not the assistant: this session's
 # network cannot reach *.messaging.solace.cloud -- confirmed blocked
@@ -29,10 +32,16 @@
 # Sends one harmless test message per cloud broker on a topic under the
 # matching enewable/* subtree (so if it succeeds, the message also lands
 # in the matching queue -- safe, and useful to see in Broker Manager too).
+#
+# Output goes to <repo-root>/output/test-rest-direct.txt (gitignored, same
+# convention as diagnose-rdp.sh), AND is still printed to the console.
 
 set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ENV_FILE="${SCRIPT_DIR}/../../local-broker/.env"
+REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
+OUT_DIR="${REPO_ROOT}/output"
+OUT_FILE="${OUT_DIR}/test-rest-direct.txt"
 
 if [[ ! -f "${ENV_FILE}" ]]; then
   echo "Missing ${ENV_FILE}."
@@ -40,6 +49,8 @@ if [[ ! -f "${ENV_FILE}" ]]; then
 fi
 # shellcheck disable=SC1090
 source "${ENV_FILE}"
+
+mkdir -p "${OUT_DIR}"
 
 test_one() {
   local label="$1" host="$2" port="$3" user="$4" pass="$5" topic="$6"
@@ -52,13 +63,12 @@ test_one() {
   echo
 }
 
-test_one "AWS US East"         "${AWS_REMOTE_REST_HOST}"     "${AWS_REMOTE_REST_PORT}"     "${AWS_BRIDGE_USER}"     "${AWS_BRIDGE_PASSWORD}"     "enewable/public/test-direct"
-test_one "Azure West Europe"   "${AZURE_REMOTE_REST_HOST}"   "${AZURE_REMOTE_REST_PORT}"   "${AZURE_BRIDGE_USER}"   "${AZURE_BRIDGE_PASSWORD}"   "enewable/eu/ops/test-direct"
-test_one "STACKIT/GCP-interim" "${STACKIT_REMOTE_REST_HOST}" "${STACKIT_REMOTE_REST_PORT}" "${STACKIT_BRIDGE_USER}" "${STACKIT_BRIDGE_PASSWORD}" "enewable/eu/pii/test-direct"
+{
+  test_one "AWS US East"         "${AWS_REMOTE_REST_HOST}"     "${AWS_REMOTE_REST_PORT}"     "${AWS_BRIDGE_USER}"     "${AWS_BRIDGE_PASSWORD}"     "enewable/public/test-direct"
+  test_one "Azure West Europe"   "${AZURE_REMOTE_REST_HOST}"   "${AZURE_REMOTE_REST_PORT}"   "${AZURE_BRIDGE_USER}"   "${AZURE_BRIDGE_PASSWORD}"   "enewable/eu/ops/test-direct"
+  test_one "STACKIT/GCP-interim" "${STACKIT_REMOTE_REST_HOST}" "${STACKIT_REMOTE_REST_PORT}" "${STACKIT_BRIDGE_USER}" "${STACKIT_BRIDGE_PASSWORD}" "enewable/eu/pii/test-direct"
+} | tee "${OUT_FILE}"
 
 cat <<INFO
-Klaar. Stuur de volledige output (incl. de HTTP-statusregel en eventuele
-response-body per broker) -- dat is veel specifieker dan de RDP's eigen
-"Service Unavailable"-samenvatting en zou het echte 503-antwoord (of iets
-anders, zoals 401/403) moeten tonen.
+Klaar. Output ook geschreven naar: ${OUT_FILE}
 INFO

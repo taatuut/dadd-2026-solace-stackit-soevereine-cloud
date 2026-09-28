@@ -183,6 +183,23 @@ credentials) naar elke cloud-broker se REST-endpoint, zodat de échte
 HTTP-statusregel en responsebody zichtbaar worden in plaats van de RDP se
 samenvatting. Zie `PLAN.md` sectie 13, punt 17.
 
+**✅ Doorbraak (28/09/2026): een directe curl-POST naar alle 3 cloud-brokers
+lukt (`HTTP/1.1 200 OK`)**, met dezelfde host, poort, http-basic
+credentials en topic-uit-pad-constructie als de RDP gebruikt. Dit sluit
+REST-incoming-uitgeschakeld, verkeerde auth, host/poort en topic-mapping
+definitief uit als oorzaak van de 503 -- bevestigd ook via
+`enable-rest-on-cloud-vpns.sh`: op Azure stond `serviceRestIncomingTlsEnabled`
+al op `true` vóórdat de PATCH liep. Belangrijke aanvullende aanwijzing: de
+REST-consumer se eigen HTTP-tellers (`httpRequestTxMsgCount`,
+`httpResponseSuccessRxMsgCount`, etc.) staan voor alle 3 nog op **0** -- er
+is dus nog nooit een échte berichtaflevering geprobeerd. De "Service
+Unavailable" op de queue-binding is daarom waarschijnlijk geen mislukte
+*bericht*-aflevering, maar een RDP-interne gereedheids-/probe-stap.
+**Vervolgstap:** een echte end-to-end publish-test (`demo-apps/
+stm-public/publish-public.sh`), dan `diagnose-rdp.sh` opnieuw om te
+checken of het bericht in de queue landt en de tellers bewegen. Zie
+`PLAN.md` sectie 13, punt 18.
+
 **Opgeruimd (28/09/2026):** de 3 oude bridge-objecten
 (`bridge-to-aws/azure/stackit`), de reciprocal-bridge-testopstelling
 (`sub-aws`, `bridge-from-enewable` op AWS) en de bijbehorende scripts

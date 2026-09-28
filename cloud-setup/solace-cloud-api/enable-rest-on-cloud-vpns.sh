@@ -14,12 +14,23 @@
 # succeeds, but the cloud broker rejects the actual POST. The leading
 # theory (see local-broker/.env.example's long-standing warning that REST
 # is "not always enabled by default like SMF/Web-messaging"): the target
-# Message VPN's REST-incoming service is simply switched off. A 503 at
-# this specific point (connection succeeds, request rejected) is
-# consistent with that, though not 100% conclusive -- if enabling it does
-# NOT fix the RDPs, look at other 503 causes (client-profile REST
-# permissions, VPN-level spool/shutdown state) instead of assuming this
-# was the fix.
+# Message VPN's REST-incoming service is simply switched off.
+#
+# RESULT (Emil, 28/09/2026): on Azure, serviceRestIncomingTlsEnabled was
+# already "true" BEFORE this script's PATCH ran -- so this was NOT the
+# cause there, and is unlikely to be the cause on AWS/STACKIT either
+# (provisioned the same way). A direct curl POST to all 3 cloud brokers
+# (see test-rest-direct.sh) got HTTP 200 OK from all 3 -- REST-incoming,
+# auth and topic/path construction all check out independently of the
+# RDP. The 503 is therefore NOT explained by this script; see PLAN.md
+# section 13, item 18 for the current theory (the RDP's queue-binding
+# counters show zero real POST attempts ever, so "Service Unavailable"
+# is most likely from some RDP-internal readiness/probe step, not a
+# failed real-message delivery -- next step is an actual end-to-end
+# publish test, see demo-apps/stm-public/publish-public.sh).
+#
+# This script is still useful to keep around (idempotent, harmless to
+# re-run) -- run it again any time REST-incoming state needs rechecking.
 #
 # This script must be run by Emil, not the assistant: this session's
 # network cannot reach any *_SEMP_HOST (mr-connection-*.messaging.
@@ -27,10 +38,18 @@
 #
 # Usage: ./enable-rest-on-cloud-vpns.sh
 # Requires: curl, and a populated ../../local-broker/.env
+#
+# Output goes to <repo-root>/output/enable-rest-on-cloud-vpns.txt
+# (gitignored, same convention as local-broker/semp/diagnose-rdp.sh --
+# SEMP responses can echo back hostnames/usernames from .env), AND is
+# still printed to the console as before.
 
 set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ENV_FILE="${SCRIPT_DIR}/../../local-broker/.env"
+REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
+OUT_DIR="${REPO_ROOT}/output"
+OUT_FILE="${OUT_DIR}/enable-rest-on-cloud-vpns.txt"
 
 if [[ ! -f "${ENV_FILE}" ]]; then
   echo "Missing ${ENV_FILE}."
@@ -38,6 +57,8 @@ if [[ ! -f "${ENV_FILE}" ]]; then
 fi
 # shellcheck disable=SC1090
 source "${ENV_FILE}"
+
+mkdir -p "${OUT_DIR}"
 
 pp() {
   if command -v python3 >/dev/null 2>&1; then
@@ -67,15 +88,13 @@ check_and_enable() {
   echo
 }
 
-check_and_enable "AWS US East"          "${AWS_SEMP_HOST}"     "${AWS_SEMP_ADMIN_USER}"     "${AWS_SEMP_ADMIN_PASSWORD}"     "${AWS_REMOTE_VPN}"
-check_and_enable "Azure West Europe"    "${AZURE_SEMP_HOST}"   "${AZURE_SEMP_ADMIN_USER}"   "${AZURE_SEMP_ADMIN_PASSWORD}"   "${AZURE_REMOTE_VPN}"
-check_and_enable "STACKIT/GCP-interim"  "${STACKIT_SEMP_HOST}" "${STACKIT_SEMP_ADMIN_USER}" "${STACKIT_SEMP_ADMIN_PASSWORD}" "${STACKIT_REMOTE_VPN}"
+{
+  check_and_enable "AWS US East"          "${AWS_SEMP_HOST}"     "${AWS_SEMP_ADMIN_USER}"     "${AWS_SEMP_ADMIN_PASSWORD}"     "${AWS_REMOTE_VPN}"
+  check_and_enable "Azure West Europe"    "${AZURE_SEMP_HOST}"   "${AZURE_SEMP_ADMIN_USER}"   "${AZURE_SEMP_ADMIN_PASSWORD}"   "${AZURE_REMOTE_VPN}"
+  check_and_enable "STACKIT/GCP-interim"  "${STACKIT_SEMP_HOST}" "${STACKIT_SEMP_ADMIN_USER}" "${STACKIT_SEMP_ADMIN_PASSWORD}" "${STACKIT_REMOTE_VPN}"
+} | tee "${OUT_FILE}"
 
 cat <<INFO
 
-Klaar. Draai nu ./local-broker/semp/diagnose-rdp.sh nogmaals -- als dit de
-oorzaak was, moet de queue-binding se "lastFailureReason" veranderen (niet
-meer "Service Unavailable") en zou de RDP zelf "up": true moeten tonen.
-Zo niet: kijk naar andere 503-oorzaken (client-profile REST-rechten,
-VPN-spool/shutdown-status) in plaats van aan te nemen dat dit de fix was.
+Klaar. Output ook geschreven naar: ${OUT_FILE}
 INFO

@@ -17,7 +17,7 @@ alleen wat gepland was.
 | Fase 3 -- AWS US East | ✅ Aangemaakt | Service `ez-dadd-2026-eks-us-east-1a`, zie [`cloud-setup/aws-us-east/README.md`](cloud-setup/aws-us-east/README.md) en `screenshots/AWS/` |
 | Fase 3 -- Azure West Europe | ✅ Aangemaakt | Service `ez-dadd-2026-aks-westeurope`, zie [`cloud-setup/azure-west-europe/README.md`](cloud-setup/azure-west-europe/README.md) en `screenshots/Azure/` |
 | Fase 3 -- STACKIT / GCP-interim | ✅ Aangemaakt | Service `ez-dadd-2026-STACKIT-gke-gcp-europe-west1-b` (interim op GCP europe-west1), zie [`cloud-setup/gcp-europe-west1-interim/README.md`](cloud-setup/gcp-europe-west1-interim/README.md) en `screenshots/STACKIT-of-GCP-interim/` -- alle 3 cloud-broker services zijn nu aangemaakt |
-| Fase 4 -- Lokale broker + RDP-export | 🔬 503 blijft bestaan na herhaalde diagnose | Derde `diagnose-rdp.sh`-run bevestigt: queue-binding faalt nog steeds met `"lastFailureReason": "Service Unavailable"` (actueel, niet stale). Onduidelijk of `enable-rest-on-cloud-vpns.sh` al gedraaid is. Nieuw script `test-rest-direct.sh` toegevoegd: POST direct (curl) naar elke cloud-broker om de échte HTTP-respons te zien i.p.v. de RDP se samenvatting (zie PLAN.md sectie 13, punt 17) |
+| Fase 4 -- Lokale broker + RDP-export | 🔬 Directe curl-POST werkt (200 OK); RDP-consumer heeft nog nooit een échte POST verstuurd | REST-incoming, auth, host/poort en topic-mapping zijn nu allemaal uitgesloten als oorzaak -- `test-rest-direct.sh` kreeg HTTP 200 van alle 3 brokers. REST-consumer se HTTP-tellers staan op 0: nog geen enkele echte berichtaflevering geprobeerd. Vervolgstap: een echte end-to-end publish-test (zie PLAN.md sectie 13, punt 18) |
 | Fase 5 -- Demo-apps valideren | Nog te doen | |
 | Fase 6 -- Draaiboek + fallback | Nog te doen | |
 
@@ -229,7 +229,7 @@ nooit gecommit -- alleen `.env.example`-bestanden zitten in de repo.)
 | 1 | STACKIT-beschikbaarheid | ✅ Interim-broker op GCP europe-west1 (België) aangemaakt als stand-in; vlak vóór repetitie/DADD controleren of STACKIT al als datacenter-optie zichtbaar is en zo ja, overstappen | Interim: gereed; overstap-check: kort vóór fase 5/6 |
 | 2 | Solace Cloud account | Account + API-token aanmaken (indien nog niet aanwezig) | Week na fase 0 |
 | 3 | Cloud-brokers aanmaken | ✅ Alle 3 gereed: AWS (`ez-dadd-2026-eks-us-east-1a`), Azure (`ez-dadd-2026-aks-westeurope`), STACKIT/GCP-interim (`ez-dadd-2026-STACKIT-gke-gcp-europe-west1-b`); sovereign-node blijft STACKIT zodra GA, tot dan GCP europe-west1 interim | Gereed |
-| 4 | Lokale broker + RDP-export | 🔬 503 "Service Unavailable" blijft bestaan bij herhaalde diagnose, ook na (mogelijk) `enable-rest-on-cloud-vpns.sh`. Directe curl-test nodig om de échte HTTP-respons te zien | Emil draait `test-rest-direct.sh` en bevestigt of `enable-rest-on-cloud-vpns.sh` al gedraaid is |
+| 4 | Lokale broker + RDP-export | 🔬 `test-rest-direct.sh`: alle 3 brokers antwoorden 200 OK op een directe POST. REST-consumer se tellers staan op 0 -- er is nog nooit een échte berichtaflevering geprobeerd, dus de 503 is geen mislukte aflevering | Echte end-to-end publish-test (stm/python/sdkperf), dan diagnose-rdp.sh opnieuw |
 | 5 | Demo-apps valideren | Alle 3 tools end-to-end testen (publiceren → juiste cloud-broker, nergens anders) | Meerdere keren voor DADD, niet pas op de dag zelf |
 | 6 | Draaiboek + fallback-opname | Live-timing oefenen, schermopname als fallback maken | Week vóór DADD |
 | 7 | Op de dag zelf | `docker-run.sh` + `configure-local-broker.sh` (of al draaiend laten staan), demo-apps klaarzetten | Vlak voor het slot |
@@ -651,6 +651,34 @@ productieklaar systeem:
      "Service Unavailable". Emil moet dit draaien (en zeggen of
      `enable-rest-on-cloud-vpns.sh` al gedraaid is, en wat die liet zien
      voor `serviceRestIncomingTlsEnabled` vóór de PATCH).
+  18. **`test-rest-direct.sh` (Emil, 28/09/2026) doorbreekt de aanname: alle
+     3 cloud-brokers accepteren een rechtstreekse curl-POST met `HTTP/1.1
+     200 OK`.** Zelfde host, poort, http-basic credentials en topic-uit-
+     pad-constructie als de RDP gebruikt -- en het werkt gewoon. Dit sluit
+     REST-incoming-uitgeschakeld, verkeerde auth, host/poort en topic-
+     mapping definitief uit als oorzaak van de 503. Bevestigd via
+     `enable-rest-on-cloud-vpns.sh`: op Azure stond
+     `serviceRestIncomingTlsEnabled` al op `true` **vóórdat** de PATCH
+     liep -- dus die theorie (punt 16) was voor Azure al onwaar, en
+     vermoedelijk ook voor AWS/STACKIT (zelfde manier geprovisioned).
+     Cruciale aanvullende aanwijzing, al aanwezig in de ronde-2
+     `diagnose-rdp.txt` maar tot nu niet expliciet benoemd: de
+     REST-consumer se eigen HTTP-tellers
+     (`httpRequestTxMsgCount`, `httpResponseSuccessRxMsgCount`,
+     `httpResponseErrorRxMsgCount`, etc.) staan voor alle 3 op **0** -- de
+     consumer heeft dus nog **nooit** daadwerkelijk een POST voor een
+     echt bericht verstuurd. De "Service Unavailable" op de queue-binding
+     kan dus geen mislukte *bericht*-aflevering zijn (die heeft nog niet
+     plaatsgevonden); het is vermoedelijk een RDP-interne
+     gereedheids-/probe-stap die los staat van échte berichtaflevering.
+     **Vervolgstap, nog niet uitgevoerd:** een echte end-to-end publish-
+     test (bijv. `demo-apps/stm-public/publish-public.sh`) om te zien of
+     een bericht daadwerkelijk in de queue landt (`spooledMsgCount`) en of
+     de REST-consumer se tellers dan van 0 af bewegen -- dat zegt meer dan
+     de RDP se eigen Up/Down-status alleen. `enable-rest-on-cloud-vpns.sh`
+     en `test-rest-direct.sh` zijn beide aangepast om ook naar
+     `output/*.txt` te schrijven (zelfde conventie als `diagnose-rdp.sh`),
+     zodat toekomstige runs makkelijker te delen zijn.
 - **Geen automatische provisioning van alle 4 brokers in één commando.**
   Er is bewust voor losse, leesbare stappen gekozen (console + scripts per
   onderdeel) omdat dat beter uit te leggen en te debuggen is vóór een
@@ -698,12 +726,17 @@ productieklaar systeem:
 4. ~~`*_REMOTE_REST_HOST`/`*_REMOTE_REST_PORT` in `local-broker/.env`
    controleren/invullen en `configure-rdp-export.sh` draaien.~~ ✅ -- alle
    3 RDP's zijn geconfigureerd (0 WARN), maar staan in Broker Manager op
-   "Down" met HTTP 503 "Service Unavailable" op de queue-binding, ook na
-   herhaalde diagnose (zie sectie 13, punten 16-17). **Nu:**
-   `cloud-setup/solace-cloud-api/test-rest-direct.sh` draaien om de échte
-   HTTP-respons van elke cloud-broker rechtstreeks te zien (i.p.v. de RDP
-   se samengevatte foutmelding), en bevestigen of
-   `enable-rest-on-cloud-vpns.sh` al gedraaid is en wat die liet zien.
+   "Down" met HTTP 503 "Service Unavailable" op de queue-binding.
+   ~~`test-rest-direct.sh` draaien.~~ ✅ -- alle 3 cloud-brokers
+   antwoorden `200 OK` op een directe POST; REST-incoming, auth, host/
+   poort en topic-mapping zijn dus uitgesloten als oorzaak. De
+   REST-consumer se eigen HTTP-tellers staan echter nog op 0 -- er is nog
+   nooit een échte berichtaflevering geprobeerd (zie sectie 13, punt 18).
+   **Nu:** een echte end-to-end publish-test draaien (bijv.
+   `demo-apps/stm-public/publish-public.sh`) en meteen daarna
+   `local-broker/semp/diagnose-rdp.sh` herhalen om te zien of het bericht
+   in de queue landt (`spooledMsgCount`) en of de REST-consumer se
+   tellers dan van 0 af bewegen.
 5. Eerste end-to-end testronde volgens sectie 12: publiceren met
    stm/python/sdkperf en in de Solace Cloud console van de DOELBROKER
    controleren dat het bericht op dezelfde topic aankomt, en nergens
