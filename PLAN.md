@@ -12,11 +12,11 @@ alleen wat gepland was.
 
 | Onderdeel | Status | Details |
 |---|---|---|
-| Fase 1 -- STACKIT-beschikbaarheid | Interim gekozen | Uitgangspunt: STACKIT GA komende week; tot dan interim-broker op GCP europe-west1 (nog aan te maken) |
+| Fase 1 -- STACKIT-beschikbaarheid | Interim actief | Uitgangspunt: STACKIT GA komende week; tot dan interim-broker op GCP europe-west1, zie fase 3 |
 | Fase 2 -- Solace Cloud account/token | ✅ Gereed | API-token `dadd-2026` aangemaakt (alle permissies); staat in `token-dadd-2026.txt` (genegeerd door git) |
 | Fase 3 -- AWS US East | ✅ Aangemaakt | Service `ez-dadd-2026-eks-us-east-1a`, zie [`cloud-setup/aws-us-east/README.md`](cloud-setup/aws-us-east/README.md) en `screenshots/AWS/` |
 | Fase 3 -- Azure West Europe | ✅ Aangemaakt | Service `ez-dadd-2026-aks-westeurope`, zie [`cloud-setup/azure-west-europe/README.md`](cloud-setup/azure-west-europe/README.md) en `screenshots/Azure/` |
-| Fase 3 -- STACKIT / GCP-interim | Nog te doen | |
+| Fase 3 -- STACKIT / GCP-interim | ✅ Aangemaakt | Service `ez-dadd-2026-STACKIT-gke-gcp-europe-west1-b` (interim op GCP europe-west1), zie [`cloud-setup/gcp-europe-west1-interim/README.md`](cloud-setup/gcp-europe-west1-interim/README.md) en `screenshots/STACKIT-of-GCP-interim/` -- alle 3 cloud-broker services zijn nu aangemaakt |
 | Fase 4 -- Lokale broker + bridges | Nog te doen | |
 | Fase 5 -- Demo-apps valideren | Nog te doen | |
 | Fase 6 -- Draaiboek + fallback | Nog te doen | |
@@ -170,8 +170,8 @@ Zie [`docs/demo-apps.md`](docs/demo-apps.md) en [`demo-apps/`](demo-apps/)
 |   `-- Plan-van-aanpak-DADD2026-Enewable.docx   <- Word-samenvatting
 |-- screenshots/                    <- bewijs/documentatie van elke aanmaak-stap
 |   |-- AWS/                       (ez-dadd-2026-eks-us-east-1a)
-|   |-- Azure/                     (nog te vullen)
-|   `-- STACKIT-of-GCP-interim/     (nog te vullen)
+|   |-- Azure/                     (ez-dadd-2026-aks-westeurope)
+|   `-- STACKIT-of-GCP-interim/     (ez-dadd-2026-STACKIT-gke-gcp-europe-west1-b)
 |-- topology/
 |   `-- topologie.mmd              <- Mermaid-brondiagram
 |-- local-broker/
@@ -214,9 +214,9 @@ nooit gecommit -- alleen `.env.example`-bestanden zitten in de repo.)
 | Fase | Wat | Actie | Wanneer (t.o.v. DADD 2026) |
 |---|---|---|---|
 | 0 | Dit plan | Reviewen, akkoord geven of bijsturen | Nu |
-| 1 | STACKIT-beschikbaarheid | Interim-broker op GCP europe-west1 (België) aanmaken als stand-in; vlak vóór repetitie/DADD controleren of STACKIT al als datacenter-optie zichtbaar is en zo ja, overstappen | Interim: direct; overstap-check: kort vóór fase 5/6 |
+| 1 | STACKIT-beschikbaarheid | ✅ Interim-broker op GCP europe-west1 (België) aangemaakt als stand-in; vlak vóór repetitie/DADD controleren of STACKIT al als datacenter-optie zichtbaar is en zo ja, overstappen | Interim: gereed; overstap-check: kort vóór fase 5/6 |
 | 2 | Solace Cloud account | Account + API-token aanmaken (indien nog niet aanwezig) | Week na fase 0 |
-| 3 | Cloud-brokers aanmaken | ✅ AWS + Azure gereed (`ez-dadd-2026-eks-us-east-1a`, `ez-dadd-2026-aks-westeurope`); STACKIT/GCP-interim nog te doen; sovereign-node = STACKIT als GA, anders GCP europe-west1 interim | Ruim vóór fase 5 |
+| 3 | Cloud-brokers aanmaken | ✅ Alle 3 gereed: AWS (`ez-dadd-2026-eks-us-east-1a`), Azure (`ez-dadd-2026-aks-westeurope`), STACKIT/GCP-interim (`ez-dadd-2026-STACKIT-gke-gcp-europe-west1-b`); sovereign-node blijft STACKIT zodra GA, tot dan GCP europe-west1 interim | Gereed |
 | 4 | Lokale broker + bridges | `docker-run.sh` + `configure-local-broker.sh` testen, bridges op "Up" krijgen | Direct na fase 3, en daarna herhaaldelijk te oefenen |
 | 5 | Demo-apps valideren | Alle 3 tools end-to-end testen (publiceren → juiste cloud-broker, nergens anders) | Meerdere keren voor DADD, niet pas op de dag zelf |
 | 6 | Draaiboek + fallback-opname | Live-timing oefenen, schermopname als fallback maken | Week vóór DADD |
@@ -317,10 +317,12 @@ productieklaar systeem:
 
 ## 14. Vervolgstappen
 
-1. Dit plan doornemen en de STACKIT-beslissing (sectie 4/10) maken.
-2. `local-broker/semp/configure-local-broker.sh` valideren tegen een echte
-   broker (SEMP API Browser) en waar nodig corrigeren.
-3. De 3 Solace Cloud-services daadwerkelijk aanmaken en `local-broker/.env`
-   invullen.
+1. ~~Dit plan doornemen en de STACKIT-beslissing (sectie 4/10) maken.~~ ✅
+2. ~~De 3 Solace Cloud-services daadwerkelijk aanmaken.~~ ✅ AWS, Azure en
+   STACKIT/GCP-interim staan alle drie op "Running".
+3. `local-broker/semp/configure-local-broker.sh` valideren tegen een echte
+   broker (SEMP API Browser) en waar nodig corrigeren, en `local-broker/.env`
+   volledig invullen (bridge client-usernames per cloud-service ontbreken
+   nog, zie `local-broker/.env.example`).
 4. Eerste end-to-end testronde volgens sectie 12.
 5. Draaiboek en fallback-opname voorbereiden (sectie 11, fase 6).

@@ -33,14 +33,16 @@ datacenter, geen aparte Controlled-Availability/BYOK-procedure meer. Zie
 zodra dat zo is.
 
 **Tot het zover is**, gebruikt de demo een tijdelijke stand-in: een Solace
-Cloud HA-service op **GCP, regio europe-west1 (België)** -- zie
-`../cloud-setup/gcp-europe-west1-interim/README.md`. Functioneel identiek
-voor de demo (zelfde topics, ACL-profiel en bridge-naam
-`bridge-to-stackit`); alleen de fysieke locatie/provider wijkt tijdelijk af
-van het uiteindelijke soevereine doel. Zodra STACKIT GA is, is de overstap
-een kwestie van de echte service aanmaken, de `STACKIT_*`-variabelen in
-`local-broker/.env` bij te werken en `configure-local-broker.sh` opnieuw te
-draaien -- geen wijziging aan topics, ACL's of bridge-configuratie nodig.
+Cloud HA-service op **GCP, regio europe-west1 (België)** -- inmiddels
+aangemaakt als `ez-dadd-2026-STACKIT-gke-gcp-europe-west1-b` (status:
+Running), zie `../cloud-setup/gcp-europe-west1-interim/README.md` voor de
+details. Functioneel identiek voor de demo (zelfde topics, ACL-profiel en
+bridge-naam `bridge-to-stackit`); alleen de fysieke locatie/provider wijkt
+tijdelijk af van het uiteindelijke soevereine doel. Zodra STACKIT GA is, is
+de overstap een kwestie van de echte service aanmaken, de `STACKIT_*`-
+variabelen in `local-broker/.env` bij te werken en
+`configure-local-broker.sh` opnieuw te draaien -- geen wijziging aan topics,
+ACL's of bridge-configuratie nodig.
 
 **Restrisico**: GA-planningen kunnen schuiven. Zolang STACKIT niet
 daadwerkelijk beschikbaar is op het moment van de repetitie/DADD zelf, blijft
@@ -59,14 +61,16 @@ de eenvoudigste weg (minder foutgevoelig, visuele bevestiging van HA-status).
 alternatief voor wie de opzet wil kunnen herhalen/scripten (bijv. na een
 oefensessie de services afbreken en later opnieuw exact zo aanmaken).
 
-## Wat de AWS- en Azure-opzet ons hebben geleerd (bijgewerkt na fase 3)
+## Wat de AWS-, Azure- en GCP-interim-opzet ons hebben geleerd (fase 3 compleet)
 
-AWS US East (`ez-dadd-2026-eks-us-east-1a`) en Azure West Europe
-(`ez-dadd-2026-aks-westeurope`) zijn aangemaakt. Screenshots van elke stap
-staan in [`../screenshots/AWS/`](../screenshots/AWS/) en
-[`../screenshots/Azure/`](../screenshots/Azure/) -- doe dit ook voor
-STACKIT/GCP-interim, dat is prettig traceerbaar voor de repetitie en voor
-dit document.
+Alle drie de cloud-broker services zijn nu aangemaakt: AWS US East
+(`ez-dadd-2026-eks-us-east-1a`), Azure West Europe
+(`ez-dadd-2026-aks-westeurope`) en de STACKIT/GCP-interim-stand-in
+(`ez-dadd-2026-STACKIT-gke-gcp-europe-west1-b`, service-ID `0kc8gh43pg3`,
+regio-code `gke-gcp-europe-west1-b`). Screenshots van elke stap staan in
+[`../screenshots/AWS/`](../screenshots/AWS/),
+[`../screenshots/Azure/`](../screenshots/Azure/) en
+[`../screenshots/STACKIT-of-GCP-interim/`](../screenshots/STACKIT-of-GCP-interim/).
 
 Concrete correcties/aanvullingen op basis daarvan:
 
@@ -85,17 +89,40 @@ Concrete correcties/aanvullingen op basis daarvan:
   (`enewable`, door onszelf gekozen) en elke cloud-service heeft zijn eigen
   (auto-gegenereerde of handmatig gekozen) naam. Een bridge verbindt twee
   VPN's met verschillende namen probleemloos.
-- **Naamgevingsconventie**: gebruik voor Azure en STACKIT/GCP-interim
-  dezelfde stijl als AWS, bijv. `ez-dadd-2026-<provider>-<regio>`, voor
-  herkenbaarheid tussen de 3-4 services.
+- **Naamgevingsconventie**: AWS en Azure volgen `ez-dadd-2026-<provider>-
+  <regio>`. Voor de STACKIT/GCP-interim-service is bewust afgeweken naar
+  `ez-dadd-2026-STACKIT-gke-gcp-europe-west1-b` -- de expliciete `STACKIT`
+  in de naam maakt in de Cluster Manager-lijst en op screenshots direct
+  duidelijk dat dít knooppunt de (tijdelijke) sovereign-bestemming is, wat
+  waardevoller bleek dan strikte naamconsistentie tussen de drie services.
+- **Message VPN-namen worden ook naar kleine letters omgezet.** De
+  servicenaam `ez-dadd-2026-STACKIT-gke-gcp-europe-west1-b` (met
+  hoofdletters `STACKIT`) leverde VPN-naam `ez-dadd-2026-stackit-gke-g` op
+  -- exact 26 tekens, en volledig lowercase. Dit was bij AWS/Azure niet
+  zichtbaar omdat die servicenamen al lowercase waren; ga er dus van uit dat
+  Solace Cloud VPN-namen altijd lowercased, ook als de servicenaam
+  hoofdletters bevat.
 - **Service class**: Enterprise, 250 connecties, 50 GB message spool,
   High Availability (HA) Group (3 brokers: active/standby/monitoring),
   broker-release 10.26 -- gebruik dezelfde class voor Azure en
   STACKIT/GCP-interim voor consistentie, tenzij er een reden is om af te
   wijken.
 - **Connect-tab (exacte host:poort en client-username voor de bridge) is nog
-  niet vastgelegd** -- dat is de volgende sub-stap voor elke service, zie
-  `../local-broker/.env.example`.
+  niet vastgelegd voor AWS en Azure, en voor GCP-interim staat alleen de
+  SMF-hostnaam uit het Status-scherm vast** -- dat is nu de eerstvolgende
+  sub-stap voor alle drie services, zie `../local-broker/.env.example`.
+
+## Concrete gegevens per service
+
+| Service | Service-ID | Regio-code | Message VPN | SMF-hostname |
+|---|---|---|---|---|
+| AWS US East | (zie screenshots) | `eks-us-east-1a` | `ez-dadd-2026-eks-us-east-1` | `mr-connection-07w9t1ah76x.messaging.solace.cloud` |
+| Azure West Europe | `9vxfvj278k6` | `aks-westeurope` | `ez-dadd-2026-aks-westeurop` | `mr-connection-1uv2i5bgjkm.messaging.solace.cloud` |
+| STACKIT/GCP-interim | `0kc8gh43pg3` | `gke-gcp-europe-west1-b` | `ez-dadd-2026-stackit-gke-g` | `mr-connection-gp982rqw5dk.messaging.solace.cloud` |
+
+Alle drie: Enterprise, 250 connecties, 50 GB message spool, HA Group,
+broker-release 10.26 (GCP-interim: 10.26.0.8894-14), aangemaakt door Emil
+Zegers op 28/09/2026.
 
 ## Netwerktoegang: public clusters (bewuste keuze voor deze demo)
 

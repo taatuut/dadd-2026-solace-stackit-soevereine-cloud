@@ -13,39 +13,41 @@ opzet en de overstap zodra STACKIT GA is.
 > Voor de uiteindelijke DADD-presentatie zelf is het uitgangspunt dat STACKIT
 > dan al de echte bestemming is.
 
-## Aanmaken (Solace Cloud console)
+## Status: aangemaakt
 
-Volg dezelfde stappen als bij AWS US East (zie
-[`../aws-us-east/README.md`](../aws-us-east/README.md)) voor consistentie:
+| Veld | Waarde |
+|---|---|
+| Servicenaam | `ez-dadd-2026-STACKIT-gke-gcp-europe-west1-b` |
+| Cloud / regio | Google Cloud, regio-code `gke-gcp-europe-west1-b` (europe-west1, België) |
+| Service class | Enterprise, 250 connecties, 50 GB message spool, HA Group |
+| Broker release | 10.26 (Event Broker Service Version `10.26.0.8894-14`) |
+| Service ID | `0kc8gh43pg3` |
+| Service State | Running |
+| Netwerktoegang | Public cluster (zie `../../docs/cloud-brokers.md`, sectie "Netwerktoegang") |
+| Message VPN | `ez-dadd-2026-stackit-gke-g` (auto-gegenereerd, afgekapt op 26 tekens en lowercased) |
+| SMF-hostname | `mr-connection-gp982rqw5dk.messaging.solace.cloud` |
+| Cluster name | `cluster-gke-gcp-europe-west1-b-4lkzoejsoju` |
+| Aangemaakt door | Emil Zegers (emil.zegers@solace.com), 28/09/2026 02:07:56 |
 
-1. Solace Cloud > Cluster Manager > **+ Create Service**.
-2. Cloud provider: **GCP**, regio: **europe-west1 (België)** -- zoek de
-   exacte Solace-regio-code op in de Region-dropdown (bij AWS bleek dit
-   bijvoorbeeld `eks-us-east-1a` te zijn, niet de kale providernaam).
-3. Service class: **Enterprise**, 250 connecties, HA Group -- zelfde als AWS.
-4. Servicenaam: `ez-dadd-2026-gcp-europe-west1-interim` (of vergelijkbaar).
-5. Message VPN: laat auto-genereren of zet 'm handmatig; hoeft niet
-   "enewable" te zijn (zie `../../docs/cloud-brokers.md`).
-6. Maak screenshots van elke stap in
-   `../../screenshots/STACKIT-of-GCP-interim/`, net als bij AWS.
+Screenshots van elke stap staan in
+[`../../screenshots/STACKIT-of-GCP-interim/`](../../screenshots/STACKIT-of-GCP-interim/).
 
-Alternatief via API: `../solace-cloud-api/create-service.sh
-ez-dadd-2026-gcp-europe-west1-interim <datacenterId-voor-gcp-europe-west1>
-ENTERPRISE_250_HIGHAVAILABILITY`.
+Zie ook [`../../docs/cloud-brokers.md`](../../docs/cloud-brokers.md),
+sectie "Wat de AWS-, Azure- en GCP-interim-opzet ons hebben geleerd", voor
+de bredere lessen (regio-codes, VPN-naamgeving) die bij het aanmaken van
+deze service zijn bevestigd.
 
-## Na het aanmaken
+## Nog te doen voor deze service
 
-1. Noteer SMF-host:port (TLS, verwacht 55443) via de Connect-tab, en de
-   werkelijke Message VPN-naam.
-2. Maak een client-username (bijv. `enewable-local-bridge`) met een
-   ACL-profiel dat **alleen publiceren** toestaat op `enewable/eu/pii/>` --
-   identiek aan wat je straks bij de echte STACKIT-service doet (de bridge
-   levert hier berichten af als publisher, niet als subscriber).
-3. Vul de `STACKIT_*`-variabelen in `../../local-broker/.env` met de
-   gegevens van *deze* interim-service (de variabelenamen blijven
-   `STACKIT_*` omdat dat de uiteindelijke, definitieve bestemming
-   beschrijft; alleen de waarden zijn tijdelijk).
-4. Zodra STACKIT GA is: maak de echte STACKIT eu01-service aan, vervang de
-   waarden van dezelfde `STACKIT_*`-variabelen, herconfigureer de bridge
-   (`configure-local-broker.sh` opnieuw draaien is voldoende), en trek deze
-   interim-service in.
+1. Connect-tab openen en het exacte SMF-poortnummer bevestigen (55443/TLS
+   aangenomen, net als bij AWS en Azure).
+2. Onder Manage > Client Usernames een client-username aanmaken (bijv.
+   `enewable-local-bridge`) met een ACL-profiel dat **alleen publiceren**
+   toestaat op `enewable/eu/pii/>` -- de bridge levert hier berichten af
+   als publisher, niet als subscriber.
+3. De `STACKIT_*`-variabelen in `../../local-broker/.env` invullen met de
+   client-username/wachtwoord van stap 2 (de VPN-naam en SMF-hostname staan
+   al in `../../local-broker/.env.example`).
+4. Zodra STACKIT GA is: de echte STACKIT eu01-service aanmaken, dezelfde
+   `STACKIT_*`-variabelen bijwerken, `configure-local-broker.sh` opnieuw
+   draaien, en deze interim-service afbouwen.
