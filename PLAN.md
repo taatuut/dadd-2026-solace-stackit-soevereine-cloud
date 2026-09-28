@@ -17,7 +17,7 @@ alleen wat gepland was.
 | Fase 3 -- AWS US East | ✅ Aangemaakt | Service `ez-dadd-2026-eks-us-east-1a`, zie [`cloud-setup/aws-us-east/README.md`](cloud-setup/aws-us-east/README.md) en `screenshots/AWS/` |
 | Fase 3 -- Azure West Europe | ✅ Aangemaakt | Service `ez-dadd-2026-aks-westeurope`, zie [`cloud-setup/azure-west-europe/README.md`](cloud-setup/azure-west-europe/README.md) en `screenshots/Azure/` |
 | Fase 3 -- STACKIT / GCP-interim | ✅ Aangemaakt | Service `ez-dadd-2026-STACKIT-gke-gcp-europe-west1-b` (interim op GCP europe-west1), zie [`cloud-setup/gcp-europe-west1-interim/README.md`](cloud-setup/gcp-europe-west1-interim/README.md) en `screenshots/STACKIT-of-GCP-interim/` -- alle 3 cloud-broker services zijn nu aangemaakt |
-| Fase 4 -- Lokale broker + bridges | 🔄 Bezig | Lokale broker draait. `local-broker/.env` ingevuld met SEMP-admin-credentials (username `mission-control-manager` per service, bevestigd). Eerste run van `configure-remote-bridge-users.sh` faalde op een scheme-verdubbelingsbug (`https://https://...`) -- gefixt (accepteert host met of zonder `https://` nu). Emil draait het script opnieuw, daarna `configure-local-broker.sh` |
+| Fase 4 -- Lokale broker + bridges | 🔄 Bezig | ✅ Lokale broker draait. ✅ `enewable-local-bridge` + ACL-profiel (publish-only) succesvol aangemaakt op alle 3 cloud-brokers (AWS/Azure/STACKIT-GCP-interim) via `configure-remote-bridge-users.sh`. 🔄 Nog te doen: `configure-local-broker.sh` draaien (lokale Message VPN, publisher-ACL's, de 3 bridges zelf) en verifiëren dat alle bridges "Up" tonen |
 | Fase 5 -- Demo-apps valideren | Nog te doen | |
 | Fase 6 -- Draaiboek + fallback | Nog te doen | |
 
@@ -223,7 +223,7 @@ nooit gecommit -- alleen `.env.example`-bestanden zitten in de repo.)
 | 1 | STACKIT-beschikbaarheid | ✅ Interim-broker op GCP europe-west1 (België) aangemaakt als stand-in; vlak vóór repetitie/DADD controleren of STACKIT al als datacenter-optie zichtbaar is en zo ja, overstappen | Interim: gereed; overstap-check: kort vóór fase 5/6 |
 | 2 | Solace Cloud account | Account + API-token aanmaken (indien nog niet aanwezig) | Week na fase 0 |
 | 3 | Cloud-brokers aanmaken | ✅ Alle 3 gereed: AWS (`ez-dadd-2026-eks-us-east-1a`), Azure (`ez-dadd-2026-aks-westeurope`), STACKIT/GCP-interim (`ez-dadd-2026-STACKIT-gke-gcp-europe-west1-b`); sovereign-node blijft STACKIT zodra GA, tot dan GCP europe-west1 interim | Gereed |
-| 4 | Lokale broker + bridges | ✅ Broker draait. 🔄 3x bridge-client-username aanmaken op de cloud-brokers (script klaar, door jou te draaien); daarna `configure-local-broker.sh` | Bezig |
+| 4 | Lokale broker + bridges | ✅ Broker draait; ✅ 3x bridge-client-username + ACL aangemaakt op de cloud-brokers; 🔄 `configure-local-broker.sh` nog te draaien (VPN, publisher-ACL's, bridges) | Bezig |
 | 5 | Demo-apps valideren | Alle 3 tools end-to-end testen (publiceren → juiste cloud-broker, nergens anders) | Meerdere keren voor DADD, niet pas op de dag zelf |
 | 6 | Draaiboek + fallback-opname | Live-timing oefenen, schermopname als fallback maken | Week vóór DADD |
 | 7 | Op de dag zelf | `docker-run.sh` + `configure-local-broker.sh` (of al draaiend laten staan), demo-apps klaarzetten | Vlak voor het slot |

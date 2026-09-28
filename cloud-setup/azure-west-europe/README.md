@@ -41,15 +41,18 @@ cosmetisch (een bridge werkt prima met deze naam), maar goed om te weten als
 je een VPN-naam wilt die exact de servicenaam volgt: houd 'm dan onder de
 26 tekens, of zet de VPN-naam handmatig onder "Advanced Connection Options".
 
+## Status: bridge-toegang ingericht
+
+✅ `enewable-local-bridge` + ACL-profiel `acl-enewable-local-bridge`
+(publish-only op `enewable/eu/ops/>`) zijn aangemaakt via
+`../solace-cloud-api/configure-remote-bridge-users.sh` (SEMP-admin-username
+`mission-control-manager`). Credentials staan in `../../local-broker/.env`.
+
 ## Nog te doen voor deze service
 
 1. **Connect-tab**: exacte SMF-poort (verwacht 55443, TLS) bevestigen.
-2. **Manage > Client Usernames**: een client-username aanmaken die de
-   lokale bridge mag gebruiken, bijv. `enewable-local-bridge`, met een
-   ACL-profiel dat **alleen publiceren** toestaat op `enewable/eu/ops/>`
-   (de bridge levert hier berichten af als publisher, niet als subscriber).
-   **Gebruik niet de standaard `solace-cloud-client`-username hiervoor** -- die wordt door de "Try Me!"-tab van deze service gebruikt om tijdens de live demo de binnenkomende berichten te laten zien, en heeft standaard een ruim ACL-profiel. Een nieuwe, dedicated username met een eigen, beperkt ACL-profiel houdt de "Try Me!"-subscriptie werkend en laat bovendien precies zien waar de demo over gaat: gegarandeerde, ACL-afgedwongen scheiding per dataklasse, niet toevallige scheiding via topic-naamgeving.
-   Handmatig via de UI, of automatisch met `../solace-cloud-api/configure-remote-bridge-users.sh` (SEMP v2 Config API van deze broker zelf -- vul eerst `*_SEMP_HOST`/`*_SEMP_ADMIN_USER`/`*_SEMP_ADMIN_PASSWORD` in `../../local-broker/.env` in, te vinden op de Connect-tab; het wachtwoord voor `enewable-local-bridge` staat er al in).
-3. Host, VPN-naam en credentials in `../../local-broker/.env` invullen
-   onder de `AZURE_*`-variabelen (VPN-naam en host mag je nu al invullen,
-   zijn geen geheimen).
+2. ~~Client-username + ACL-profiel aanmaken~~ ✅ gedaan, zie "Status:
+   bridge-toegang ingericht" hierboven.
+3. ~~Host, VPN-naam en credentials in `../../local-broker/.env` invullen~~ ✅
+   gedaan (VPN-naam `ez-dadd-2026-aks-westeurop` en bridge-credentials
+   staan er al in onder de `AZURE_*`-variabelen).

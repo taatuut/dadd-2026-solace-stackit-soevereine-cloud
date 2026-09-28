@@ -37,19 +37,21 @@ sectie "Wat de AWS-, Azure- en GCP-interim-opzet ons hebben geleerd", voor
 de bredere lessen (regio-codes, VPN-naamgeving) die bij het aanmaken van
 deze service zijn bevestigd.
 
+## Status: bridge-toegang ingericht
+
+✅ `enewable-local-bridge` + ACL-profiel `acl-enewable-local-bridge`
+(publish-only op `enewable/eu/pii/>`) zijn aangemaakt via
+`../solace-cloud-api/configure-remote-bridge-users.sh` (SEMP-admin-username
+`mission-control-manager`). Credentials staan in `../../local-broker/.env`.
+
 ## Nog te doen voor deze service
 
 1. Connect-tab openen en het exacte SMF-poortnummer bevestigen (55443/TLS
    aangenomen, net als bij AWS en Azure).
-2. Onder Manage > Client Usernames een client-username aanmaken (bijv.
-   `enewable-local-bridge`) met een ACL-profiel dat **alleen publiceren**
-   toestaat op `enewable/eu/pii/>` -- de bridge levert hier berichten af
-   als publisher, niet als subscriber.
-   **Gebruik niet de standaard `solace-cloud-client`-username hiervoor** -- die wordt door de "Try Me!"-tab van deze service gebruikt om tijdens de live demo de binnenkomende berichten te laten zien, en heeft standaard een ruim ACL-profiel. Een nieuwe, dedicated username met een eigen, beperkt ACL-profiel houdt de "Try Me!"-subscriptie werkend en laat bovendien precies zien waar de demo over gaat: gegarandeerde, ACL-afgedwongen scheiding per dataklasse, niet toevallige scheiding via topic-naamgeving.
-   Handmatig via de UI, of automatisch met `../solace-cloud-api/configure-remote-bridge-users.sh` (SEMP v2 Config API van deze broker zelf -- vul eerst `*_SEMP_HOST`/`*_SEMP_ADMIN_USER`/`*_SEMP_ADMIN_PASSWORD` in `../../local-broker/.env` in, te vinden op de Connect-tab; het wachtwoord voor `enewable-local-bridge` staat er al in).
-3. De `STACKIT_*`-variabelen in `../../local-broker/.env` invullen met de
-   client-username/wachtwoord van stap 2 (de VPN-naam en SMF-hostname staan
-   al in `../../local-broker/.env.example`).
+2. ~~Client-username + ACL-profiel aanmaken~~ ✅ gedaan, zie "Status:
+   bridge-toegang ingericht" hierboven.
+3. ~~De `STACKIT_*`-variabelen in `../../local-broker/.env` invullen~~ ✅
+   gedaan (VPN-naam, SMF-hostname en bridge-credentials staan er al in).
 4. Zodra STACKIT GA is: de echte STACKIT eu01-service aanmaken, dezelfde
    `STACKIT_*`-variabelen bijwerken, `configure-local-broker.sh` opnieuw
    draaien, en deze interim-service afbouwen.
