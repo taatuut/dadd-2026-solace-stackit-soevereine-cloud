@@ -831,6 +831,21 @@ productieklaar systeem:
      meetmoment ligt (= continue connect/drop-lus, niet een oude,
      eenmalige waarde). Emil moet dit draaien: eerst een publish-test,
      dan meteen `./watch-rdp-live.sh`.
+  25. **Eerste run van `watch-rdp-live.sh` leverde alleen `null`-waarden op
+     voor alle consumer/binding-velden (Emil, 28/09/2026) -- een bug in
+     het script zelf, geen nieuwe broker-info.** Oorzaak: de `jq`-filter
+     las de velden van het top-level JSON-object i.p.v. van `.data`
+     (SEMP v2 wrapt alle content onder een `"data"`-key), dus elk veld
+     was per definitie afwezig. De queue-regel (`spooledMsgCount`) werkte
+     wél correct (die filterde al op `.data`) en toont `q-export-public`
+     inmiddels op 30 wachtende berichten -- consistent met het screenshot
+     van Broker Manager. **Gefixt:** filter aangepast naar
+     `.data | {up, uptime, ...}`. Omdat er al 30 berichten in de
+     AWS-queue liggen (over meerdere retry-cycli heen, gezien
+     `retryDelay: 3`), hoeft Emil niet opnieuw te publiceren -- gewoon
+     `./watch-rdp-live.sh` nogmaals draaien is genoeg om punt 24's
+     hypothese (`"Peer TCP Closed"` op de persistente verbindingspool)
+     te toetsen.
 - **Geen automatische provisioning van alle 4 brokers in één commando.**
   Er is bewust voor losse, leesbare stappen gekozen (console + scripts per
   onderdeel) omdat dat beter uit te leggen en te debuggen is vóór een
@@ -912,9 +927,13 @@ productieklaar systeem:
    dus niet de (enige) oorzaak. Zie sectie 13, punt 24 voor het nieuwe
    spoor (`"lastConnectionFailureReason": "Peer TCP Closed"` op de
    REST-consumer). **Nu:** eerst een publish-test draaien, dan meteen
-   `local-broker/semp/watch-rdp-live.sh` draaien (nieuw, read-only,
-   pollt 30 seconden lang elke 2 seconden) en de output delen -- dit
-   moet laten zien of de HTTP-tellers ooit al is het maar heel even
+   ~~`local-broker/semp/watch-rdp-live.sh` draaien.~~ ✅ (poging 1) --
+   leverde alleen `null`-waarden op door een bug in het script se
+   `jq`-filter (las van het top-level object i.p.v. `.data`); geen
+   nieuwe broker-info. Gefixt (zie sectie 13, punt 25). **Nu:**
+   `watch-rdp-live.sh` nogmaals draaien (geen nieuwe publish-test nodig,
+   er liggen al 30 berichten in `q-export-public`) en de output delen --
+   dit moet laten zien of de HTTP-tellers ooit al is het maar heel even
    bewegen, en of de verbindingen in een continue connect/drop-lus
    zitten.
 5. Eerste end-to-end testronde volgens sectie 12: publiceren met

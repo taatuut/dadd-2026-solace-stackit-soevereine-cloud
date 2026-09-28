@@ -83,7 +83,7 @@ VPN="${LOCAL_MSG_VPN}"
 extract() {
   local json="$1"
   if command -v jq >/dev/null 2>&1; then
-    echo "${json}" | jq -c '{up, uptime, lastFailureReason, lastFailureTime, lastConnectionFailureReason, lastConnectionFailureTime, remoteOutgoingConnectionUpCount, outgoingConnectionCount, httpRequestTxMsgCount, httpResponseSuccessRxMsgCount, httpResponseErrorRxMsgCount} // {}' 2>/dev/null || echo "${json}"
+    echo "${json}" | jq -c '.data | {up, uptime, lastFailureReason, lastFailureTime, lastConnectionFailureReason, lastConnectionFailureTime, remoteOutgoingConnectionUpCount, outgoingConnectionCount, httpRequestTxMsgCount, httpResponseSuccessRxMsgCount, httpResponseErrorRxMsgCount}' 2>/dev/null || echo "${json}"
   elif command -v python3 >/dev/null 2>&1; then
     python3 - "${json}" << 'PY'
 import json, sys
