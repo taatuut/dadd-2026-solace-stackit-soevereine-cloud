@@ -9,6 +9,23 @@ hier alleen complexiteit toe zonder de kernboodschap (soevereine routering)
 te versterken. De drie cloud-brokers zijn wel HA, omdat dat past bij een
 "echt" productiesysteem en bij de eis uit de opdracht.
 
+## Status: draait
+
+De container is gestart met `../local-broker/docker-run.sh` (container-naam
+`enewable-local-broker`, image `solace/solace-pubsub-standard`). Bevestigd
+via Docker Desktop en de SEMP-health-check in het script zelf:
+
+| Endpoint | Adres |
+|---|---|
+| Broker Manager (SEMP) | `http://localhost:8080` (admin/admin) |
+| SMF (messaging) | `tcp://localhost:55554` |
+| Web messaging (stm) | `ws://localhost:8008` |
+| MQTT | `tcp://localhost:1883` |
+| AMQP | `amqp://localhost:5672` |
+
+Volgende sub-stap: `../local-broker/semp/configure-local-broker.sh` draaien
+om de Message VPN, client-usernames/ACL's en de 3 bridges aan te maken.
+
 ## Starten
 
 Zie `../local-broker/docker-run.sh`. Kort samengevat:
