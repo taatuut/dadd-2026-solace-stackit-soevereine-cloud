@@ -200,6 +200,29 @@ stm-public/publish-public.sh`), dan `diagnose-rdp.sh` opnieuw om te
 checken of het bericht in de queue landt en de tellers bewegen. Zie
 `PLAN.md` sectie 13, punt 18.
 
+**⛔ Nieuw, apart probleem (28/09/2026): de lokale broker wijst
+`pub-public` af.** Na het fixen van de stm CLI-syntax (zie hieronder)
+loopt de publish-test meteen vast op de allereerste hop -- stm naar de
+lokale broker over Web Messaging (`ws://localhost:8008`) -- met
+`error: connection failed to the message router / The RADIUS profile is
+shutdown - - check the connection parameters!`. Dit staat los van het
+RDP/503-onderzoek hierboven: het gaat mis vóórdat er ook maar íets bij
+een cloud-broker aankomt. Vermoeden: de `enewable`-VPN se
+`authenticationBasicType` staat op "radius" in plaats van "internal"
+(een vers aangemaakte VPN staat normaal op internal-auth;
+`configure-local-broker.sh` zet dit veld nergens expliciet). Nieuw
+script: `local-broker/semp/diagnose-local-auth.sh` -- checkt de VPN se
+auth-type, eventuele RADIUS-profielen, het client-profile "default", en
+alle 4 client-usernames se enabled-status. Moet Emil vanuit zijn eigen
+terminal draaien (niet de sandbox -- die kan `localhost:8080` niet
+bereiken). Zie `PLAN.md` sectie 13, punt 20.
+
+**Gefixt (28/09/2026): `stm publish` bestaat niet.** De geïnstalleerde
+Solace Try-Me CLI (v1.0.0) heeft geen `publish`-subcommando -- de juiste
+is `stm send` (zelfde vlaggen). Gefixt in
+`demo-apps/stm-public/publish-public.sh` en `stm-public/README.md`. Zie
+`PLAN.md` sectie 13, punt 19.
+
 **Opgeruimd (28/09/2026):** de 3 oude bridge-objecten
 (`bridge-to-aws/azure/stackit`), de reciprocal-bridge-testopstelling
 (`sub-aws`, `bridge-from-enewable` op AWS) en de bijbehorende scripts

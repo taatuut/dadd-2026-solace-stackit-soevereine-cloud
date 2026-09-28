@@ -17,7 +17,7 @@ alleen wat gepland was.
 | Fase 3 -- AWS US East | ✅ Aangemaakt | Service `ez-dadd-2026-eks-us-east-1a`, zie [`cloud-setup/aws-us-east/README.md`](cloud-setup/aws-us-east/README.md) en `screenshots/AWS/` |
 | Fase 3 -- Azure West Europe | ✅ Aangemaakt | Service `ez-dadd-2026-aks-westeurope`, zie [`cloud-setup/azure-west-europe/README.md`](cloud-setup/azure-west-europe/README.md) en `screenshots/Azure/` |
 | Fase 3 -- STACKIT / GCP-interim | ✅ Aangemaakt | Service `ez-dadd-2026-STACKIT-gke-gcp-europe-west1-b` (interim op GCP europe-west1), zie [`cloud-setup/gcp-europe-west1-interim/README.md`](cloud-setup/gcp-europe-west1-interim/README.md) en `screenshots/STACKIT-of-GCP-interim/` -- alle 3 cloud-broker services zijn nu aangemaakt |
-| Fase 4 -- Lokale broker + RDP-export | 🔬 Publish-test gefixt (stm CLI), nog niet opnieuw gedraaid | `stm publish` bestaat niet in stm v1.0.0 (moet `stm send` zijn) -- gefixt in publish-public.sh/README.md. RDP-diagnose staat op: REST-incoming/auth/host/topic uitgesloten, REST-consumer nog 0 echte POSTs (zie PLAN.md sectie 13, punt 19) |
+| Fase 4 -- Lokale broker + RDP-export | 🔬 Nieuw, apart probleem: lokale broker wijst pub-public af ("RADIUS profile is shutdown") | Losstaand van het RDP/503-onderzoek -- gaat mis vóór de RDP zelfs bereikt wordt. Nieuw script diagnose-local-auth.sh checkt VPN-auth-type/client-username-status (zie PLAN.md sectie 13, punt 20) |
 | Fase 5 -- Demo-apps valideren | Nog te doen | |
 | Fase 6 -- Draaiboek + fallback | Nog te doen | |
 
@@ -187,7 +187,8 @@ Zie [`docs/demo-apps.md`](docs/demo-apps.md) en [`demo-apps/`](demo-apps/)
 |   `-- semp/
 |       |-- configure-local-broker.sh
 |       |-- configure-rdp-export.sh          <- queues + REST Delivery Points voor export naar cloud-brokers
-|       `-- diagnose-rdp.sh                  <- read-only: SEMP monitor-data om RDP down-reden te vinden
+|       |-- diagnose-rdp.sh                  <- read-only: SEMP monitor-data om RDP down-reden te vinden
+|       `-- diagnose-local-auth.sh           <- read-only: VPN-auth-type + client-username-status (lokaal)
 |-- cloud-setup/solace-cloud-api/
 |       |-- enable-rest-on-cloud-vpns.sh     <- checkt/zet serviceRestIncomingTlsEnabled aan op elke cloud-VPN
 |       `-- test-rest-direct.sh              <- bypasst de RDP, POST't rechtstreeks naar elke cloud-broker (curl)
@@ -229,7 +230,7 @@ nooit gecommit -- alleen `.env.example`-bestanden zitten in de repo.)
 | 1 | STACKIT-beschikbaarheid | ✅ Interim-broker op GCP europe-west1 (België) aangemaakt als stand-in; vlak vóór repetitie/DADD controleren of STACKIT al als datacenter-optie zichtbaar is en zo ja, overstappen | Interim: gereed; overstap-check: kort vóór fase 5/6 |
 | 2 | Solace Cloud account | Account + API-token aanmaken (indien nog niet aanwezig) | Week na fase 0 |
 | 3 | Cloud-brokers aanmaken | ✅ Alle 3 gereed: AWS (`ez-dadd-2026-eks-us-east-1a`), Azure (`ez-dadd-2026-aks-westeurope`), STACKIT/GCP-interim (`ez-dadd-2026-STACKIT-gke-gcp-europe-west1-b`); sovereign-node blijft STACKIT zodra GA, tot dan GCP europe-west1 interim | Gereed |
-| 4 | Lokale broker + RDP-export | 🔬 Eerste publish-test faalde op de stm CLI zelf (`stm publish` bestaat niet, moet `stm send` zijn) -- gefixt. RDP-diagnose: REST-incoming/auth/host/topic al uitgesloten, REST-consumer nog 0 echte POSTs | Emil draait publish-public.sh opnieuw, dan diagnose-rdp.sh |
+| 4 | Lokale broker + RDP-export | 🔬 Na de stm-fix: lokale broker wijst pub-public af, "The RADIUS profile is shutdown" -- een apart, eerder probleem dan de RDP-503 (gaat mis vóór de RDP bereikt wordt) | Emil draait diagnose-local-auth.sh vanuit eigen terminal |
 | 5 | Demo-apps valideren | Alle 3 tools end-to-end testen (publiceren → juiste cloud-broker, nergens anders) | Meerdere keren voor DADD, niet pas op de dag zelf |
 | 6 | Draaiboek + fallback-opname | Live-timing oefenen, schermopname als fallback maken | Week vóór DADD |
 | 7 | Op de dag zelf | `docker-run.sh` + `configure-local-broker.sh` (of al draaiend laten staan), demo-apps klaarzetten | Vlak voor het slot |
@@ -696,6 +697,30 @@ productieklaar systeem:
      end-to-end test (landt het bericht in de queue, bewegen de
      REST-consumer se tellers van 0 af, komt het aan op AWS) moet Emil nu
      opnieuw draaien.
+  20. **Na de stm-fix loopt de publish-test meteen vast op een NIEUW,
+     apart probleem: de LOKALE broker wijst `pub-public` af** met
+     `error: connection failed to the message router / The RADIUS profile
+     is shutdown - - check the connection parameters!` (Emil,
+     28/09/2026). Dit staat los van het RDP/503-onderzoek (punten 14-19)
+     -- het gaat mis op de allereerste hop, stm -> lokale broker over
+     Web Messaging (`ws://localhost:8008`), vóórdat er ook maar íets bij
+     een cloud-broker aankomt. Verdacht: Solace's eigen error-subcode-
+     documentatie (de JS-clientlibrary waar stm op gebouwd is) kent
+     losse "administratief shutdown"-redenen (`CLIENT_USERNAME_IS_
+     SHUTDOWN`, `BASIC_AUTHENTICATION_IS_SHUTDOWN`), maar "The RADIUS
+     profile is shutdown" hoort specifiek bij een VPN waarvan het
+     basic-auth-type op "radius" staat terwijl er geen werkend RADIUS-
+     profiel is -- een vers aangemaakte Message VPN staat normaal op
+     "internal" auth, dus als dit klopt heeft iets `authenticationBasic
+     Type` op de `enewable`-VPN op "radius" gezet (of eerdere
+     experimenten hebben dat achtergelaten); `configure-local-broker.sh`
+     zet dit veld nergens expliciet, dus het verklaart het probleem ook
+     niet weg. Nieuw diagnostisch script:
+     `local-broker/semp/diagnose-local-auth.sh` (read-only, checkt VPN
+     enabled/basic-auth-type/radius-profiles, client-profile "default",
+     en alle 4 client-usernames se enabled-status) -- moet Emil draaien
+     vanuit zijn eigen terminal (de sandbox van de assistent kan
+     `localhost:8080` niet bereiken, andere VM dan waar Docker draait).
 - **Geen automatische provisioning van alle 4 brokers in één commando.**
   Er is bewust voor losse, leesbare stappen gekozen (console + scripts per
   onderdeel) omdat dat beter uit te leggen en te debuggen is vóór een
@@ -751,11 +776,15 @@ productieklaar systeem:
    nooit een échte berichtaflevering geprobeerd (zie sectie 13, punt 18).
    Eerste poging tot een echte publish-test liep vast op de stm CLI zelf
    (`stm publish` bestaat niet, moet `stm send` zijn) -- gefixt in
-   `demo-apps/stm-public/publish-public.sh` (zie sectie 13, punt 19).
-   **Nu:** `demo-apps/stm-public/publish-public.sh` opnieuw draaien en
-   meteen daarna `local-broker/semp/diagnose-rdp.sh` herhalen om te zien
-   of het bericht in de queue landt (`spooledMsgCount`) en of de
-   REST-consumer se tellers dan van 0 af bewegen.
+   `demo-apps/stm-public/publish-public.sh` (zie sectie 13, punt 19). Na
+   die fix loopt de test meteen vast op een nieuw, apart probleem: de
+   lokale broker wijst `pub-public` af met "The RADIUS profile is
+   shutdown" -- dit gaat mis vóór de RDP-keten zelfs bereikt wordt, dus
+   los van het 503-onderzoek (zie sectie 13, punt 20). **Nu:**
+   `local-broker/semp/diagnose-local-auth.sh` draaien (vanuit Emils eigen
+   terminal, niet de sandbox) om te zien of de `enewable`-VPN per ongeluk
+   op RADIUS-auth staat of een client-username/profiel is uitgeschakeld;
+   pas daarna is de echte end-to-end publish-test opnieuw te proberen.
 5. Eerste end-to-end testronde volgens sectie 12: publiceren met
    stm/python/sdkperf en in de Solace Cloud console van de DOELBROKER
    controleren dat het bericht op dezelfde topic aankomt, en nergens
