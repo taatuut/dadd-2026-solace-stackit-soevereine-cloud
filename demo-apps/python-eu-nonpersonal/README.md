@@ -27,11 +27,14 @@ Publiceert, in volgorde: publiek (`enewable/public/market/price/<type>/
 <market>`, als `pub-public`) -> niet-persoonlijk EU
 (`enewable/eu/ops/grid/load/<type>/<postcodeArea>`, als `pub-eu-ops`) ->
 gevoelige PII (`enewable/eu/pii/meter/reading/<customerId>`, als
-`pub-eu-pii`), elk 20 berichten. Anders dan `stm`/SDKPerf (die een
-statisch JSON-bestand lezen) bouwt dit script de topic per verstuurd
-bericht opnieuw op, want `postcodeArea` en `customerId` rouleren hier per
-bericht (bijv. `enewable/eu/pii/meter/reading/ENW-NL-000917` op het ene
-bericht, `.../ENW-NL-002203` op het volgende). Beperk tot één klasse met
+`pub-eu-pii`), elk 20 berichten. Anders dan `stm`/SDKPerf (die
+`eu-ops`/`eu-pii` uit een statisch JSON-bestand lezen) bouwt dit script
+de topic per verstuurd bericht opnieuw op, want de veldwaarden rouleren
+hier per bericht: `type`/`market` voor publiek (3 types x 5 markten,
+bijv. `.../price/intraday-price/BE`), `postcodeArea` voor eu-ops,
+`customerId` voor eu-pii (bijv.
+`enewable/eu/pii/meter/reading/ENW-NL-000917` op het ene bericht,
+`.../ENW-NL-002203` op het volgende). Beperk tot één klasse met
 `--class`:
 
 ```bash

@@ -55,6 +55,17 @@ draagt de hoofdboodschap al. Totaal ruim binnen de 4 minuten die de
 presentatie zelf voor de live demo reserveert (zie de sprekersnotities bij
 slide 23 van de deck).
 
+**Let op de publiek-klasse** (sinds de dynamische `type`/`market`-variatie,
+zie `../demo-apps/README.md`): die roept `stm`/`sdkperf_java.sh` nu COUNT
+keer los aan (één bericht per keer) in plaats van één batch-aanroep, dus
+de default COUNT (10 voor stm, 20 voor SDKPerf) kan op het podium langer
+duren dan de 60-90s-inschatting hierboven, vooral bij SDKPerf (JVM-
+opstarttijd per aanroep). Gebruik `--class public 5` (of een vergelijkbaar
+laag getal) voor de publiek-klasse tijdens de live demo om dit
+voorspelbaar kort te houden -- 5 berichten laat, dankzij de willekeurige
+keuze uit 3 types en 5 markten, meestal al meerdere verschillende
+combinaties zien.
+
 ## Fallback
 
 Zoals de presentatie zelf ook aanraadt voor de eigen demo: neem vooraf een

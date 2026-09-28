@@ -53,6 +53,11 @@ from solace.messaging.config.solace_properties import (
 )
 from solace.messaging.resources.topic import Topic
 
+# 3 realistic electricity-market price types and the 5 markets Emil asked
+# for -- deliberately small, fixed lists (not exhaustive) so a short demo
+# run visibly cycles through more than one value of each.
+PRICE_TYPES = ["day-ahead-price", "intraday-price", "imbalance-price"]
+MARKETS = ["NL", "BE", "LU", "DE", "FR"]
 POSTCODE_AREAS = ["1000-NL", "3500-NL", "5600-NL", "9700-NL"]
 CUSTOMER_IDS = ["ENW-NL-000482", "ENW-NL-000917", "ENW-NL-002203"]
 
@@ -72,8 +77,8 @@ def load_config() -> dict:
 def make_public_message() -> dict:
     return {
         "source": "enewable-market-feed",
-        "type": "day-ahead-price",
-        "market": "NL",
+        "type": random.choice(PRICE_TYPES),
+        "market": random.choice(MARKETS),
         "currency": "EUR",
         "pricePerMWh": round(random.uniform(40.0, 140.0), 2),
         "classification": "public",

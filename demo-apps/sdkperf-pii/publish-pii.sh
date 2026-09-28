@@ -36,6 +36,17 @@
 # README.md, "Vereisten"), else a plain grep/sed fallback for these flat,
 # single-level JSON files.
 #
+# The "public" class additionally VARIES "type" and "market" per message
+# (TYPES_PUBLIC/MARKETS_PUBLIC below, picked at random per message) --
+# public.json is only the base template; render_payload() overrides those
+# 2 fields per message before publishing. This means "public" publishes
+# COUNT separate messages one at a time (COUNT sdkperf_java.sh
+# invocations), instead of one "-mn=N" batch call like eu-ops/eu-pii still
+# do -- noticeably slower per message (JVM startup each time), but needed
+# to get real variety per message rather than repeating one fixed
+# combination. Lower COUNT (e.g. "5") for a quicker pass if demo time is
+# tight; eu-ops/eu-pii are unaffected and stay fast/batched.
+#
 # Usage: ./publish-pii.sh [--class public|eu-ops|eu-pii] [COUNT]
 #   --class   Restrict to a single data class (default: all 3, in order:
 #             public, eu-ops, eu-pii).
@@ -70,6 +81,37 @@ json_field() {
   fi
 }
 
+# 3 realistic electricity-market price types and the 5 markets Emil asked
+# for -- deliberately small, fixed lists (not exhaustive) so a short demo
+# run visibly cycles through more than one value of each.
+TYPES_PUBLIC=(day-ahead-price intraday-price imbalance-price)
+MARKETS_PUBLIC=(NL BE LU DE FR)
+
+render_payload() {
+  # render_payload BASE_FILE OUT_FILE KEY1 VAL1 [KEY2 VAL2 ...] -- copies
+  # BASE_FILE to OUT_FILE with the given top-level string fields
+  # overridden. Uses jq if available; otherwise a plain sed substitution
+  # (these payload files are flat, one field per line, no nesting, so
+  # this simple approach is safe here).
+  local base="$1" out="$2"; shift 2
+  if command -v jq >/dev/null 2>&1; then
+    local args=() filter=""
+    while [[ $# -gt 0 ]]; do
+      args+=(--arg "$1" "$2")
+      if [[ -z "${filter}" ]]; then filter=".$1 = \$$1"; else filter="${filter} | .$1 = \$$1"; fi
+      shift 2
+    done
+    jq "${args[@]}" "${filter}" "${base}" > "${out}"
+  else
+    cp "${base}" "${out}"
+    while [[ $# -gt 0 ]]; do
+      sed -E "s/\"$1\"([[:space:]]*:[[:space:]]*)\"[^\"]*\"/\"$1\"\\1\"$2\"/" "${out}" > "${out}.tmp"
+      mv "${out}.tmp" "${out}"
+      shift 2
+    done
+  fi
+}
+
 CLASS_FILTER=""
 COUNT=20
 
@@ -87,7 +129,7 @@ while [[ $# -gt 0 ]]; do
 done
 
 publish_class() {
-  local class="$1" topic="$2" user="$3" pass="$4" file="$5"
+  local class="$1" topic="$2" user="$3" pass="$4" file="$5" count="${6:-${COUNT}}"
   echo "-- ${class}: ${topic} (as ${user}) --"
   "${SDKPERF_BIN}" \
     -cip="${LOCAL_SMF_HOST}" \
@@ -95,25 +137,34 @@ publish_class() {
     -cp="${pass}" \
     -ptl="${topic}" \
     -pal="${file}" \
-    -mt=direct -mn="${COUNT}" -mr=2 -md
+    -mt=direct -mn="${count}" -mr=2 -md
 }
 
 run_public() {
-  local file="${PAYLOAD_DIR}/public.json" type market
-  type="$(json_field "${file}" type)"; : "${type:=unknown}"
-  market="$(json_field "${file}" market)"; : "${market:=unknown}"
-  publish_class "public" "enewable/public/market/price/${type}/${market}" "${PUB_PUBLIC_USER}" "${PUB_PUBLIC_PASSWORD}" "${file}"
+  local base="${PAYLOAD_DIR}/public.json"
+  local tmp_file type market i
+  tmp_file="$(mktemp "${TMPDIR:-/tmp}/enewable-public.XXXXXX.json")" || return 1
+  for (( i=0; i<COUNT; i++ )); do
+    type="${TYPES_PUBLIC[$(( RANDOM % ${#TYPES_PUBLIC[@]} ))]}"
+    market="${MARKETS_PUBLIC[$(( RANDOM % ${#MARKETS_PUBLIC[@]} ))]}"
+    render_payload "${base}" "${tmp_file}" type "${type}" market "${market}"
+    if ! publish_class "public" "enewable/public/market/price/${type}/${market}" "${PUB_PUBLIC_USER}" "${PUB_PUBLIC_PASSWORD}" "${tmp_file}" 1; then
+      rm -f "${tmp_file}"
+      return 1
+    fi
+  done
+  rm -f "${tmp_file}"
 }
 run_eu_ops() {
   local file="${PAYLOAD_DIR}/eu-ops.json" type postcode_area
   type="$(json_field "${file}" type)"; : "${type:=unknown}"
   postcode_area="$(json_field "${file}" postcodeArea)"; : "${postcode_area:=unknown}"
-  publish_class "eu-ops" "enewable/eu/ops/grid/load/${type}/${postcode_area}" "${PUB_EU_OPS_USER}" "${PUB_EU_OPS_PASSWORD}" "${file}"
+  publish_class "eu-ops" "enewable/eu/ops/grid/load/${type}/${postcode_area}" "${PUB_EU_OPS_USER}" "${PUB_EU_OPS_PASSWORD}" "${file}" "${COUNT}"
 }
 run_eu_pii() {
   local file="${PAYLOAD_DIR}/eu-pii.json" customer_id
   customer_id="$(json_field "${file}" customerId)"; : "${customer_id:=unknown}"
-  publish_class "eu-pii" "enewable/eu/pii/meter/reading/${customer_id}" "${PUB_EU_PII_USER}" "${PUB_EU_PII_PASSWORD}" "${file}"
+  publish_class "eu-pii" "enewable/eu/pii/meter/reading/${customer_id}" "${PUB_EU_PII_USER}" "${PUB_EU_PII_PASSWORD}" "${file}" "${COUNT}"
 }
 
 # Each class is attempted independently -- one class failing (e.g. a wrong

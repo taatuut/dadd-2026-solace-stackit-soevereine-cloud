@@ -26,17 +26,25 @@ alleen een ander topic + credential -- op STACKIT landen.
 
 Binnen die subtree is de topic **dynamisch**: de laatste 1-2 niveaus komen
 uit het bericht zelf, niet uit een vaste string. Bijvoorbeeld:
-`enewable/public/market/price/day-ahead-price/NL` (type + market),
+`enewable/public/market/price/intraday-price/BE` (type + market),
 `enewable/eu/ops/grid/load/grid-load-aggregate/3500-NL` (type +
 postcodeArea), `enewable/eu/pii/meter/reading/ENW-NL-000482`
 (customerId). Dit werkt zonder enige broker-wijziging, want alle
 ACL-exceptions en RDP-export-queue-subscriptions staan al op de hele
 `enewable/<klasse>/>`-subtree, niet op een exacte topic -- extra niveaus
-erbij komt er automatisch in mee. `stm`/`sdkperf` lezen deze velden uit
-hun statische JSON-bestand in `sample-payloads/` (met `jq`, of een
-grep/sed-fallback als `jq` ontbreekt); het Python-script bouwt de topic
-per verstuurd bericht op, omdat `postcodeArea`/`customerId` daar per
-bericht rouleren.
+erbij komt er automatisch in mee.
+
+Voor **eu-ops**/**eu-pii** lezen `stm`/`sdkperf` deze velden uit hun
+statische JSON-bestand in `sample-payloads/` (met `jq`, of een
+grep/sed-fallback als `jq` ontbreekt) -- die blijven per run vast. Voor
+**publiek** variëren `type` en `market` juist WEL per bericht, willekeurig
+gekozen uit 3 types (`day-ahead-price`/`intraday-price`/`imbalance-price`)
+en de 5 markten (`NL`/`BE`/`LU`/`DE`/`FR`) -- alle 3 tools bouwen daarvoor
+per bericht een nieuwe payload/topic op (`stm`/`sdkperf`: COUNT losse
+CLI-aanroepen i.p.v. één batch, dus zichtbaar langzamer voor de
+publiek-klasse; het Python-script deed dit al zo voor zijn eigen
+velden). Het Python-script bouwt de topic voor alle 3 klassen per
+verstuurd bericht op, omdat de veldwaarden daar per bericht rouleren.
 
 Voor elke klasse gebruikt elke tool zijn eigen, met een ACL-profiel
 beperkte client-username (`pub-public`/`pub-eu-ops`/`pub-eu-pii`,

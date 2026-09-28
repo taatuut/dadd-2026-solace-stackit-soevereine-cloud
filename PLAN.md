@@ -1225,6 +1225,51 @@ productieklaar systeem:
      los getest (3x per klasse, bevestigt dat de topic per bericht
      meevarieert met `postcodeArea`/`customerId`). `bash -n` en
      `python -m py_compile` op de definitieve versies: allemaal ok.
+  37. **Publiek-klasse: meer variatie in `<type>`/`<market>` (Emil,
+     28/09/2026, op verzoek).** Punt 36's publiek-topic varieerde nog maar
+     op precies 1 vaste combinatie (`day-ahead-price`/`NL`, uit het
+     statische `public.json`) -- geen echte variatie. Uitgebreid naar 3
+     realistische type-waarden (`day-ahead-price`, `intraday-price`,
+     `imbalance-price`) en de 5 gevraagde markten (`NL`, `BE`, `LU`, `DE`,
+     `FR`), willekeurig gekozen PER BERICHT:
+     - `python-eu-nonpersonal/publisher.py`: nieuwe `PRICE_TYPES`/
+       `MARKETS`-lijsten (zelfde stijl als de al bestaande
+       `POSTCODE_AREAS`/`CUSTOMER_IDS`); `make_public_message()` gebruikt
+       nu `random.choice()` voor `type`/`market` i.p.v. de vaste strings
+       `"day-ahead-price"`/`"NL"`. Geen verdere wijziging nodig -- deze
+       velden vloeiden al automatisch door naar de topic (punt 36's
+       per-bericht topic-opbouw).
+     - `stm-public/publish-public.sh` en `sdkperf-pii/publish-pii.sh`
+       (beide publiceren `eu-ops`/`eu-pii` nog steeds als één STATISCHE
+       batch uit `sample-payloads/*.json`, maar `public` moest nu WEL
+       variëren): nieuwe `TYPES_PUBLIC`/`MARKETS_PUBLIC`-arrays (plain
+       indexed arrays, geen `declare -A`, dus macOS-bash-3.2-veilig) en
+       een nieuwe `render_payload()`-helper die `public.json` per bericht
+       kopieert met `type`/`market` overschreven (via `jq`, of een
+       sed-fallback zonder `jq`). `run_public()` is herschreven van één
+       aanroep naar een lus van COUNT iteraties, elk met een eigen
+       willekeurige `type`/`market`, eigen topic, eigen gerenderd
+       payload-bestand, en `-mn=1`/`--count 1` (nieuwe 6e parameter op
+       `publish_class()`, met de globale `COUNT` als default zodat
+       `eu-ops`/`eu-pii` ongewijzigd blijven werken). **Bewuste
+       performance-afweging**: dit roept `stm`/`sdkperf_java.sh` nu COUNT
+       keer LOS aan voor de publiek-klasse (proces-opstart per bericht)
+       i.p.v. één batch-aanroep -- merkbaar trager dan `eu-ops`/`eu-pii`,
+       vooral bij SDKPerf's JVM-opstarttijd. Gedocumenteerd in
+       `docs/demo-apps.md`'s Timing-sectie: gebruik `--class public 5` (of
+       vergelijkbaar) tijdens de live demo om dit voorspelbaar kort te
+       houden.
+     **Bevestigd via echte dry-runs** (nep-`stm`/nep-`sdkperf_java.sh`-
+     scripts die topic + payload-inhoud teruggeven i.p.v. een echte
+     broker aan te spreken): voor beide bash-scripts getest, ZOWEL met
+     `jq` beschikbaar ALS met een PATH die `jq` daadwerkelijk uitsluit
+     (bevestigd met `command -v jq` vóór en na het beperken van de PATH)
+     -- beide paden geven de juiste, overschreven `type`/`market` in topic
+     én payload terug, over meerdere/alle 3 klassen heen, inclusief
+     `--class`-filtering. `publisher.py`'s `make_public_message()` los
+     getest over 30 aanroepen: alle 3 types en alle 5 markten kwamen voor.
+     `bash -n` en `python -m py_compile` op de definitieve versies:
+     allemaal ok.
 - **Geen automatische provisioning van alle 4 brokers in één commando.**
   Er is bewust voor losse, leesbare stappen gekozen (console + scripts per
   onderdeel) omdat dat beter uit te leggen en te debuggen is vóór een

@@ -26,10 +26,19 @@ Publiceert, in volgorde: publiek (`enewable/public/market/price/<type>/
 <market>`, als `pub-public`) -> niet-persoonlijk EU
 (`enewable/eu/ops/grid/load/<type>/<postcodeArea>`, als `pub-eu-ops`) ->
 gevoelige PII (`enewable/eu/pii/meter/reading/<customerId>`, als
-`pub-eu-pii`). De `<...>`-delen worden bij elke run uit
-`../sample-payloads/<class>.json` gelezen (met `jq`, of een
-grep/sed-fallback als `jq` niet geïnstalleerd is). Beperk tot één klasse
-met `--class`:
+`pub-eu-pii`).
+
+Voor **eu-ops**/**eu-pii** komen de `<...>`-delen uit het vaste
+`../sample-payloads/<class>.json`-bestand (met `jq`, of een
+grep/sed-fallback als `jq` niet geïnstalleerd is). Voor **public**
+variëren `<type>` en `<market>` per bericht -- willekeurig gekozen uit 3
+types (`day-ahead-price`/`intraday-price`/`imbalance-price`) en 5 markten
+(`NL`/`BE`/`LU`/`DE`/`FR`). Dit betekent dat `sdkperf_java.sh` voor de
+public-klasse COUNT keer los wordt aangeroepen (één bericht per keer),
+i.p.v. één `-mn=N`-batch zoals eu-ops/eu-pii nog doen -- dus zichtbaar
+langzamer per bericht (JVM-opstarttijd elke keer), maar nodig voor echte
+variatie. Verlaag `COUNT` (bijv. `5`) voor een snellere pas als de
+demotijd beperkt is. Beperk tot één klasse met `--class`:
 
 ```bash
 ./publish-pii.sh --class eu-pii 20
