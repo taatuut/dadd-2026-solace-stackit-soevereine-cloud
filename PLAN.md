@@ -17,7 +17,7 @@ alleen wat gepland was.
 | Fase 3 -- AWS US East | ✅ Aangemaakt | Service `ez-dadd-2026-eks-us-east-1a`, zie [`cloud-setup/aws-us-east/README.md`](cloud-setup/aws-us-east/README.md) en `screenshots/AWS/` |
 | Fase 3 -- Azure West Europe | ✅ Aangemaakt | Service `ez-dadd-2026-aks-westeurope`, zie [`cloud-setup/azure-west-europe/README.md`](cloud-setup/azure-west-europe/README.md) en `screenshots/Azure/` |
 | Fase 3 -- STACKIT / GCP-interim | ✅ Aangemaakt | Service `ez-dadd-2026-STACKIT-gke-gcp-europe-west1-b` (interim op GCP europe-west1), zie [`cloud-setup/gcp-europe-west1-interim/README.md`](cloud-setup/gcp-europe-west1-interim/README.md) en `screenshots/STACKIT-of-GCP-interim/` -- alle 3 cloud-broker services zijn nu aangemaakt |
-| Fase 4 -- Lokale broker + RDP-export | 🔧 1 scriptbug gefixt na eerste testrun, opnieuw draaien | Queues/RDP's/queue-bindings maakten in de eerste run al schoon aan (0 WARN); de rest-consumers faalden op een verkeerde `authenticationScheme`-waarde (`"basic"` i.p.v. `"http-basic"`), nu gefixt in `configure-rdp-export.sh` (zie PLAN.md sectie 13, punt 13) -- Emil moet het script nogmaals draaien |
+| Fase 4 -- Lokale broker + RDP-export | 🔧 Script draait volledig schoon, Broker Manager-check nodig | `configure-rdp-export.sh` heeft nu 0 WARN (na de authenticationScheme-fix, PLAN.md sectie 13 punt 13) -- nog te bevestigen: queues ontvangen berichten (Bind Count 1) en de 3 RDP's tonen "Up" in Broker Manager |
 | Fase 5 -- Demo-apps valideren | Nog te doen | |
 | Fase 6 -- Draaiboek + fallback | Nog te doen | |
 
@@ -225,7 +225,7 @@ nooit gecommit -- alleen `.env.example`-bestanden zitten in de repo.)
 | 1 | STACKIT-beschikbaarheid | ✅ Interim-broker op GCP europe-west1 (België) aangemaakt als stand-in; vlak vóór repetitie/DADD controleren of STACKIT al als datacenter-optie zichtbaar is en zo ja, overstappen | Interim: gereed; overstap-check: kort vóór fase 5/6 |
 | 2 | Solace Cloud account | Account + API-token aanmaken (indien nog niet aanwezig) | Week na fase 0 |
 | 3 | Cloud-brokers aanmaken | ✅ Alle 3 gereed: AWS (`ez-dadd-2026-eks-us-east-1a`), Azure (`ez-dadd-2026-aks-westeurope`), STACKIT/GCP-interim (`ez-dadd-2026-STACKIT-gke-gcp-europe-west1-b`); sovereign-node blijft STACKIT zodra GA, tot dan GCP europe-west1 interim | Gereed |
-| 4 | Lokale broker + RDP-export | 🔧 Eerste testrun vond 1 scriptbug (authenticationScheme-waarde), nu gefixt. Script opnieuw draaien om de 3 rest-consumers alsnog aan te maken | Opnieuw draaien nu |
+| 4 | Lokale broker + RDP-export | 🔧 Script draait schoon (0 WARN). Broker Manager-check nodig: queues vullen zich, 3 RDP's tonen "Up" | Verificatie nu |
 | 5 | Demo-apps valideren | Alle 3 tools end-to-end testen (publiceren → juiste cloud-broker, nergens anders) | Meerdere keren voor DADD, niet pas op de dag zelf |
 | 6 | Draaiboek + fallback-opname | Live-timing oefenen, schermopname als fallback maken | Week vóór DADD |
 | 7 | Op de dag zelf | `docker-run.sh` + `configure-local-broker.sh` (of al draaiend laten staan), demo-apps klaarzetten | Vlak voor het slot |
@@ -559,7 +559,13 @@ productieklaar systeem:
      bugverslag zelf gedocumenteerd, ook inline in het script). Script is
      idempotent: de 9 al aangemaakte objecten worden overgeslagen
      ("already exists"), alleen de 3 rest-consumers worden nu alsnog
-     aangemaakt bij een herhaalde run.
+     aangemaakt bij een herhaalde run. **Herhaalde run (Emil, 28/09/2026):
+     0 WARN** -- de 9 bestaande objecten correct overgeslagen, de 3
+     rest-consumers nu zonder fout aangemaakt. Nog te bevestigen in Broker
+     Manager: of de queues daadwerkelijk berichten binnenkrijgen (Bind
+     Count 1, message promotion) en of de 3 RDP's status "Up" tonen (TLS +
+     http-basic-auth geslaagd richting elke cloud-broker) -- dat is de
+     eerstvolgende stap.
 - **Geen automatische provisioning van alle 4 brokers in één commando.**
   Er is bewust voor losse, leesbare stappen gekozen (console + scripts per
   onderdeel) omdat dat beter uit te leggen en te debuggen is vóór een
