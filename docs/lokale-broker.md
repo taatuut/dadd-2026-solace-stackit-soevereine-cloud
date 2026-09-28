@@ -66,10 +66,36 @@ wat met een scriptfix op te lossen is -- zie `PLAN.md`, sectie 13, voor de
 opties (tunnel, port-forwarding, of de lokale broker op een cloud-VM in
 plaats van Emils laptop) en de vraag die daar aan Emil is voorgelegd.
 
-De bestaande 3 bridges (`bridge-to-aws` e.a., op de lokale broker) blijven
-vooralsnog ongewijzigd staan (ze doen feitelijk niets schadelijks, alleen
-niets nuttigs voor export) totdat de architectuurbeslissing is genomen.
-Broker Manager toont zelf geen down-reden; `../local-broker/semp/diagnose-bridges.sh`
+**Update: er loopt nu een experiment vóór we naar de zwaardere
+netwerkoplossingen grijpen.** Solace's documentatie beschrijft een
+"bi-directional bridge"-modus waarbij de kant die met een IP/FQDN verbindt
+(onze bestaande, al werkende `bridge-to-aws`) de connectie opent, en de
+ANDERE kant -- geconfigureerd met de peer's **virtual router-name**
+(`v:<naam>`) i.p.v. een adres -- die bestaande connectie "discovert" in
+plaats van zelf een nieuwe te openen. Als dat ook geldt voor een kale
+Message-VPN-bridge (niet bevestigd of dit een DMR-cluster vereist), hoeft de
+lokale broker niet publiek bereikbaar te zijn.
+
+Getest met alleen AWS (om goedkoop te falen als het niet werkt):
+1. Lokale broker's eigen virtual router-name opgevraagd via legacy SEMP:
+   `curl -u admin:admin -H "Content-Type: application/xml" -d '<rpc><show><router-name></router-name></show></rpc>' http://localhost:8080/SEMP`
+   -- resultaat: `3a106d66a729` (de Docker-container-hostname), vastgelegd
+   als `LOCAL_ROUTER_NAME` in `.env`.
+2. `configure-local-broker.sh` sectie 4 (nieuw): maakt `sub-aws` aan, een
+   subscribe-only client-username op de LOKALE broker (ACL: uitsluitend
+   subscriben op `enewable/public/>`), voor de reciprocal bridge om mee in
+   te loggen.
+3. `../cloud-setup/solace-cloud-api/test-reciprocal-bridge-aws.sh` (nieuw):
+   maakt, via AWS's eigen SEMP-admin, een bridge `bridge-from-enewable` OP
+   AWS aan met `remoteMsgVpnLocation` = `v:3a106d66a729`.
+
+Volgende sub-stap: beide scripts draaien en in de Solace Cloud console vóór
+de AWS-service checken of `bridge-from-enewable` Up komt. Werkt dit, dan
+wordt het patroon naar Azure/STACKIT uitgerold; werkt het niet, dan vallen
+we terug op de netwerkbereikbaarheid-opties (tunnel/port-forward/cloud-VM)
+of een lokale relay-app. De bestaande 3 bridges (`bridge-to-aws` e.a.)
+blijven ongewijzigd staan (niet schadelijk) tot dit is opgelost. Broker
+Manager toont zelf geen down-reden; `../local-broker/semp/diagnose-bridges.sh`
 (schrijft naar `output/diagnose-bridges.txt`, gitignored) blijft nuttig om
 dit soort dingen te verifiëren i.p.v. te gokken -- zoals hier ook gebeurd is.
 

@@ -17,7 +17,7 @@ alleen wat gepland was.
 | Fase 3 -- AWS US East | ✅ Aangemaakt | Service `ez-dadd-2026-eks-us-east-1a`, zie [`cloud-setup/aws-us-east/README.md`](cloud-setup/aws-us-east/README.md) en `screenshots/AWS/` |
 | Fase 3 -- Azure West Europe | ✅ Aangemaakt | Service `ez-dadd-2026-aks-westeurope`, zie [`cloud-setup/azure-west-europe/README.md`](cloud-setup/azure-west-europe/README.md) en `screenshots/Azure/` |
 | Fase 3 -- STACKIT / GCP-interim | ✅ Aangemaakt | Service `ez-dadd-2026-STACKIT-gke-gcp-europe-west1-b` (interim op GCP europe-west1), zie [`cloud-setup/gcp-europe-west1-interim/README.md`](cloud-setup/gcp-europe-west1-interim/README.md) en `screenshots/STACKIT-of-GCP-interim/` -- alle 3 cloud-broker services zijn nu aangemaakt |
-| Fase 4 -- Lokale broker + bridges | ⛔ Open architectuurpunt | De bridge-verbinding zelf is gezond (TLS+auth ok via `diagnose-bridges.sh`), maar een bridge kan überhaupt niet lokaal-gepubliceerde berichten exporteren via `remoteSubscription` (dat importeert juist) -- en een verondersteld `localSubscription`-fix bestaat niet (bevestigd door broker + Solace-docs). De enige juiste oplossing is een **wederkerige bridge op elke cloud-broker**, die naar de lokale broker toe verbindt -- wat vereist dat de lokale broker publiek bereikbaar is. Dit is een netwerk-/infra-beslissing, geen scriptfix; vraag aan Emil uitstaand (zie sectie 13) |
+| Fase 4 -- Lokale broker + bridges | 🔬 Experiment lopend | Export via `remoteSubscription` alleen werkt niet; een wederkerige bridge is nodig. Test lopend of die de bestaande AWS-connectie kan hergebruiken via `v:<router-name>`-adressering (geen publieke bereikbaarheid nodig) i.p.v. een nieuwe inbound-verbinding. 🔄 Emil draait `test-reciprocal-bridge-aws.sh` en checkt AWS-console |
 | Fase 5 -- Demo-apps valideren | Nog te doen | |
 | Fase 6 -- Draaiboek + fallback | Nog te doen | |
 
@@ -195,6 +195,7 @@ Zie [`docs/demo-apps.md`](docs/demo-apps.md) en [`demo-apps/`](demo-apps/)
 |   `-- solace-cloud-api/
 |       |-- create-service.sh
 |       |-- configure-remote-bridge-users.sh   <- creates bridge client-usernames + ACL's on the 3 cloud brokers
+|       |-- test-reciprocal-bridge-aws.sh      <- experiment: reciprocal bridge op AWS via v:<router-name>
 |       `-- .env.example
 `-- demo-apps/
     |-- README.md
@@ -224,7 +225,7 @@ nooit gecommit -- alleen `.env.example`-bestanden zitten in de repo.)
 | 1 | STACKIT-beschikbaarheid | ✅ Interim-broker op GCP europe-west1 (België) aangemaakt als stand-in; vlak vóór repetitie/DADD controleren of STACKIT al als datacenter-optie zichtbaar is en zo ja, overstappen | Interim: gereed; overstap-check: kort vóór fase 5/6 |
 | 2 | Solace Cloud account | Account + API-token aanmaken (indien nog niet aanwezig) | Week na fase 0 |
 | 3 | Cloud-brokers aanmaken | ✅ Alle 3 gereed: AWS (`ez-dadd-2026-eks-us-east-1a`), Azure (`ez-dadd-2026-aks-westeurope`), STACKIT/GCP-interim (`ez-dadd-2026-STACKIT-gke-gcp-europe-west1-b`); sovereign-node blijft STACKIT zodra GA, tot dan GCP europe-west1 interim | Gereed |
-| 4 | Lokale broker + bridges | ⛔ Bridge-export via `remoteSubscription` alleen werkt niet -- vereist wederkerige bridge per cloud-broker + publiek bereikbare lokale broker. Wacht op Emils keuze (tunnel / port-forward / cloud-VM) | Geblokkeerd op infra-beslissing |
+| 4 | Lokale broker + bridges | 🔬 Test lopend: wederkerige bridge op AWS via `v:<router-name>`, om te zien of dit de bestaande connectie hergebruikt (geen publieke bereikbaarheid nodig) | Bezig (experiment) |
 | 5 | Demo-apps valideren | Alle 3 tools end-to-end testen (publiceren → juiste cloud-broker, nergens anders) | Meerdere keren voor DADD, niet pas op de dag zelf |
 | 6 | Draaiboek + fallback-opname | Live-timing oefenen, schermopname als fallback maken | Week vóór DADD |
 | 7 | Op de dag zelf | `docker-run.sh` + `configure-local-broker.sh` (of al draaiend laten staan), demo-apps klaarzetten | Vlak voor het slot |
@@ -384,26 +385,49 @@ productieklaar systeem:
      (Message-VPN-Bridges-Overview, Configuring-VPN-Bridges) bevestigt dit:
      er is geen "local subscription"-concept op een bridge. De aanroep is
      verwijderd uit `configure-local-broker.sh`.
-  9. **❗ Open architectuurpunt (blokkerend voor fase 4, nog niet
-     opgelost):** volgens Solace's documentatie is de enige manier om
-     lokaal-gepubliceerde berichten over een bridge naar een remote VPN te
-     exporteren een **tweede, wederkerige bridge**, dit keer
-     geconfigureerd OP DE CLOUD-BROKER zelf (via diens eigen SEMP, waarvoor
-     we al `SEMP_ADMIN_USER`/`PASSWORD` in `.env` hebben), met "enewable"
-     als *diens* remote VPN en een `remoteSubscriptionTopic` die
-     overeenkomt met de gewenste topic-subtree. Zo'n bridge wordt door de
-     cloud-broker actief opgezet NAAR de lokale broker toe -- wat betekent
-     dat de lokale broker's SMF-poort **vanaf het publieke internet
-     bereikbaar** moet zijn (nu alleen `localhost:55554`, achter NAT op
-     Emils Mac). Dit is een netwerk-/infrastructuurbeslissing, geen
-     scriptfix, en is aan Emil voorgelegd (tunnel zoals ngrok/Cloudflare
-     Tunnel, port-forwarding op zijn eigen router, of de lokale broker op
-     een kleine cloud-VM i.p.v. zijn laptop draaien -- elke optie heeft
-     eigen afwegingen rond betrouwbaarheid op de dag zelf, beveiliging, en
-     hoeveel tijd het nog kost vóór DADD). De bestaande 3 bridges op de
-     lokale broker (`bridge-to-aws` e.a.) blijven ongewijzigd staan tot die
-     keuze gemaakt is -- ze zijn niet schadelijk, alleen (nog) niet
-     nuttig voor export.
+  9. **Emils tegenvraag bracht een derde optie naar boven, die nu getest
+     wordt.** Een bridge-verbinding is op transport-niveau een gewone,
+     bidirectionele TCP/TLS-verbinding -- de vraag was: waarom zou de
+     bestaande, al werkende `bridge-to-aws`-verbinding (lokaal dialt uit
+     naar AWS) niet hergebruikt kunnen worden voor de exportkant? Solace's
+     eigen documentatie bevestigt een relevant mechanisme: een
+     "bi-directional bridge" wordt gemaakt door op de ANDERE broker een
+     tweede bridge-object toe te voegen dat naar de peer verwijst via zijn
+     **virtual router-name** (vorm `v:<naam>`, i.p.v. een IP/FQDN) -- de
+     kant die IP/FQDN gebruikt dialt uit, de kant die de router-name
+     gebruikt "discovers the existing connection" (letterlijke quote)
+     i.p.v. zelf een nieuwe verbinding te openen. Als dat ook voor een
+     kale Message-VPN-bridge werkt (niet alleen binnen een DMR-cluster,
+     wat niet met zekerheid uit de documentatie blijkt), zou de
+     cloud-broker kunnen "meeliften" op de connectie die de lokale
+     broker al opende -- zonder dat de lokale broker publiek bereikbaar
+     hoeft te zijn.
+  10. **Experiment opgezet om dit empirisch te testen (alleen AWS, om
+     goedkoop te falen als het niet werkt):** de lokale broker's eigen
+     virtual router-name opgevraagd via legacy SEMP
+     (`<rpc><show><router-name></router-name></show></rpc>` naar
+     `http://localhost:8080/SEMP`) -- dit bleek `3a106d66a729` (herkenbaar
+     als de Docker-container-hostname, niet een DNS-naam), nu vastgelegd
+     als `LOCAL_ROUTER_NAME` in `local-broker/.env(.example)`. Twee nieuwe
+     stukken toegevoegd:
+     - `configure-local-broker.sh` sectie 4: maakt een nieuwe, subscribe-
+       only client-username `sub-aws` aan op de LOKALE broker (ACL:
+       uitsluitend subscriben op `enewable/public/>`, nooit publiceren) --
+       symmetrisch aan de bestaande scoped publishers, maar dan in de
+       andere richting, voor de reciprocal bridge om mee in te loggen.
+     - `cloud-setup/solace-cloud-api/test-reciprocal-bridge-aws.sh`
+       (nieuw): maakt, via AWS's eigen SEMP-adminaccount, een bridge
+       `bridge-from-enewable` OP de AWS-broker aan, met
+       `remoteMsgVpnLocation` = `v:3a106d66a729` (i.p.v. een adres) en
+       `remoteSubscriptionTopic` = `enewable/public/>`.
+     🔄 Emil draait beide scripts en checkt in de Solace Cloud console
+     voor de AWS-service of `bridge-from-enewable` Up komt. Als dat werkt:
+     geen publieke bereikbaarheid nodig, en dit patroon wordt uitgerold
+     naar Azure/STACKIT. Als niet: terugvallen op de eerder besproken
+     opties (tunnel/port-forward/cloud-VM, of een lokale relay-app die
+     zelf, als gewone client, van lokaal naar elke cloud-broker publiceert
+     -- dat vereist sowieso geen publieke bereikbaarheid, ten koste van
+     het "broker doet de routering zelf" verhaal).
 - **Geen automatische provisioning van alle 4 brokers in één commando.**
   Er is bewust voor losse, leesbare stappen gekozen (console + scripts per
   onderdeel) omdat dat beter uit te leggen en te debuggen is vóór een

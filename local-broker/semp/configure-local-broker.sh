@@ -152,6 +152,32 @@ create_bridge "bridge-to-azure"   "${AZURE_REMOTE_VPN}"   "${AZURE_REMOTE_SMF_HO
 # until STACKIT is GA in Solace Cloud -- see ../../cloud-setup/stackit-eu01/README.md
 create_bridge "bridge-to-stackit" "${STACKIT_REMOTE_VPN}" "${STACKIT_REMOTE_SMF_HOST}" "${STACKIT_BRIDGE_USER}" "${STACKIT_BRIDGE_PASSWORD}" "enewable/eu/pii/>"
 
+echo "== 4. TEST: subscribe-only client-username for the AWS reciprocal-bridge experiment =="
+# See PLAN.md section 13 and cloud-setup/solace-cloud-api/test-reciprocal-bridge-aws.sh:
+# this is the client-username AWS's *reciprocal* bridge will log in as, to
+# pull enewable/public/> from us -- symmetric to create_scoped_publisher()
+# above, but subscribe-only (never allowed to publish). If this section's
+# variables aren't filled in yet, it's skipped with a clear message rather
+# than failing the whole run.
+create_scoped_subscriber() {
+  local user="$1" topic="$2" pass="$3"
+  local acl="acl-${user}"
+
+  semp POST "/msgVpns/${VPN}/aclProfiles" \
+    "{\"aclProfileName\":\"${acl}\",\"clientConnectDefaultAction\":\"allow\",\"publishTopicDefaultAction\":\"disallow\",\"subscribeTopicDefaultAction\":\"disallow\"}"
+  semp POST "/msgVpns/${VPN}/aclProfiles/${acl}/subscribeTopicExceptions" \
+    "{\"subscribeTopicExceptionSyntax\":\"smf\",\"subscribeTopicException\":\"${topic}\"}"
+  semp POST "/msgVpns/${VPN}/clientUsernames" \
+    "{\"clientUsername\":\"${user}\",\"password\":\"${pass}\",\"enabled\":true,\"aclProfileName\":\"${acl}\",\"clientProfileName\":\"default\"}"
+  echo "  ${user} -> may only subscribe on ${topic} (never publish)"
+}
+
+if [[ -n "${SUB_AWS_USER:-}" && "${SUB_AWS_USER:-}" != "CHANGEME_"* ]]; then
+  create_scoped_subscriber "${SUB_AWS_USER}" "enewable/public/>" "${SUB_AWS_PASSWORD:-sub-aws-pw}"
+else
+  echo "  SKIPPED -- SUB_AWS_USER not filled in in local-broker/.env yet"
+fi
+
 cat <<INFO
 
 Klaar. Controleer nu in Broker Manager (http://localhost:8080 > VPN 'enewable'
