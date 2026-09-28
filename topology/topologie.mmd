@@ -9,9 +9,9 @@ flowchart LR
         SDK -- "enewable/eu/pii/>" --> L
     end
 
-    L -- "bridge: exporteert\nenewable/public/>" --> AWS
-    L -- "bridge: exporteert\nenewable/eu/ops/>" --> AZ
-    L -- "bridge: exporteert\nenewable/eu/pii/>" --> ST
+    L -- "RDP: queue + REST-export\nenewable/public/>" --> AWS
+    L -- "RDP: queue + REST-export\nenewable/eu/ops/>" --> AZ
+    L -- "RDP: queue + REST-export\nenewable/eu/pii/>" --> ST
 
     subgraph AWS["AWS US East - Solace Cloud HA"]
         AWSVPN[("enewable\nMessage VPN")]

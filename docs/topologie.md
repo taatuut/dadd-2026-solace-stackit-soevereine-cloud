@@ -2,8 +2,10 @@
 
 ## Overzicht
 
-Vier Solace-brokers, drie dataklassen, drie bridges -- elke dataklasse mag
-naar precies één bestemming:
+Vier Solace-brokers, drie dataklassen, drie REST Delivery Points (RDP) --
+elke dataklasse mag naar precies één bestemming. (Eerder onderzocht en
+verlaten: Message VPN Bridges, die alleen kunnen *importeren* van een
+remote broker, niet exporteren -- zie "Waarom RDP's" hieronder.)
 
 ```mermaid
 flowchart LR
@@ -17,9 +19,9 @@ flowchart LR
         SDK -- "enewable/eu/pii/>" --> L
     end
 
-    L -- "bridge: exporteert\nenewable/public/>" --> AWS
-    L -- "bridge: exporteert\nenewable/eu/ops/>" --> AZ
-    L -- "bridge: exporteert\nenewable/eu/pii/>" --> ST
+    L -- "RDP: queue + REST-export\nenewable/public/>" --> AWS
+    L -- "RDP: queue + REST-export\nenewable/eu/ops/>" --> AZ
+    L -- "RDP: queue + REST-export\nenewable/eu/pii/>" --> ST
 
     subgraph AWS["AWS US East - Solace Cloud HA"]
         AWSVPN[("enewable\nMessage VPN")]
@@ -50,34 +52,35 @@ Mermaid-viewer of `mmdc`.)
 
 | # | Broker              | Type                                   | Locatie                | Rol                                  |
 |---|----------------------|-----------------------------------------|--------------------------|----------------------------------------|
-| 1 | Lokaal                | Self-managed software, single-AZ, Docker | Laptop (macOS)           | Bron van alle demo-data, exporteert via 3 bridges |
+| 1 | Lokaal                | Self-managed software, single-AZ, Docker | Laptop (macOS)           | Bron van alle demo-data, exporteert via 3 REST Delivery Points |
 | 2 | AWS US East           | Solace Cloud, HA                         | AWS, US East              | Ontvangt **publieke** data              |
 | 3 | Azure West Europe    | Solace Cloud, HA                         | Azure, West Europe (NL)   | Ontvangt **niet-persoonlijke EU**-data  |
 | 4 | STACKIT eu01          | Sovereign HA (zie open punt hieronder)   | STACKIT, Duitsland        | Ontvangt **gevoelige PII**              |
 
 ## Topic-taxonomie
 
-| Topic-subtree            | Dataklasse            | Voorbeeld                                   | Bridge naar |
+| Topic-subtree            | Dataklasse            | Voorbeeld                                   | RDP naar |
 |----------------------------|------------------------|-----------------------------------------------|-------------|
-| `enewable/public/>`        | Publiek                | Day-ahead energieprijs, publieke weerdata     | AWS         |
-| `enewable/eu/ops/>`        | Niet-persoonlijk, EU    | Geaggregeerde netbelasting per postcodegebied | Azure       |
-| `enewable/eu/pii/>`        | Gevoelige PII           | Individuele slimme-meterstand + klant-ID      | STACKIT     |
+| `enewable/public/>`        | Publiek                | Day-ahead energieprijs, publieke weerdata     | AWS (`rdp-aws`)     |
+| `enewable/eu/ops/>`        | Niet-persoonlijk, EU    | Geaggregeerde netbelasting per postcodegebied | Azure (`rdp-azure`) |
+| `enewable/eu/pii/>`        | Gevoelige PII           | Individuele slimme-meterstand + klant-ID      | STACKIT (`rdp-stackit`) |
 
-Elke bridge moet uitsluitend zijn eigen subtree exporteren, en elke
+Elke queue/RDP-paar moet uitsluitend zijn eigen subtree exporteren, en elke
 publicerende client-username mag (via een ACL-profiel) uitsluitend op zijn
 eigen subtree publiceren -- de dubbele "governed export": eenmaal aan de bron
-(publish-ACL) en eenmaal aan de grens (bridge-subscriptie).
+(publish-ACL) en eenmaal aan de grens (queue-subscriptie/RDP).
 
-**❗ Open punt (zie `PLAN.md` sectie 13 en `../docs/lokale-broker.md`,
-"Open architectuurpunt"):** een bridge's `remoteSubscription` trekt berichten
-van de remote broker naar binnen (import) -- er bestaat geen "local
-subscription" op een bridge om lokaal gepubliceerde berichten naar buiten te
-sturen. Om echt te exporteren is een **tweede, wederkerige bridge nodig, op
-elke cloud-broker zelf**, die vanaf daar naar de lokale broker toe verbindt
-en op de topic-subtree subscribet. Dat vereist dat de lokale broker vanaf het
-publieke internet bereikbaar is (nu alleen `localhost`) -- een netwerkkeuze
-die nog met Emil afgestemd moet worden voordat dit verder geïmplementeerd
-wordt.
+**✅ Opgelost via REST Delivery Points (zie `PLAN.md` sectie 13, punt 11, en
+`../docs/lokale-broker.md`, "Definitieve keuze"):** een Message VPN Bridge's
+`remoteSubscription` trekt berichten van de remote broker naar binnen
+(import), niet naar buiten -- dat bleek de kern van waarom bridges niet
+werkten voor export zonder een publiek bereikbare lokale broker. In plaats
+daarvan gebruikt deze demo nu een **queue per topic-subtree** (vangt de
+lokaal DIRECT gepubliceerde berichten automatisch op via Solace's "message
+promotion") + een **REST Delivery Point** die elke queue naar het REST-
+endpoint van de bijbehorende cloud-broker post, op exact dezelfde topic
+(`postRequestTarget: "/${topic()}"`). Geen publieke bereikbaarheid van de
+lokale broker nodig -- de RDP dialt net als een bridge zelf uit.
 
 ## Interim: STACKIT-knooppunt tijdelijk gemimickt op GCP België
 
@@ -89,14 +92,17 @@ eindpunt wisselt zodra STACKIT GA is. Zie
 `../cloud-setup/gcp-europe-west1-interim/README.md` en
 `../cloud-setup/stackit-eu01/README.md`.
 
-## Waarom bridges en niet "echte" `#noexport`/DMR?
+## Waarom REST Delivery Points en niet "echte" `#noexport`/DMR?
 
 De presentatie noemt `#noexport` als Solace-mechanisme om data fysiek te
 laten blokkeren over Dynamic Message Routing (DMR)-links tussen
-geclusterde brokers. Deze demo gebruikt in plaats daarvan gewone
-**Message VPN Bridges** met topic-scoped `remoteSubscriptions` (nu nog:
-wederkerig op te zetten vanaf elke cloud-broker, zie het open punt hierboven): functioneel
-identiek voor deze demo (data die niet in een subtree zit, kan een bridge
-niet verlaten), maar architecturaal een ander mechanisme dan DMR/`#noexport`.
-Zie `PLAN.md`, sectie "Wat ontbreekt of kan beter" voor de afweging en hoe je
-dit dichter bij de `#noexport`-demonstratie uit de slides zou brengen.
+geclusterde brokers. Deze demo gebruikt in plaats daarvan **queues +
+REST Delivery Points** met topic-scoped subscriptions: functioneel
+identiek voor deze demo (data die niet in een subtree zit, kan een RDP niet
+verlaten, want de bijbehorende queue heeft er geen subscription op), maar
+architecturaal een ander mechanisme dan DMR/`#noexport`. (Message VPN
+Bridges waren het eerst geprobeerde alternatief, maar konden -- zonder een
+publiek bereikbare lokale broker -- alleen importeren, niet exporteren; zie
+`PLAN.md` sectie 13 voor de volledige onderbouwing.) Zie `PLAN.md`, sectie
+"Wat ontbreekt of kan beter" voor de afweging en hoe je dit dichter bij de
+`#noexport`-demonstratie uit de slides zou brengen.

@@ -17,7 +17,7 @@ alleen wat gepland was.
 | Fase 3 -- AWS US East | ✅ Aangemaakt | Service `ez-dadd-2026-eks-us-east-1a`, zie [`cloud-setup/aws-us-east/README.md`](cloud-setup/aws-us-east/README.md) en `screenshots/AWS/` |
 | Fase 3 -- Azure West Europe | ✅ Aangemaakt | Service `ez-dadd-2026-aks-westeurope`, zie [`cloud-setup/azure-west-europe/README.md`](cloud-setup/azure-west-europe/README.md) en `screenshots/Azure/` |
 | Fase 3 -- STACKIT / GCP-interim | ✅ Aangemaakt | Service `ez-dadd-2026-STACKIT-gke-gcp-europe-west1-b` (interim op GCP europe-west1), zie [`cloud-setup/gcp-europe-west1-interim/README.md`](cloud-setup/gcp-europe-west1-interim/README.md) en `screenshots/STACKIT-of-GCP-interim/` -- alle 3 cloud-broker services zijn nu aangemaakt |
-| Fase 4 -- Lokale broker + bridges | ⛔ Router-name-experiment negatief | `bridge-from-enewable` op AWS bleef Down (Establisher: N/A) -- router-name-discovery werkt niet zonder DMR-cluster. Terug naar 2 haalbare routes: lokale broker publiek bereikbaar maken, of een lokale relay-app i.p.v. bridges voor export. Keuze aan Emil |
+| Fase 4 -- Lokale broker + RDP-export | 🔧 Geimplementeerd, testrun nodig | Emil koos "aangepaste optie 2": apps blijven DIRECT publiceren, 3 queues (`q-export-*`) vangen berichten op via Solace message promotion (automatisch, geen appwijziging nodig), 3 REST Delivery Points sturen elke queue native door naar de bijbehorende cloud-broker. Bridges (`bridge-to-*`) blijven ongebruikt staan. Nieuw script `local-broker/semp/configure-rdp-export.sh` -- wacht op Emils testrun + `*_REMOTE_REST_HOST/PORT` bevestiging in `.env` |
 | Fase 5 -- Demo-apps valideren | Nog te doen | |
 | Fase 6 -- Draaiboek + fallback | Nog te doen | |
 
@@ -185,6 +185,7 @@ Zie [`docs/demo-apps.md`](docs/demo-apps.md) en [`demo-apps/`](demo-apps/)
 |   |-- README.md
 |   `-- semp/
 |       |-- configure-local-broker.sh
+|       |-- configure-rdp-export.sh          <- NIEUW: queues + REST Delivery Points voor export naar cloud-brokers
 |       `-- diagnose-bridges.sh              <- read-only: SEMP monitor-data om down-reden te vinden
 |-- cloud-setup/
 |   |-- README.md
@@ -225,7 +226,7 @@ nooit gecommit -- alleen `.env.example`-bestanden zitten in de repo.)
 | 1 | STACKIT-beschikbaarheid | ✅ Interim-broker op GCP europe-west1 (België) aangemaakt als stand-in; vlak vóór repetitie/DADD controleren of STACKIT al als datacenter-optie zichtbaar is en zo ja, overstappen | Interim: gereed; overstap-check: kort vóór fase 5/6 |
 | 2 | Solace Cloud account | Account + API-token aanmaken (indien nog niet aanwezig) | Week na fase 0 |
 | 3 | Cloud-brokers aanmaken | ✅ Alle 3 gereed: AWS (`ez-dadd-2026-eks-us-east-1a`), Azure (`ez-dadd-2026-aks-westeurope`), STACKIT/GCP-interim (`ez-dadd-2026-STACKIT-gke-gcp-europe-west1-b`); sovereign-node blijft STACKIT zodra GA, tot dan GCP europe-west1 interim | Gereed |
-| 4 | Lokale broker + bridges | ⛔ Router-name-experiment negatief (DMR-cluster nodig, buiten scope). Keuze nodig: publieke bereikbaarheid regelen vs. lokale relay-app i.p.v. bridges | Geblokkeerd op keuze |
+| 4 | Lokale broker + RDP-export | 🔧 Aangepaste optie 2 (Emils keuze) geïmplementeerd: queues + REST Delivery Points i.p.v. bridges voor export, apps ongewijzigd. Testrun + validatie door Emil nodig | Testrun nu |
 | 5 | Demo-apps valideren | Alle 3 tools end-to-end testen (publiceren → juiste cloud-broker, nergens anders) | Meerdere keren voor DADD, niet pas op de dag zelf |
 | 6 | Draaiboek + fallback-opname | Live-timing oefenen, schermopname als fallback maken | Week vóór DADD |
 | 7 | Op de dag zelf | `docker-run.sh` + `configure-local-broker.sh` (of al draaiend laten staan), demo-apps klaarzetten | Vlak voor het slot |
@@ -445,6 +446,67 @@ productieklaar systeem:
        cloud-broker via een normale uitgaande verbinding (die al bewezen
        werkt) -- geen publieke bereikbaarheid nodig, wel een architecturele
        afwijking van "de broker doet de routering zelf".
+  11. **Emil koos een derde, betere optie: native REST Delivery Points
+     (RDP) i.p.v. bridges of een relay-app.** Emils voorstel: "app (stm,
+     sdkperf etc) keep publishing to topic. Create queues on localhost
+     that attract messages from relevant topic categories ... Then use
+     these queues as source for RDPs to cloud brokers." Dit combineert het
+     beste van beide eerder afgewogen routes -- geen publieke
+     bereikbaarheid nodig (de RDP dialt zelf uit, net als een bridge doet),
+     én geen relay-app nodig (de broker doet de routering zelf, via een
+     100% SEMP-geconfigureerde, native feature). Twee zaken zijn hierbij
+     uitgezocht en bevestigd vóór implementatie, om niet een derde keer een
+     verkeerd schema te raden (zie punten 7-8 hierboven):
+     - **Werkt dit met DIRECT-berichten, of moeten de demo-apps naar
+       guaranteed/persistent messaging omgezet worden?** Bevestigd via
+       Solace's eigen documentatie
+       (Messaging/Guaranteed-Msg/Topic-Matching-and-Delivery-Modes.htm,
+       "message promotion"): een DIRECT-bericht dat een topic-match heeft
+       met een queue's subscription wordt automatisch door die queue
+       opgevangen -- "No special configuration is required". **Geen
+       appwijziging nodig** -- stm/python/sdkperf blijven ongewijzigd
+       DIRECT publiceren.
+     - **Exacte SEMP v2-attribuutnamen voor `restDeliveryPoints`,
+       `queueBindings`, `restConsumers`, `queues` en
+       `queues/{q}/subscriptions`.** Solace's eigen CLI-documentatie
+       (Services/Managing-RDPs.htm) geeft alleen CLI-syntax, geen
+       REST-attribuutnamen. Gecrosscheckt tegen een werkende Go SEMP-client
+       (`github.com/koverton/semp_client`, struct/JSON-tags) i.p.v. verder
+       te raden: `restDeliveryPointName`/`clientProfileName`/`enabled`
+       (RDP); `queueBindingName`/`postRequestTarget` (queue-binding);
+       `restConsumerName`/`remoteHost`/`remotePort`/`tlsEnabled`/
+       `authenticationScheme`/`authenticationHttpBasicUsername`/
+       `authenticationHttpBasicPassword`/`enabled` (rest-consumer);
+       `queueName`/`accessType`/`permission`/`ingressEnabled`/
+       `egressEnabled` (queue); `subscriptionTopic` (queue-subscription).
+     - **Topic-behoud end-to-end**: Solace's REST-publish-service leest de
+       topic uit het URL-pad van de POST (bevestigd via
+       tutorials.solace.dev/rest-messaging/publish-subscribe: `POST
+       .../solace/samples/rest` publiceert op topic
+       `solace/samples/rest`). De queue-binding gebruikt daarom
+       `"postRequestTarget": "/${topic()}"` -- Solace's
+       substitution-expression-syntax voor "de volledige originele topic"
+       (Messaging/Substitution-Expressions-Overview.htm) -- zodat een
+       bericht op `enewable/public/plant-1/telemetry` lokaal ook op
+       precies die topic op de cloud-broker verschijnt, in plaats van op
+       een vast pad.
+     Geïmplementeerd in het nieuwe `local-broker/semp/configure-rdp-export.sh`:
+     3 queues (`q-export-public`/`q-export-eu-ops`/`q-export-eu-pii`) met
+     topic-subscription, 3 RDP's (`rdp-aws`/`rdp-azure`/`rdp-stackit`) elk
+     met 1 queue-binding en 1 rest-consumer. De rest-consumer hergebruikt de
+     bestaande `enewable-local-bridge`-credentials (al publish-only
+     ACL-gescoped per cloud-broker) -- geen nieuwe secrets nodig. De
+     bridges (`bridge-to-aws/azure/stackit`) uit `configure-local-broker.sh`
+     blijven ongebruikt maar onschadelijk staan (niet opgeruimd, tenzij
+     Emil dat expliciet wil).
+     **Nog open, moet Emil zelf checken/invullen** (geen toegang tot Solace
+     Cloud console vanuit deze sessie): `*_REMOTE_REST_HOST`/
+     `*_REMOTE_REST_PORT` in `local-broker/.env(.example)` zijn ingevuld
+     met de aanname "zelfde hostname als SMF, poort 9443" (Solace Cloud's
+     standaard secure-REST-poort) -- controleer dit op de Connect-tab van
+     elke service (REST-sectie) en **zet het REST-messaging-protocol aan**
+     voor die service als dat nog niet zo is (in tegenstelling tot
+     SMF/Web-messaging staat REST niet altijd standaard aan).
 - **Geen automatische provisioning van alle 4 brokers in één commando.**
   Er is bewust voor losse, leesbare stappen gekozen (console + scripts per
   onderdeel) omdat dat beter uit te leggen en te debuggen is vóór een
@@ -484,11 +546,19 @@ productieklaar systeem:
 1. ~~Dit plan doornemen en de STACKIT-beslissing (sectie 4/10) maken.~~ ✅
 2. ~~De 3 Solace Cloud-services daadwerkelijk aanmaken.~~ ✅ AWS, Azure en
    STACKIT/GCP-interim staan alle drie op "Running".
-3. Bridge-client-username `enewable-local-bridge` aanmaken op elke
-   cloud-broker (SEMP-admin-gegevens per broker in `local-broker/.env`
-   invullen en `cloud-setup/solace-cloud-api/configure-remote-bridge-users.sh`
-   draaien -- zelf, niet via de assistent, zie `docs/cloud-brokers.md`), en
-   daarna `local-broker/semp/configure-local-broker.sh` valideren tegen een
-   echte broker (SEMP API Browser) en waar nodig corrigeren.
-4. Eerste end-to-end testronde volgens sectie 12.
-5. Draaiboek en fallback-opname voorbereiden (sectie 11, fase 6).
+3. ~~Bridge-client-username `enewable-local-bridge` aanmaken op elke
+   cloud-broker en `configure-local-broker.sh` valideren.~~ ✅ (bridges
+   draaien schoon; export via bridges bleek architecturaal niet mogelijk
+   zonder reciprocal bridge + publieke bereikbaarheid -- zie sectie 13,
+   punten 6-10 -- Emil koos daarom RDP's, zie punt 11 hieronder.)
+4. **Nu:** `*_REMOTE_REST_HOST`/`*_REMOTE_REST_PORT` in `local-broker/.env`
+   controleren/invullen (Connect-tab, REST-sectie, per service -- en REST
+   aanzetten voor die service als het nog uitstaat), daarna
+   `local-broker/semp/configure-rdp-export.sh` draaien en in Broker Manager
+   controleren dat de 3 queues gevuld raken en de 3 RDP's "Up" komen (zie
+   sectie 13, punt 11).
+5. Eerste end-to-end testronde volgens sectie 12: publiceren met
+   stm/python/sdkperf en in de Solace Cloud console van de DOELBROKER
+   controleren dat het bericht op dezelfde topic aankomt, en nergens
+   anders.
+6. Draaiboek en fallback-opname voorbereiden (sectie 11, fase 6).

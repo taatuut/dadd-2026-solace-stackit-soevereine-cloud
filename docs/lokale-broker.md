@@ -102,13 +102,56 @@ Experiment afgesloten; de testobjecten (`bridge-from-enewable` op AWS,
 Overgebleven, wél haalbare routes (zie `PLAN.md` sectie 13 voor de volledige
 afweging): de lokale broker publiek bereikbaar maken zodat een échte
 reciprocal bridge per cloud-broker kan dialen, of bridges loslaten voor de
-exportkant en een lokale relay-app bouwen die zelf, als gewone client, van
-lokaal naar elke cloud-broker publiceert. De bestaande 3 bridges
-(`bridge-to-aws` e.a.) blijven ongewijzigd staan (niet schadelijk) tot een
-van deze twee gekozen is. Broker Manager toont zelf geen down-reden;
+exportkant. Broker Manager toont zelf geen down-reden;
 `../local-broker/semp/diagnose-bridges.sh` (schrijft naar
 `output/diagnose-bridges.txt`, gitignored) blijft nuttig om dit soort
 dingen te verifiëren i.p.v. te gokken -- zoals hier ook gebeurd is.
+
+## ✅ Definitieve keuze: REST Delivery Points i.p.v. bridges voor export
+
+Emil koos een derde optie, beter dan de twee hierboven: **native REST
+Delivery Points (RDP)**, Solace's eigen feature om berichten van een lokale
+queue naar een extern REST-endpoint te posten -- geen relay-app, geen
+publieke bereikbaarheid van de lokale broker nodig (de RDP dialt zelf uit,
+net als een bridge). De 3 demo-apps blijven **ongewijzigd** DIRECT
+publiceren; Solace's "message promotion"-feature vangt een DIRECT-bericht
+automatisch op in elke queue met een matchende topic-subscription, "no
+special configuration required" (bevestigd via Solace's eigen
+documentatie, zie `PLAN.md` sectie 13, punt 11).
+
+Nieuw script: `../local-broker/semp/configure-rdp-export.sh`. Maakt per
+topic-subtree:
+1. Een durable **queue** (`q-export-public`/`q-export-eu-ops`/
+   `q-export-eu-pii`) met een topic-subscription die exact die subtree
+   matcht (promotie vangt de DIRECT-berichten van de demo-apps hierin op).
+2. Een **REST Delivery Point** (`rdp-aws`/`rdp-azure`/`rdp-stackit`) met:
+   - een **queue-binding** naar die queue, met
+     `postRequestTarget: "/${topic()}"` -- Solace's REST-publish-service
+     leest de topic uit het URL-pad van de POST, en `${topic()}` is
+     Solace's substitution-syntax voor "de volledige originele topic", dus
+     het bericht landt op de CLOUD-broker op precies dezelfde topic als
+     lokaal.
+   - een **rest-consumer** die naar de cloud-broker's eigen REST-endpoint
+     wijst, met TLS en HTTP-basic-auth (hergebruikt de bestaande
+     `enewable-local-bridge`-credentials, al publish-only ACL-gescoped per
+     cloud-broker -- geen nieuwe secrets).
+
+De SEMP v2-attribuutnamen (`restDeliveryPointName`, `postRequestTarget`,
+`remoteHost`, `authenticationHttpBasicUsername`, etc.) zijn niet gegokt
+maar gecrosscheckt tegen een werkende Go SEMP-client
+(`github.com/koverton/semp_client`) omdat Solace's eigen CLI-documentatie
+voor RDP's (Services/Managing-RDPs.htm) geen REST-attribuutnamen geeft --
+zie `PLAN.md` sectie 13, punt 11 voor de volledige onderbouwing.
+
+**Nog open, moet Emil zelf checken** (geen toegang tot de Solace Cloud
+console vanuit deze sessie): `*_REMOTE_REST_HOST`/`*_REMOTE_REST_PORT` in
+`.env(.example)` zijn ingevuld met de aanname "zelfde hostname als SMF,
+poort 9443" -- controleer dit op de Connect-tab (REST-sectie) van elke
+service en zet het REST-protocol aan voor die service als het nog uitstaat.
+
+De 3 oude bridges (`bridge-to-aws/azure/stackit`) blijven ongebruikt maar
+onschadelijk staan in `configure-local-broker.sh` -- niet opgeruimd, tenzij
+Emil dat expliciet wil.
 
 ## Starten
 
@@ -140,8 +183,14 @@ curl) doet, in volgorde:
    elk met een eigen ACL-profiel dat publiceren beperkt tot precies één
    topic-subtree (zie `../docs/topologie.md`).
 3. Drie bridges aanmaken (`bridge-to-aws`, `bridge-to-azure`,
-   `bridge-to-stackit`), elk met een `remoteSubscription` die exact één
-   topic-subtree exporteert naar de bijbehorende cloud-broker.
+   `bridge-to-stackit`) -- **historisch/ongebruikt**: dit bleek
+   architecturaal niet te kunnen exporteren zonder reciprocal bridge +
+   publieke bereikbaarheid, zie hieronder. Blijft staan, onschadelijk.
+
+Het **daadwerkelijke** exportpad loopt via
+`../local-broker/semp/configure-rdp-export.sh` (los script, ná
+`configure-local-broker.sh` te draaien): 3 queues + 3 REST Delivery Points,
+zie "✅ Definitieve keuze" hieronder.
 
 **macOS-gebruikers**: dit script draait met `#!/usr/bin/env bash` maar
 gebruikt bewust **geen** bash associative arrays (`declare -A`) -- macOS'
@@ -160,6 +209,12 @@ associative arrays.
   kunnen per broker-release licht verschillen. **Test dit ruim vóór DADD**
   met de "SEMP API Browser" in Broker Manager (About-pagina) op je eigen
   broker-versie, en corrigeer het script waar nodig.
+- **REST-host/poort per cloud-service niet bevestigd**: `*_REMOTE_REST_HOST`
+  gebruikt dezelfde hostname als de SMF-verbinding, `*_REMOTE_REST_PORT` is
+  aangenomen als 9443 (Solace Cloud's standaard secure-REST-poort) -- dit is
+  een aanname, niet bevestigd tegen de Connect-tab. Controleer dit vóór het
+  draaien van `configure-rdp-export.sh`, en zet REST-messaging aan voor die
+  service als het nog uit staat.
 - **TLS-vertrouwen richting Solace Cloud**: bridges naar Solace Cloud
   gebruiken TLS op poort 55443 met een publiek CA-certificaat. De
   standaard-broker-image heeft doorgaans de meest gebruikelijke publieke
