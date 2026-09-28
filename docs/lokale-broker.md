@@ -89,15 +89,26 @@ Getest met alleen AWS (om goedkoop te falen als het niet werkt):
    maakt, via AWS's eigen SEMP-admin, een bridge `bridge-from-enewable` OP
    AWS aan met `remoteMsgVpnLocation` = `v:3a106d66a729`.
 
-Volgende sub-stap: beide scripts draaien en in de Solace Cloud console vóór
-de AWS-service checken of `bridge-from-enewable` Up komt. Werkt dit, dan
-wordt het patroon naar Azure/STACKIT uitgerold; werkt het niet, dan vallen
-we terug op de netwerkbereikbaarheid-opties (tunnel/port-forward/cloud-VM)
-of een lokale relay-app. De bestaande 3 bridges (`bridge-to-aws` e.a.)
-blijven ongewijzigd staan (niet schadelijk) tot dit is opgelost. Broker
-Manager toont zelf geen down-reden; `../local-broker/semp/diagnose-bridges.sh`
-(schrijft naar `output/diagnose-bridges.txt`, gitignored) blijft nuttig om
-dit soort dingen te verifiëren i.p.v. te gokken -- zoals hier ook gebeurd is.
+**Uitkomst: negatief.** Na het draaien van beide scripts toont
+`bridge-from-enewable` op AWS "Down", Establisher "N/A" -- AWS heeft niet
+eens geprobeerd `v:3a106d66a729` te resolven. Onze lokale `bridge-to-aws`
+bleef ook onveranderd. De router-name-discovery uit Solace's
+bi-directional-bridge-documentatie werkt dus niet voor een kale
+Message-VPN-bridge zonder DMR-cluster-lidmaatschap tussen de twee brokers --
+dat opzetten is een te groot traject voor de resterende tijd tot DADD.
+Experiment afgesloten; de testobjecten (`bridge-from-enewable` op AWS,
+`sub-aws` lokaal) blijven onschadelijk staan.
+
+Overgebleven, wél haalbare routes (zie `PLAN.md` sectie 13 voor de volledige
+afweging): de lokale broker publiek bereikbaar maken zodat een échte
+reciprocal bridge per cloud-broker kan dialen, of bridges loslaten voor de
+exportkant en een lokale relay-app bouwen die zelf, als gewone client, van
+lokaal naar elke cloud-broker publiceert. De bestaande 3 bridges
+(`bridge-to-aws` e.a.) blijven ongewijzigd staan (niet schadelijk) tot een
+van deze twee gekozen is. Broker Manager toont zelf geen down-reden;
+`../local-broker/semp/diagnose-bridges.sh` (schrijft naar
+`output/diagnose-bridges.txt`, gitignored) blijft nuttig om dit soort
+dingen te verifiëren i.p.v. te gokken -- zoals hier ook gebeurd is.
 
 ## Starten
 

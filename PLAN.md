@@ -17,7 +17,7 @@ alleen wat gepland was.
 | Fase 3 -- AWS US East | ✅ Aangemaakt | Service `ez-dadd-2026-eks-us-east-1a`, zie [`cloud-setup/aws-us-east/README.md`](cloud-setup/aws-us-east/README.md) en `screenshots/AWS/` |
 | Fase 3 -- Azure West Europe | ✅ Aangemaakt | Service `ez-dadd-2026-aks-westeurope`, zie [`cloud-setup/azure-west-europe/README.md`](cloud-setup/azure-west-europe/README.md) en `screenshots/Azure/` |
 | Fase 3 -- STACKIT / GCP-interim | ✅ Aangemaakt | Service `ez-dadd-2026-STACKIT-gke-gcp-europe-west1-b` (interim op GCP europe-west1), zie [`cloud-setup/gcp-europe-west1-interim/README.md`](cloud-setup/gcp-europe-west1-interim/README.md) en `screenshots/STACKIT-of-GCP-interim/` -- alle 3 cloud-broker services zijn nu aangemaakt |
-| Fase 4 -- Lokale broker + bridges | 🔬 Experiment lopend | Export via `remoteSubscription` alleen werkt niet; een wederkerige bridge is nodig. Test lopend of die de bestaande AWS-connectie kan hergebruiken via `v:<router-name>`-adressering (geen publieke bereikbaarheid nodig) i.p.v. een nieuwe inbound-verbinding. 🔄 Emil draait `test-reciprocal-bridge-aws.sh` en checkt AWS-console |
+| Fase 4 -- Lokale broker + bridges | ⛔ Router-name-experiment negatief | `bridge-from-enewable` op AWS bleef Down (Establisher: N/A) -- router-name-discovery werkt niet zonder DMR-cluster. Terug naar 2 haalbare routes: lokale broker publiek bereikbaar maken, of een lokale relay-app i.p.v. bridges voor export. Keuze aan Emil |
 | Fase 5 -- Demo-apps valideren | Nog te doen | |
 | Fase 6 -- Draaiboek + fallback | Nog te doen | |
 
@@ -225,7 +225,7 @@ nooit gecommit -- alleen `.env.example`-bestanden zitten in de repo.)
 | 1 | STACKIT-beschikbaarheid | ✅ Interim-broker op GCP europe-west1 (België) aangemaakt als stand-in; vlak vóór repetitie/DADD controleren of STACKIT al als datacenter-optie zichtbaar is en zo ja, overstappen | Interim: gereed; overstap-check: kort vóór fase 5/6 |
 | 2 | Solace Cloud account | Account + API-token aanmaken (indien nog niet aanwezig) | Week na fase 0 |
 | 3 | Cloud-brokers aanmaken | ✅ Alle 3 gereed: AWS (`ez-dadd-2026-eks-us-east-1a`), Azure (`ez-dadd-2026-aks-westeurope`), STACKIT/GCP-interim (`ez-dadd-2026-STACKIT-gke-gcp-europe-west1-b`); sovereign-node blijft STACKIT zodra GA, tot dan GCP europe-west1 interim | Gereed |
-| 4 | Lokale broker + bridges | 🔬 Test lopend: wederkerige bridge op AWS via `v:<router-name>`, om te zien of dit de bestaande connectie hergebruikt (geen publieke bereikbaarheid nodig) | Bezig (experiment) |
+| 4 | Lokale broker + bridges | ⛔ Router-name-experiment negatief (DMR-cluster nodig, buiten scope). Keuze nodig: publieke bereikbaarheid regelen vs. lokale relay-app i.p.v. bridges | Geblokkeerd op keuze |
 | 5 | Demo-apps valideren | Alle 3 tools end-to-end testen (publiceren → juiste cloud-broker, nergens anders) | Meerdere keren voor DADD, niet pas op de dag zelf |
 | 6 | Draaiboek + fallback-opname | Live-timing oefenen, schermopname als fallback maken | Week vóór DADD |
 | 7 | Op de dag zelf | `docker-run.sh` + `configure-local-broker.sh` (of al draaiend laten staan), demo-apps klaarzetten | Vlak voor het slot |
@@ -420,14 +420,31 @@ productieklaar systeem:
        `bridge-from-enewable` OP de AWS-broker aan, met
        `remoteMsgVpnLocation` = `v:3a106d66a729` (i.p.v. een adres) en
        `remoteSubscriptionTopic` = `enewable/public/>`.
-     🔄 Emil draait beide scripts en checkt in de Solace Cloud console
-     voor de AWS-service of `bridge-from-enewable` Up komt. Als dat werkt:
-     geen publieke bereikbaarheid nodig, en dit patroon wordt uitgerold
-     naar Azure/STACKIT. Als niet: terugvallen op de eerder besproken
-     opties (tunnel/port-forward/cloud-VM, of een lokale relay-app die
-     zelf, als gewone client, van lokaal naar elke cloud-broker publiceert
-     -- dat vereist sowieso geen publieke bereikbaarheid, ten koste van
-     het "broker doet de routering zelf" verhaal).
+     Uitkomst: **negatief.** Op AWS toont `bridge-from-enewable`
+     "Down", Establisher "N/A" -- AWS heeft dus niet eens een poging
+     gedaan om `v:3a106d66a729` te resolven, en onze lokale `bridge-to-aws`
+     is niet van vorm veranderd (nog steeds gewoon "Down" in de lijst,
+     zoals altijd, ondanks de eerder bevestigde gezonde onderliggende
+     verbinding). Conclusie: de router-name-discovery uit Solace's
+     bi-directional-bridge-documentatie werkt niet voor een kale
+     Message-VPN-bridge op zichzelf -- vermoedelijk is hiervoor
+     daadwerkelijk DMR-cluster-lidmaatschap tussen de twee brokers nodig
+     (waarbinnen router-names pas resolvebaar zijn), wat een veel groter
+     traject is dan de resterende tijd tot DADD toelaat. Dit experiment is
+     hiermee afgesloten (de testobjecten `bridge-from-enewable` op AWS en
+     `sub-aws` lokaal blijven ongebruikt/onschadelijk staan). Terug naar de
+     twee eerder genoemde, wél haalbare routes -- aan Emil voorgelegd welke
+     kant we op gaan (zie de vraag hieronder in de conversatie, niet
+     hierin herhaald):
+     - lokale broker publiek bereikbaar maken (tunnel/port-forward/cloud-VM)
+       zodat een ECHTE (niet-router-name) reciprocal bridge per cloud-broker
+       kan dialen, of
+     - bridges loslaten voor de exportkant en een kleine lokale relay-app
+       bouwen die, als gewone client, subscribet op de 3 topic-subtrees op
+       de lokale broker en elk bericht doorpubliceert naar de bijbehorende
+       cloud-broker via een normale uitgaande verbinding (die al bewezen
+       werkt) -- geen publieke bereikbaarheid nodig, wel een architecturele
+       afwijking van "de broker doet de routering zelf".
 - **Geen automatische provisioning van alle 4 brokers in één commando.**
   Er is bewust voor losse, leesbare stappen gekozen (console + scripts per
   onderdeel) omdat dat beter uit te leggen en te debuggen is vóór een
