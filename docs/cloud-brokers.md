@@ -61,6 +61,32 @@ de eenvoudigste weg (minder foutgevoelig, visuele bevestiging van HA-status).
 alternatief voor wie de opzet wil kunnen herhalen/scripten (bijv. na een
 oefensessie de services afbreken en later opnieuw exact zo aanmaken).
 
+**Twee verschillende Solace Cloud API's, niet één** -- dit is een makkelijk te
+verwarren punt:
+
+1. **Mission Control API** (`api.solace.cloud`, `Bearer` met het
+   `token-dadd-2026.txt`-token) -- beheert de **services zelf**
+   (aanmaken/verwijderen/schalen). Gebruikt door `create-service.sh`.
+2. **SEMP v2 Config API van elke broker afzonderlijk** (`<service>:943`,
+   Basic Auth met de **SEMP-admin-username/password van die specifieke
+   broker** -- niet het Mission Control-token, en niet `solace-cloud-client`)
+   -- beheert **objecten binnen** die broker: Message VPN's,
+   client-usernames, ACL-profielen, bridges. Gebruikt door
+   `../local-broker/semp/configure-local-broker.sh` (lokaal) en
+   `../cloud-setup/solace-cloud-api/configure-remote-bridge-users.sh`
+   (op afstand, voor de 3 cloud-brokers).
+
+**Netwerktoegang vanuit deze sessie is getest en geblokkeerd voor beide.**
+Zowel `api.solace.cloud` als de drie broker-hostnamen
+(`mr-connection-*.messaging.solace.cloud`) zijn vanuit zowel de
+cloud-container als de sandbox-VM op je Mac onbereikbaar: een
+organisatie-brede proxy-allowlist geeft `403 blocked-by-allowlist`
+(sandbox-VM) resp. sluit de TLS-verbinding (cloud-container). Concreet
+betekent dit dat elk script dat `api.solace.cloud` of een broker-SEMP-host
+aanroept, **door jou zelf gedraaid moet worden** in je eigen, gewone
+terminal (dezelfde waarin `git push` en `docker-run.sh` al werkten) -- niet
+door de assistent.
+
 ## Wat de AWS-, Azure- en GCP-interim-opzet ons hebben geleerd (fase 3 compleet)
 
 Alle drie de cloud-broker services zijn nu aangemaakt: AWS US East
@@ -144,10 +170,14 @@ al werkt.
 ## Credentials
 
 - Elke service krijgt een eigen, **nieuw aangemaakte** client-username voor
-  de inkomende bridge-verbinding (voorstel: dezelfde username
-  `enewable-local-bridge` op alle drie de cloud-services, met per service
-  een eigen wachtwoord), met een ACL-profiel dat het verkeer tot de juiste
-  topic-subtree beperkt (zie per submap in `../cloud-setup/`).
+  de inkomende bridge-verbinding: `enewable-local-bridge` op alle drie de
+  cloud-services, elk met een eigen, al gegenereerd wachtwoord in
+  `../local-broker/.env` (niet gecommit). Aanmaken kan handmatig (Manage >
+  Client Usernames, zie per submap in `../cloud-setup/`) of via
+  `../cloud-setup/solace-cloud-api/configure-remote-bridge-users.sh`, zodra
+  je de SEMP-admin-username/password per broker in `.env` hebt ingevuld
+  (Connect-tab van de service) -- zie hierboven waarom dit een ander
+  token/andere credentials zijn dan het Mission Control-token.
 - **Gebruik hiervoor niet de standaard `solace-cloud-client`-username** die
   Solace Cloud standaard aanmaakt. Die identiteit wordt door de "Try Me!"-tab
   van elke service gebruikt om tijdens de live demo de binnenkomende

@@ -17,7 +17,7 @@ alleen wat gepland was.
 | Fase 3 -- AWS US East | ✅ Aangemaakt | Service `ez-dadd-2026-eks-us-east-1a`, zie [`cloud-setup/aws-us-east/README.md`](cloud-setup/aws-us-east/README.md) en `screenshots/AWS/` |
 | Fase 3 -- Azure West Europe | ✅ Aangemaakt | Service `ez-dadd-2026-aks-westeurope`, zie [`cloud-setup/azure-west-europe/README.md`](cloud-setup/azure-west-europe/README.md) en `screenshots/Azure/` |
 | Fase 3 -- STACKIT / GCP-interim | ✅ Aangemaakt | Service `ez-dadd-2026-STACKIT-gke-gcp-europe-west1-b` (interim op GCP europe-west1), zie [`cloud-setup/gcp-europe-west1-interim/README.md`](cloud-setup/gcp-europe-west1-interim/README.md) en `screenshots/STACKIT-of-GCP-interim/` -- alle 3 cloud-broker services zijn nu aangemaakt |
-| Fase 4 -- Lokale broker + bridges | 🔄 Bezig | `docker-run.sh` uitgevoerd: container `enewable-local-broker` draait (SEMP :8080, SMF :55554); `configure-local-broker.sh` nog te draaien |
+| Fase 4 -- Lokale broker + bridges | 🔄 Bezig | Lokale broker draait. Bridge-username `enewable-local-bridge` + wachtwoorden voorbereid; SEMP-config-script geschreven (`cloud-setup/solace-cloud-api/configure-remote-bridge-users.sh`) maar niet door de assistent uit te voeren (netwerktoegang tot de broker-SEMP-hosts is geblokkeerd, zelfde als bij de Mission Control API -- zie `docs/cloud-brokers.md`). Jij draait dit script (of maakt de client-usernames handmatig aan), daarna `configure-local-broker.sh` |
 | Fase 5 -- Demo-apps valideren | Nog te doen | |
 | Fase 6 -- Draaiboek + fallback | Nog te doen | |
 
@@ -193,6 +193,7 @@ Zie [`docs/demo-apps.md`](docs/demo-apps.md) en [`demo-apps/`](demo-apps/)
 |   |-- gcp-europe-west1-interim/README.md
 |   `-- solace-cloud-api/
 |       |-- create-service.sh
+|       |-- configure-remote-bridge-users.sh   <- creates bridge client-usernames + ACL's on the 3 cloud brokers
 |       `-- .env.example
 `-- demo-apps/
     |-- README.md
@@ -222,7 +223,7 @@ nooit gecommit -- alleen `.env.example`-bestanden zitten in de repo.)
 | 1 | STACKIT-beschikbaarheid | ✅ Interim-broker op GCP europe-west1 (België) aangemaakt als stand-in; vlak vóór repetitie/DADD controleren of STACKIT al als datacenter-optie zichtbaar is en zo ja, overstappen | Interim: gereed; overstap-check: kort vóór fase 5/6 |
 | 2 | Solace Cloud account | Account + API-token aanmaken (indien nog niet aanwezig) | Week na fase 0 |
 | 3 | Cloud-brokers aanmaken | ✅ Alle 3 gereed: AWS (`ez-dadd-2026-eks-us-east-1a`), Azure (`ez-dadd-2026-aks-westeurope`), STACKIT/GCP-interim (`ez-dadd-2026-STACKIT-gke-gcp-europe-west1-b`); sovereign-node blijft STACKIT zodra GA, tot dan GCP europe-west1 interim | Gereed |
-| 4 | Lokale broker + bridges | ✅ `docker-run.sh` uitgevoerd (broker draait); 🔄 `configure-local-broker.sh` nog te draaien om bridges op "Up" te krijgen | Bezig |
+| 4 | Lokale broker + bridges | ✅ Broker draait. 🔄 3x bridge-client-username aanmaken op de cloud-brokers (script klaar, door jou te draaien); daarna `configure-local-broker.sh` | Bezig |
 | 5 | Demo-apps valideren | Alle 3 tools end-to-end testen (publiceren → juiste cloud-broker, nergens anders) | Meerdere keren voor DADD, niet pas op de dag zelf |
 | 6 | Draaiboek + fallback-opname | Live-timing oefenen, schermopname als fallback maken | Week vóór DADD |
 | 7 | Op de dag zelf | `docker-run.sh` + `configure-local-broker.sh` (of al draaiend laten staan), demo-apps klaarzetten | Vlak voor het slot |
@@ -286,6 +287,22 @@ productieklaar systeem:
   gebaseerd op de huidige SEMP v2-documentatie maar niet getest tegen een
   live broker in deze sessie (geen broker-toegang vanuit hier) -- test dit
   als eerste concrete vervolgstap (zie sectie 14).
+- **Geen netwerktoegang vanuit deze sessie tot Solace Cloud, bevestigd door
+  te testen (niet aangenomen).** Zowel de Mission Control API
+  (`api.solace.cloud`) als de SEMP v2 Config API van elke individuele
+  broker (`mr-connection-*.messaging.solace.cloud:943`) zijn geblokkeerd
+  door een organisatiebrede proxy-allowlist, zowel vanuit de cloud-container
+  als vanuit de sandbox-VM op je Mac. Elk script dat een van deze twee
+  aanroept (`create-service.sh`,
+  `configure-remote-bridge-users.sh`) moet daarom door jouzelf gedraaid
+  worden, in je eigen terminal.
+- **Bash-onveilige `<...>`-placeholders in `.env`-bestanden gevonden en
+  gecorrigeerd.** `local-broker/.env` en `.env.example` (en
+  `cloud-setup/solace-cloud-api/.env.example`) worden met `source`
+  ingelezen door de shellscripts; een niet-ingevulde placeholder als
+  `<host>:943` breekt daar op (bash interpreteert `<` als
+  input-redirectie). Alle placeholders zijn nu `CHANGEME_...`-stijl
+  (bash-veilig, geen haakjes).
 - **Geen automatische provisioning van alle 4 brokers in één commando.**
   Er is bewust voor losse, leesbare stappen gekozen (console + scripts per
   onderdeel) omdat dat beter uit te leggen en te debuggen is vóór een
@@ -325,9 +342,11 @@ productieklaar systeem:
 1. ~~Dit plan doornemen en de STACKIT-beslissing (sectie 4/10) maken.~~ ✅
 2. ~~De 3 Solace Cloud-services daadwerkelijk aanmaken.~~ ✅ AWS, Azure en
    STACKIT/GCP-interim staan alle drie op "Running".
-3. `local-broker/semp/configure-local-broker.sh` valideren tegen een echte
-   broker (SEMP API Browser) en waar nodig corrigeren, en `local-broker/.env`
-   volledig invullen (bridge client-usernames per cloud-service ontbreken
-   nog, zie `local-broker/.env.example`).
+3. Bridge-client-username `enewable-local-bridge` aanmaken op elke
+   cloud-broker (SEMP-admin-gegevens per broker in `local-broker/.env`
+   invullen en `cloud-setup/solace-cloud-api/configure-remote-bridge-users.sh`
+   draaien -- zelf, niet via de assistent, zie `docs/cloud-brokers.md`), en
+   daarna `local-broker/semp/configure-local-broker.sh` valideren tegen een
+   echte broker (SEMP API Browser) en waar nodig corrigeren.
 4. Eerste end-to-end testronde volgens sectie 12.
 5. Draaiboek en fallback-opname voorbereiden (sectie 11, fase 6).

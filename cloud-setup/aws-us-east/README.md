@@ -31,6 +31,7 @@ Screenshots van elke stap staan in
    niet als subscriber; vergelijk met hoe de lokale ACL-profielen in
    `../../local-broker/semp/configure-local-broker.sh` zijn opgezet).
    **Gebruik niet de standaard `solace-cloud-client`-username hiervoor** -- die wordt door de "Try Me!"-tab van deze service gebruikt om tijdens de live demo de binnenkomende berichten te laten zien, en heeft standaard een ruim ACL-profiel. Een nieuwe, dedicated username met een eigen, beperkt ACL-profiel houdt de "Try Me!"-subscriptie werkend en laat bovendien precies zien waar de demo over gaat: gegarandeerde, ACL-afgedwongen scheiding per dataklasse, niet toevallige scheiding via topic-naamgeving.
+   Handmatig via de UI, of automatisch met `../solace-cloud-api/configure-remote-bridge-users.sh` (SEMP v2 Config API van deze broker zelf -- vul eerst `*_SEMP_HOST`/`*_SEMP_ADMIN_USER`/`*_SEMP_ADMIN_PASSWORD` in `../../local-broker/.env` in, te vinden op de Connect-tab; het wachtwoord voor `enewable-local-bridge` staat er al in).
 3. Host, VPN-naam en credentials in `../../local-broker/.env` invullen
    onder de `AWS_*`-variabelen (VPN-naam mag je nu al invullen, is geen
    geheim: `ez-dadd-2026-eks-us-east-1`).
