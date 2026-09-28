@@ -169,6 +169,20 @@ RDP op `"up": true"` komt. Niet gegarandeerd de fix: als dit niet werkt,
 kijk naar andere 503-oorzaken (client-profile REST-rechten, VPN-spool/
 shutdown-status). Zie `PLAN.md` sectie 13, punt 16.
 
+**⛔ Vervolg (28/09/2026): de 503 blijft bestaan bij een derde diagnose-run.**
+Alle 3 queue-bindings tonen opnieuw `"lastFailureReason": "Service
+Unavailable"`, met een `lastFailureTime` die vrijwel samenvalt met het
+moment van de diagnose-run zelf -- dit is dus een actuele, herhaalde
+mislukking (past bij de RDP's automatische reconnect-lus), geen oude
+waarde. Onduidelijk is of dit gemeten is vóór of na een run van
+`enable-rest-on-cloud-vpns.sh`; als het probleem blijft bestaan terwijl
+REST-incoming al aan bleek te staan, is die theorie ontkracht. Nieuw
+script: `cloud-setup/solace-cloud-api/test-rest-direct.sh` -- bypasst de
+RDP volledig en POST't rechtstreeks (curl, dezelfde http-basic
+credentials) naar elke cloud-broker se REST-endpoint, zodat de échte
+HTTP-statusregel en responsebody zichtbaar worden in plaats van de RDP se
+samenvatting. Zie `PLAN.md` sectie 13, punt 17.
+
 **Opgeruimd (28/09/2026):** de 3 oude bridge-objecten
 (`bridge-to-aws/azure/stackit`), de reciprocal-bridge-testopstelling
 (`sub-aws`, `bridge-from-enewable` op AWS) en de bijbehorende scripts
