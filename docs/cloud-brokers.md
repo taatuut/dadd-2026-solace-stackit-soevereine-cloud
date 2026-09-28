@@ -143,9 +143,20 @@ al werkt.
 
 ## Credentials
 
-- Elke service krijgt een eigen client-username voor de inkomende
-  bridge-verbinding, met een ACL-profiel dat het verkeer tot de juiste
+- Elke service krijgt een eigen, **nieuw aangemaakte** client-username voor
+  de inkomende bridge-verbinding (voorstel: dezelfde username
+  `enewable-local-bridge` op alle drie de cloud-services, met per service
+  een eigen wachtwoord), met een ACL-profiel dat het verkeer tot de juiste
   topic-subtree beperkt (zie per submap in `../cloud-setup/`).
+- **Gebruik hiervoor niet de standaard `solace-cloud-client`-username** die
+  Solace Cloud standaard aanmaakt. Die identiteit wordt door de "Try Me!"-tab
+  van elke service gebruikt om tijdens de live demo de binnenkomende
+  berichten te tonen (zie `docs/demo-apps.md`), en heeft van zichzelf een
+  ruim ACL-profiel. Een ACL-restrictie op `solace-cloud-client` zou dus
+  zowel de bridge als de "Try Me!"-subscriptie raken -- en het hele punt van
+  de demo is juist dat de scheiding tussen dataklassen door de ACL wordt
+  *afgedwongen*, niet dat hij toevallig lijkt te werken omdat er verder
+  niets anders op die topic-subtree publiceert.
 - Bewaar client-secrets nooit in de repo; gebruik `.env`-bestanden (zie
   `.gitignore`) of, voor een teamsetting, een secrets-manager. Hetzelfde
   geldt voor het Solace Cloud API-token (`token-dadd-2026.txt`, ook

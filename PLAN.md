@@ -96,7 +96,12 @@ brokertabel en de topic-taxonomie. Kort samengevat: lokaal → 3 bridges →
   brokers). Zie sectie 13.
 - **Eigen client-username per dataklasse**, met ACL-profiel dat publiceren
   beperkt tot exact één topic-subtree -- dit is de "governed sharing"
-  gedachte (slide 19 van de deck) toegepast op de publicatiekant.
+  gedachte (slide 19 van de deck) toegepast op de publicatiekant. Voor de
+  bridge-kant op elke cloud-broker geldt hetzelfde principe: een nieuwe,
+  dedicated client-username (niet de standaard `solace-cloud-client`, die
+  de "Try Me!"-tab gebruikt en een ruim ACL-profiel heeft), met een
+  ACL-profiel dat alleen publiceren op de juiste topic-subtree toestaat.
+  Zie `docs/cloud-brokers.md`, sectie "Credentials".
 - **Single-availability lokale broker**, HA cloud-brokers -- zie
   [`docs/lokale-broker.md`](docs/lokale-broker.md) voor de afweging.
 - **Solace Cloud console als primaire weg** om de 3 cloud-services aan te

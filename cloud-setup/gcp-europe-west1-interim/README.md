@@ -45,6 +45,7 @@ deze service zijn bevestigd.
    `enewable-local-bridge`) met een ACL-profiel dat **alleen publiceren**
    toestaat op `enewable/eu/pii/>` -- de bridge levert hier berichten af
    als publisher, niet als subscriber.
+   **Gebruik niet de standaard `solace-cloud-client`-username hiervoor** -- die wordt door de "Try Me!"-tab van deze service gebruikt om tijdens de live demo de binnenkomende berichten te laten zien, en heeft standaard een ruim ACL-profiel. Een nieuwe, dedicated username met een eigen, beperkt ACL-profiel houdt de "Try Me!"-subscriptie werkend en laat bovendien precies zien waar de demo over gaat: gegarandeerde, ACL-afgedwongen scheiding per dataklasse, niet toevallige scheiding via topic-naamgeving.
 3. De `STACKIT_*`-variabelen in `../../local-broker/.env` invullen met de
    client-username/wachtwoord van stap 2 (de VPN-naam en SMF-hostname staan
    al in `../../local-broker/.env.example`).
