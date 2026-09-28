@@ -30,8 +30,20 @@ vóór de REST-PATCH die faalde). De hernieuwde run van het script slaat dit
 gewoon over ("already exists") en gaat door met de client-usernames en
 bridges.
 
-Volgende sub-stap: `../local-broker/semp/configure-local-broker.sh` draaien
-om de Message VPN, client-usernames/ACL's en de 3 bridges aan te maken.
+`../local-broker/semp/configure-local-broker.sh` is inmiddels meerdere keren
+gedraaid en draait nu volledig schoon (0 WARN-regels): VPN, ACL's,
+client-usernames en alle 3 bridge-objecten + hun `remoteMsgVpns`/
+`remoteSubscriptions` worden zonder SEMP-fout aangemaakt. Bevestigd via
+screenshots van Broker Manager > Bridges > Summary: elke bridge toont nu de
+juiste remote Message VPN-naam en `via: <ip>:55443`, dus de configuratie komt
+aan bij de broker. **Toch blijven alle 3 bridges "Down"** (Bridge Status,
+en Message Flow in beide richtingen). Dit is dus niet langer een
+SEMP-configuratiefout maar een probleem op het niveau van de daadwerkelijke
+bridge-verbindingspoging. Broker Manager toont zelf geen down-reden, dus is
+`../local-broker/semp/diagnose-bridges.sh` toegevoegd: een read-only script
+dat i.p.v. de SEMP v2 **Config**-API de **Monitor**-API opvraagt (die wel een
+verbindingsfout-detail bevat) voor alle 3 bridges. Volgende sub-stap: dit
+script draaien en de output beoordelen.
 
 ## Starten
 
@@ -88,7 +100,11 @@ associative arrays.
   standaard-broker-image heeft doorgaans de meest gebruikelijke publieke
   CA's al vertrouwd, maar controleer dit (Broker Manager > CA Certificates)
   voordat je live gaat -- een niet-vertrouwd certificaat laat de bridge
-  simpelweg "Down" blijven, wat een vervelende verrassing op het podium is.
+  simpelweg "Down" blijven. **Dit risico is nu actueel**: na een volledig
+  schone `configure-local-broker.sh`-run blijven alle 3 bridges toch "Down"
+  -- zie "Status: draait" hierboven en `diagnose-bridges.sh` voor de
+  vervolgstap om de exacte oorzaak (TLS, netwerk, of credentials) vast te
+  stellen in plaats van te gokken.
 - **Geen persistente opslag**: de container gebruikt geen bind-mount voor
   `/var/lib/solace`. Elke herstart van de container = opnieuw
   `configure-local-broker.sh` draaien. Voor herhaalde oefensessies in de
