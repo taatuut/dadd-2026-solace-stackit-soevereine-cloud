@@ -22,6 +22,13 @@ via Docker Desktop en de SEMP-health-check in het script zelf:
 | Web messaging (stm) | `ws://localhost:8008` |
 | MQTT | `tcp://localhost:1883` |
 | AMQP | `amqp://localhost:5672` |
+| Broker-versie | `10.25.0.208` (bevestigd via Broker Manager) |
+
+Message VPN `enewable` bestaat al (Status: Up) -- aangemaakt door de eerste,
+deels geslaagde run van `configure-local-broker.sh` (de VPN-POST liep door
+vóór de REST-PATCH die faalde). De hernieuwde run van het script slaat dit
+gewoon over ("already exists") en gaat door met de client-usernames en
+bridges.
 
 Volgende sub-stap: `../local-broker/semp/configure-local-broker.sh` draaien
 om de Message VPN, client-usernames/ACL's en de 3 bridges aan te maken.
