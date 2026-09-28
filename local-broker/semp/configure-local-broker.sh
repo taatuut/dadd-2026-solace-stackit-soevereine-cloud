@@ -97,13 +97,22 @@ create_bridge() {
   # otherwise) -- "auto" is correct for a non-redundant, single-node local
   # broker (it only matters for HA broker pairs, where it picks primary vs
   # backup).
+  #
+  # A bridge's SEMP identifier is the COMPOSITE key (bridgeName,
+  # bridgeVirtualRouter), not bridgeName alone -- addressing a specific
+  # bridge's sub-collections (remoteMsgVpns, remoteSubscriptions) requires
+  # the comma-joined form "{bridgeName},{bridgeVirtualRouter}" in the path,
+  # confirmed after "/bridges/${name}/remoteMsgVpns" alone returned
+  # "535 INVALID_PATH -- No paths found" even though the bridge itself was
+  # created successfully.
+  local vr="auto"
   semp POST "/msgVpns/${VPN}/bridges" \
-    "{\"bridgeName\":\"${name}\",\"bridgeVirtualRouter\":\"auto\",\"enabled\":true,\"remoteConnectionRetryCount\":10,\"remoteConnectionRetryDelay\":3}"
+    "{\"bridgeName\":\"${name}\",\"bridgeVirtualRouter\":\"${vr}\",\"enabled\":true,\"remoteConnectionRetryCount\":10,\"remoteConnectionRetryDelay\":3}"
 
-  semp POST "/msgVpns/${VPN}/bridges/${name}/remoteMsgVpns" \
+  semp POST "/msgVpns/${VPN}/bridges/${name},${vr}/remoteMsgVpns" \
     "{\"remoteMsgVpnName\":\"${remote_vpn}\",\"remoteMsgVpnLocation\":\"${remote_host}\",\"remoteMsgVpnInterface\":\"\",\"remoteAuthenticationScheme\":\"basic\",\"remoteAuthenticationBasicClientUsername\":\"${remote_user}\",\"remoteAuthenticationBasicPassword\":\"${remote_pass}\",\"tlsEnabled\":true,\"enabled\":true}"
 
-  semp POST "/msgVpns/${VPN}/bridges/${name}/remoteSubscriptions" \
+  semp POST "/msgVpns/${VPN}/bridges/${name},${vr}/remoteSubscriptions" \
     "{\"remoteSubscriptionTopic\":\"${export_topic}\",\"deliverAlwaysEnabled\":true}"
 
   echo "  ${name}: exports '${export_topic}' -> vpn '${remote_vpn}' @ ${remote_host}"
