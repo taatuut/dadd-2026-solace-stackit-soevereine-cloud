@@ -18,7 +18,7 @@ alleen wat gepland was.
 | Fase 3 -- Azure West Europe | ✅ Aangemaakt | Service `ez-dadd-2026-aks-westeurope`, zie [`cloud-setup/azure-west-europe/README.md`](cloud-setup/azure-west-europe/README.md) en `screenshots/Azure/` |
 | Fase 3 -- STACKIT / GCP-interim | ✅ Aangemaakt | Service `ez-dadd-2026-STACKIT-gke-gcp-europe-west1-b` (interim op GCP europe-west1), zie [`cloud-setup/gcp-europe-west1-interim/README.md`](cloud-setup/gcp-europe-west1-interim/README.md) en `screenshots/STACKIT-of-GCP-interim/` -- alle 3 cloud-broker services zijn nu aangemaakt |
 | Fase 4 -- Lokale broker + RDP-export | ✅✅ VOLLEDIG WERKEND, end-to-end bevestigd | Na de rdp-deliver-profiel-fix: alle 3 queue-bindings up:true met bindSuccessCount:1, RDP-aws leverde daadwerkelijk 21 berichten af (httpResponseSuccessRxMsgCount:21) en AWS "Try Me!" toont het echte bericht aankomen op enewable/public/market/price. Zie PLAN.md sectie 13, punt 28. Klaar voor volledige testronde (fase 5) |
-| Fase 5 -- Demo-apps valideren | Nog te doen | |
+| Fase 5 -- Demo-apps valideren | 🟡 2/3 geslaagd | stm-public (AWS) ✅, python-eu-nonpersonal (Azure) ✅ (na een zsh-commentaar-instructiefout, zie sectie 13 punt 29), sdkperf-pii (STACKIT) nog te doen |
 | Fase 6 -- Draaiboek + fallback | Nog te doen | |
 
 ## Inhoud
@@ -231,7 +231,7 @@ nooit gecommit -- alleen `.env.example`-bestanden zitten in de repo.)
 | 2 | Solace Cloud account | Account + API-token aanmaken (indien nog niet aanwezig) | Week na fase 0 |
 | 3 | Cloud-brokers aanmaken | ✅ Alle 3 gereed: AWS (`ez-dadd-2026-eks-us-east-1a`), Azure (`ez-dadd-2026-aks-westeurope`), STACKIT/GCP-interim (`ez-dadd-2026-STACKIT-gke-gcp-europe-west1-b`); sovereign-node blijft STACKIT zodra GA, tot dan GCP europe-west1 interim | Gereed |
 | 4 | Lokale broker + RDP-export | ✅✅ Volledig werkend, end-to-end bevestigd op AWS (bindSuccessCount:1, 21 berichten daadwerkelijk afgeleverd, zichtbaar in AWS "Try Me!" op de juiste topic). Azure/STACKIT staan klaar (up:true), nog geen verkeer getest | Fase 5: volledige testronde met alle 3 demo-apps (stm/python/sdkperf) op alle 3 topic-subtrees |
-| 5 | Demo-apps valideren | Alle 3 tools end-to-end testen (publiceren → juiste cloud-broker, nergens anders) | Meerdere keren voor DADD, niet pas op de dag zelf |
+| 5 | Demo-apps valideren | 🟡 stm-public (AWS) ✅ en python-eu-nonpersonal (Azure) ✅ bevestigd, elk alleen op de eigen broker; sdkperf-pii (STACKIT) nog te doen | Meerdere keren voor DADD, niet pas op de dag zelf |
 | 6 | Draaiboek + fallback-opname | Live-timing oefenen, schermopname als fallback maken | Week vóór DADD |
 | 7 | Op de dag zelf | `docker-run.sh` + `configure-local-broker.sh` (of al draaiend laten staan), demo-apps klaarzetten | Vlak voor het slot |
 
@@ -938,6 +938,33 @@ productieklaar systeem:
      AWS, en staat klaar voor Azure/STACKIT.** Sectie 14, stap 5 (de
      eerste volledige testronde met alle 3 demo-apps) is de logische
      vervolgstap.
+  29. **Volledige testronde (sectie 12, punten 2-4) in uitvoering (Emil,
+     28/09/2026):**
+     - ~~`stm-public/publish-public.sh` -> alleen AWS.~~ ✅ Geslaagd.
+     - `python-eu-nonpersonal/publisher.py` -> alleen Azure: eerste poging
+       faalde met `ERROR: Invalid requirement: '#'` gevolgd door
+       `ModuleNotFoundError: No module named 'dotenv'` -- geen bug in de
+       repo, maar een instructiefout van de assistent: de meegegeven
+       commando's hadden een `# first time only`-toelichting achter
+       `pip install -r requirements.txt` op dezelfde regel. bash negeert
+       zo'n inline `#`-commentaar in interactieve shells, maar Emil se
+       shell is **zsh** (macOS-default), die dat standaard NIET doet
+       (`interactivecomments`-optie staat standaard uit) -- dus `#`,
+       `first` en `only` werden als drie extra, letterlijke argumenten aan
+       `pip` doorgegeven, en pip weigerde `#` als ongeldige package-naam
+       nog vóórdat er iets geïnstalleerd was (dus ook `python-dotenv`
+       niet, vandaar de `ModuleNotFoundError` erna). Geen opschoning
+       nodig: de venv-regel had toevallig geen kwaadaardige neveneffecten
+       (bevestigd, geen rondslingerende map's `#`/`first`/`only`
+       aangemaakt). **Fix:** dezelfde commando's zonder inline
+       `#`-commentaar opnieuw laten draaien. ~~Opnieuw draaien.~~ ✅
+       Geslaagd: 20 Direct-berichten op Azure "Try Me!"
+       (`enewable/eu/ops/grid/load`), niets op AWS.
+     - `sdkperf-pii/publish-pii.sh` -> alleen STACKIT: **nog te doen.**
+     **Les voor de rest van deze sessie:** geen losse `# toelichting`
+     meer aan het eind van een commando-regel die Emil moet copy-pasten --
+     die toelichting hoort op een eigen regel, of helemaal weg, om dit
+     zsh-verschil niet opnieuw te raken.
 - **Geen automatische provisioning van alle 4 brokers in één commando.**
   Er is bewust voor losse, leesbare stappen gekozen (console + scripts per
   onderdeel) omdat dat beter uit te leggen en te debuggen is vóór een
