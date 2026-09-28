@@ -17,7 +17,7 @@ alleen wat gepland was.
 | Fase 3 -- AWS US East | ✅ Aangemaakt | Service `ez-dadd-2026-eks-us-east-1a`, zie [`cloud-setup/aws-us-east/README.md`](cloud-setup/aws-us-east/README.md) en `screenshots/AWS/` |
 | Fase 3 -- Azure West Europe | ✅ Aangemaakt | Service `ez-dadd-2026-aks-westeurope`, zie [`cloud-setup/azure-west-europe/README.md`](cloud-setup/azure-west-europe/README.md) en `screenshots/Azure/` |
 | Fase 3 -- STACKIT / GCP-interim | ✅ Aangemaakt | Service `ez-dadd-2026-STACKIT-gke-gcp-europe-west1-b` (interim op GCP europe-west1), zie [`cloud-setup/gcp-europe-west1-interim/README.md`](cloud-setup/gcp-europe-west1-interim/README.md) en `screenshots/STACKIT-of-GCP-interim/` -- alle 3 cloud-broker services zijn nu aangemaakt |
-| Fase 4 -- Lokale broker + bridges | 🔄 Bezig | ✅ Broker draait, ✅ bridge-users op de 3 cloud-brokers. Eerste run van `configure-local-broker.sh` faalde op 2 bugs (macOS-bash 3.2 incompatibiliteit met associative arrays; REST-service-enable zonder listen-port) -- beide gefixt. 🔄 Emil draait het script opnieuw en verifieert dat alle 3 bridges "Up" tonen |
+| Fase 4 -- Lokale broker + bridges | 🔄 Bezig | ✅ Broker draait, ✅ VPN + 3 publisher-ACL's + bridge-users gereed. 3e bug gevonden: bridge-aanmaak faalde op ontbrekend verplicht veld `bridgeVirtualRouter` (SEMP-fout 228) -- gefixt (`"auto"` voor deze single-node broker). 🔄 Emil draait het script opnieuw en verifieert dat alle 3 bridges "Up" tonen |
 | Fase 5 -- Demo-apps valideren | Nog te doen | |
 | Fase 6 -- Draaiboek + fallback | Nog te doen | |
 
@@ -223,7 +223,7 @@ nooit gecommit -- alleen `.env.example`-bestanden zitten in de repo.)
 | 1 | STACKIT-beschikbaarheid | ✅ Interim-broker op GCP europe-west1 (België) aangemaakt als stand-in; vlak vóór repetitie/DADD controleren of STACKIT al als datacenter-optie zichtbaar is en zo ja, overstappen | Interim: gereed; overstap-check: kort vóór fase 5/6 |
 | 2 | Solace Cloud account | Account + API-token aanmaken (indien nog niet aanwezig) | Week na fase 0 |
 | 3 | Cloud-brokers aanmaken | ✅ Alle 3 gereed: AWS (`ez-dadd-2026-eks-us-east-1a`), Azure (`ez-dadd-2026-aks-westeurope`), STACKIT/GCP-interim (`ez-dadd-2026-STACKIT-gke-gcp-europe-west1-b`); sovereign-node blijft STACKIT zodra GA, tot dan GCP europe-west1 interim | Gereed |
-| 4 | Lokale broker + bridges | ✅ Broker + bridge-users gereed; `configure-local-broker.sh` 2 bugs gefixt (bash 3.2-compatibiliteit, REST listen-port); 🔄 opnieuw te draaien | Bezig |
+| 4 | Lokale broker + bridges | ✅ VPN + publisher-ACL's gereed; `configure-local-broker.sh` 3 bugs gefixt (bash 3.2-compatibiliteit, REST listen-port, ontbrekend `bridgeVirtualRouter`); 🔄 opnieuw te draaien voor de bridges | Bezig |
 | 5 | Demo-apps valideren | Alle 3 tools end-to-end testen (publiceren → juiste cloud-broker, nergens anders) | Meerdere keren voor DADD, niet pas op de dag zelf |
 | 6 | Draaiboek + fallback-opname | Live-timing oefenen, schermopname als fallback maken | Week vóór DADD |
 | 7 | Op de dag zelf | `docker-run.sh` + `configure-local-broker.sh` (of al draaiend laten staan), demo-apps klaarzetten | Vlak voor het slot |
@@ -323,6 +323,16 @@ productieklaar systeem:
      geen van de 3 demo-apps gebruikt (stm: web-messaging, Python/SDKPerf:
      SMF) -- verwijderd in plaats van een ongebruikte listen-port erbij te
      configureren.
+  3. Bridge-aanmaak (`POST /msgVpns/{vpn}/bridges`) gaf SEMP-fout 228
+     ("Expecting value for required attribute bridgeVirtualRouter") --
+     bevestigt de eerder genoemde "SEMP-scriptvalidatie"-risico
+     (broker-versie 10.25.0.208 vereist dit veld expliciet bij aanmaak).
+     Toegevoegd: `"bridgeVirtualRouter":"auto"` (correct voor deze
+     single-node, niet-redundante lokale broker -- relevant onderscheid is
+     alleen primary/backup bij een HA-broker-paar). Ook de "already
+     exists"-detectie in het script verbreed naar `status: ALREADY_EXISTS`
+     (niet alleen `code: 6001`), zodat een herhaalde VPN-aanmaak netjes
+     wordt overgeslagen in plaats van als WARN te verschijnen.
 - **Geen automatische provisioning van alle 4 brokers in één commando.**
   Er is bewust voor losse, leesbare stappen gekozen (console + scripts per
   onderdeel) omdat dat beter uit te leggen en te debuggen is vóór een

@@ -43,7 +43,7 @@ semp() {
   if echo "${response}" | grep -q '"code"'; then
     # SEMP returns a "meta.error" object on failure; treat anything with a top-level
     # "code" as a possible error and print it, but don't hard-fail on "already exists" (6001)
-    if echo "${response}" | grep -q '"code": *6001'; then
+    if echo "${response}" | grep -q '"code": *6001' || echo "${response}" | grep -q '"status": *"ALREADY_EXISTS"'; then
       echo "  (already exists, skipping) ${path}"
     else
       echo "  WARN on ${method} ${path}:"
@@ -92,8 +92,13 @@ echo "== 3. Bridges to the 3 cloud brokers =="
 create_bridge() {
   local name="$1" remote_vpn="$2" remote_host="$3" remote_user="$4" remote_pass="$5" export_topic="$6"
 
+  # bridgeVirtualRouter is a required attribute on this broker version (SEMP
+  # error 228 "Expecting value for required attribute bridgeVirtualRouter"
+  # otherwise) -- "auto" is correct for a non-redundant, single-node local
+  # broker (it only matters for HA broker pairs, where it picks primary vs
+  # backup).
   semp POST "/msgVpns/${VPN}/bridges" \
-    "{\"bridgeName\":\"${name}\",\"enabled\":true,\"remoteConnectionRetryCount\":10,\"remoteConnectionRetryDelay\":3}"
+    "{\"bridgeName\":\"${name}\",\"bridgeVirtualRouter\":\"auto\",\"enabled\":true,\"remoteConnectionRetryCount\":10,\"remoteConnectionRetryDelay\":3}"
 
   semp POST "/msgVpns/${VPN}/bridges/${name}/remoteMsgVpns" \
     "{\"remoteMsgVpnName\":\"${remote_vpn}\",\"remoteMsgVpnLocation\":\"${remote_host}\",\"remoteMsgVpnInterface\":\"\",\"remoteAuthenticationScheme\":\"basic\",\"remoteAuthenticationBasicClientUsername\":\"${remote_user}\",\"remoteAuthenticationBasicPassword\":\"${remote_pass}\",\"tlsEnabled\":true,\"enabled\":true}"
