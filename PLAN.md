@@ -17,7 +17,7 @@ alleen wat gepland was.
 | Fase 3 -- AWS US East | ✅ Aangemaakt | Service `ez-dadd-2026-eks-us-east-1a`, zie [`cloud-setup/aws-us-east/README.md`](cloud-setup/aws-us-east/README.md) en `screenshots/AWS/` |
 | Fase 3 -- Azure West Europe | ✅ Aangemaakt | Service `ez-dadd-2026-aks-westeurope`, zie [`cloud-setup/azure-west-europe/README.md`](cloud-setup/azure-west-europe/README.md) en `screenshots/Azure/` |
 | Fase 3 -- STACKIT / GCP-interim | ✅ Aangemaakt | Service `ez-dadd-2026-STACKIT-gke-gcp-europe-west1-b` (interim op GCP europe-west1), zie [`cloud-setup/gcp-europe-west1-interim/README.md`](cloud-setup/gcp-europe-west1-interim/README.md) en `screenshots/STACKIT-of-GCP-interim/` -- alle 3 cloud-broker services zijn nu aangemaakt |
-| Fase 4 -- Lokale broker + RDP-export | ✅ Echte root cause gevonden en gefixt: clientProfileName "default" had allowGuaranteedMsgReceiveEnabled: false | watch-rdp-live.sh bevestigt: de queue-binding bindt zich nooit aan zijn eigen queue (bindRequestCount: 0, "Consumers: 0"), want zowel de RDP als de demo-app publishers gebruikten profiel "default" dat guaranteed-receive verbiedt -- exact wat een RDP-binding nodig heeft. Gefixt met een los profiel "rdp-deliver" (zie PLAN.md sectie 13, punt 26); Emil moet configure-rdp-export.sh opnieuw draaien om te bevestigen |
+| Fase 4 -- Lokale broker + RDP-export | ✅✅ VOLLEDIG WERKEND, end-to-end bevestigd | Na de rdp-deliver-profiel-fix: alle 3 queue-bindings up:true met bindSuccessCount:1, RDP-aws leverde daadwerkelijk 21 berichten af (httpResponseSuccessRxMsgCount:21) en AWS "Try Me!" toont het echte bericht aankomen op enewable/public/market/price. Zie PLAN.md sectie 13, punt 28. Klaar voor volledige testronde (fase 5) |
 | Fase 5 -- Demo-apps valideren | Nog te doen | |
 | Fase 6 -- Draaiboek + fallback | Nog te doen | |
 
@@ -230,7 +230,7 @@ nooit gecommit -- alleen `.env.example`-bestanden zitten in de repo.)
 | 1 | STACKIT-beschikbaarheid | ✅ Interim-broker op GCP europe-west1 (België) aangemaakt als stand-in; vlak vóór repetitie/DADD controleren of STACKIT al als datacenter-optie zichtbaar is en zo ja, overstappen | Interim: gereed; overstap-check: kort vóór fase 5/6 |
 | 2 | Solace Cloud account | Account + API-token aanmaken (indien nog niet aanwezig) | Week na fase 0 |
 | 3 | Cloud-brokers aanmaken | ✅ Alle 3 gereed: AWS (`ez-dadd-2026-eks-us-east-1a`), Azure (`ez-dadd-2026-aks-westeurope`), STACKIT/GCP-interim (`ez-dadd-2026-STACKIT-gke-gcp-europe-west1-b`); sovereign-node blijft STACKIT zodra GA, tot dan GCP europe-west1 interim | Gereed |
-| 4 | Lokale broker + RDP-export | ✅ Root cause gevonden: clientProfileName "default" (RDP + publishers) had allowGuaranteedMsgReceiveEnabled: false, dus de queue-binding kon nooit binden aan zijn eigen queue (bindRequestCount: 0). Gefixt met nieuw profiel "rdp-deliver" | Emil herdraait configure-rdp-export.sh (zet de 3 RDP's op het nieuwe profiel), dan diagnose-rdp.sh + AWS "Try Me!"-tab controleren |
+| 4 | Lokale broker + RDP-export | ✅✅ Volledig werkend, end-to-end bevestigd op AWS (bindSuccessCount:1, 21 berichten daadwerkelijk afgeleverd, zichtbaar in AWS "Try Me!" op de juiste topic). Azure/STACKIT staan klaar (up:true), nog geen verkeer getest | Fase 5: volledige testronde met alle 3 demo-apps (stm/python/sdkperf) op alle 3 topic-subtrees |
 | 5 | Demo-apps valideren | Alle 3 tools end-to-end testen (publiceren → juiste cloud-broker, nergens anders) | Meerdere keren voor DADD, niet pas op de dag zelf |
 | 6 | Draaiboek + fallback-opname | Live-timing oefenen, schermopname als fallback maken | Week vóór DADD |
 | 7 | Op de dag zelf | `docker-run.sh` + `configure-local-broker.sh` (of al draaiend laten staan), demo-apps klaarzetten | Vlak voor het slot |
@@ -904,6 +904,40 @@ productieklaar systeem:
      topic-naar-URL-mapping zijn 100% in orde -- het probleem zit
      uitsluitend op de lokale broker (punt 26's `rdp-deliver`-profiel-fix),
      niet aan de AWS-kant.
+  28. **✅ BEVESTIGD OPGELOST: `configure-rdp-export.sh` herdraaien +
+     `diagnose-rdp.sh` + AWS "Try Me!" tonen de volledige RDP-keten
+     werkend, end-to-end (Emil, 28/09/2026).** Na de `rdp-deliver`-fix
+     (punt 26):
+     - Alle 3 queue-bindings staan nu op `"up": true` met `bindRequestCount: 1`
+       / `bindSuccessCount: 1` op hun queue -- de RDP is dus voor het eerst
+       daadwerkelijk gebonden aan zijn eigen lokale queue (was 0/0 in elke
+       eerdere meting).
+     - Voor `rdp-aws` (die al 30 wachtende berichten had):
+       `httpRequestTxMsgCount: 24`, `httpResponseSuccessRxMsgCount: 21`,
+       `httpResponseErrorRxMsgCount: 0`, `httpRequestOutstandingTxMsgCount: 3`
+       -- de REST-consumer post nu daadwerkelijk berichten en krijgt
+       succesvolle responses terug (was overal exact 0). De queue drainde
+       van 30 naar 9 resterende berichten binnen enkele seconden.
+     - AWS "Try Me!" toont het bewijs zelf: Messages ging van 1 (de eerdere
+       handmatige curl-sanity-check) naar **31 Direct** -- het nieuwste
+       bericht, `2026-09-28 13:37:41 [Topic enewable/public/market/price]`
+       met inhoud `{"source": "enewable-market-feed", "type":
+       "day-ahead-price", ...}`, is een ECHT demo-berichten, aangekomen via
+       de volledige keten (publish -> lokale queue -> RDP -> AWS) op
+       precies dezelfde topic-structuur.
+     - `rdp-azure` en `rdp-stackit` tonen dezelfde `up: true` /
+       `bindSuccessCount: 1` -- klaar en wachtend, alleen nog geen verkeer
+       omdat er nog niet op `enewable/eu/ops/>` of `enewable/eu/pii/>` is
+       gepubliceerd in deze testronde.
+     De `"RDP (Is) Shutdown"`/`"No REST Consumers Up"`-meldingen die nog in
+     de output staan zijn eenmalige, verwachte blips van het moment
+     waarop het script het RDP-object herconfigureerde (het object gaat
+     kort omlaag en weer omhoog bij een PATCH) -- geen actief probleem,
+     aangezien `"up": true` op alle niveaus blijft staan.
+     **Conclusie: de volledige RDP-exportketen werkt nu end-to-end voor
+     AWS, en staat klaar voor Azure/STACKIT.** Sectie 14, stap 5 (de
+     eerste volledige testronde met alle 3 demo-apps) is de logische
+     vervolgstap.
 - **Geen automatische provisioning van alle 4 brokers in één commando.**
   Er is bewust voor losse, leesbare stappen gekozen (console + scripts per
   onderdeel) omdat dat beter uit te leggen en te debuggen is vóór een
@@ -998,11 +1032,16 @@ productieklaar systeem:
    3 RDP's daarop. ~~Sanity-check: handmatige curl-POST rechtstreeks
    naar AWS.~~ ✅ -- 200 OK, bericht verschijnt meteen in AWS "Try Me!"
    (zie sectie 13, punt 27) -- AWS-kant, credentials en topic-mapping zijn
-   dus 100% in orde, het probleem zit uitsluitend lokaal. **Nu:** Emil
-   draait `configure-rdp-export.sh` opnieuw (patcht de bestaande RDP's
-   naar het nieuwe `rdp-deliver`-profiel), dan `diagnose-rdp.sh` en/of de
-   AWS "Try Me!"-tab controleren of het bericht nu via de RDP-keten
-   (i.p.v. handmatige curl) eindelijk aankomt.
+   dus 100% in orde, het probleem zit uitsluitend lokaal.
+   ~~`configure-rdp-export.sh` opnieuw draaien, dan diagnose-rdp.sh en de
+   AWS "Try Me!"-tab controleren.~~ ✅✅ **WERKT.** Alle 3 queue-bindings
+   `up: true` met `bindSuccessCount: 1`; RDP-aws leverde 21 van de 30
+   wachtende berichten daadwerkelijk af (`httpResponseSuccessRxMsgCount:
+   21`), en AWS "Try Me!" toont het echte bericht aankomen op
+   `enewable/public/market/price` (zie sectie 13, punt 28). De RDP-export
+   werkt nu volledig end-to-end voor AWS; Azure/STACKIT staan klaar
+   (`up: true`) maar nog ongetest omdat er nog niet op die topics is
+   gepubliceerd.
 5. Eerste end-to-end testronde volgens sectie 12: publiceren met
    stm/python/sdkperf en in de Solace Cloud console van de DOELBROKER
    controleren dat het bericht op dezelfde topic aankomt, en nergens
