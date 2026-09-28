@@ -20,7 +20,8 @@ slide 23 ("Data that can't cross the border") van de sovereign-cloud-deck.
    zodat het publiek het verschil letterlijk ziet, net als in slide 23 van de
    deck: "watch it stay" vs. "share the safe part").
 4. Optioneel, als er tijd is: laat in Broker Manager van de lokale broker de
-   3 bridges en hun message-counts zien, als "achter de schermen"-bewijs dat
+   3 REST Delivery Points en hun queue message-counts zien, als "achter de
+schermen"-bewijs dat
    dit door topic-routering komt, niet door drie losse handmatige acties.
 
 ## Timing

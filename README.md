@@ -5,7 +5,8 @@ verborgen kosten van het verlaten van de hyperscalers"** van Emil Zegers,
 DADD 2026.
 
 Vier Solace-brokers (1 lokaal, self-managed + 3 Solace Cloud HA-services in
-AWS/Azure/STACKIT), verbonden via bridges, die laten zien hoe data op basis
+AWS/Azure/STACKIT), verbonden via REST Delivery Points (RDP's), die laten
+zien hoe data op basis
 van classificatie (publiek / niet-persoonlijk EU / gevoelige PII)
 automatisch naar precies de juiste, en alleen de juiste, bestemming
 stroomt.

@@ -3,8 +3,14 @@
 #   - Message VPN "enewable" (+ web-messaging / SMF services enabled)
 #   - 3 scoped publisher client-usernames (public / eu-ops / eu-pii), each
 #     restricted by an ACL profile to its own topic subtree
-#   - 3 bridges (local -> AWS, local -> Azure, local -> STACKIT), each with a
-#     localSubscription that exports exactly one topic subtree
+#
+# Run local-broker/semp/configure-rdp-export.sh AFTER this script to set up
+# the actual export path (queues + REST Delivery Points) to the 3 cloud
+# brokers. An earlier version of this script also created 3 Message VPN
+# Bridges for export -- that approach was tried and abandoned (a bridge's
+# remoteSubscription can only IMPORT from a remote broker, not export,
+# without a reciprocal bridge on a publicly reachable local broker; see
+# PLAN.md section 13 and docs/lokale-broker.md for the full investigation).
 #
 # This is a best-effort skeleton based on the SEMP v2 Config API reference
 # (https://docs.solace.com/SEMP/SEMP-API-Ref.htm). Field names are correct as of
@@ -87,102 +93,9 @@ create_scoped_publisher "pub-public"  "enewable/public/>"  "${PUB_PUBLIC_PASSWOR
 create_scoped_publisher "pub-eu-ops"  "enewable/eu/ops/>"   "${PUB_EU_OPS_PASSWORD:-pub-eu-ops-pw}"
 create_scoped_publisher "pub-eu-pii"  "enewable/eu/pii/>"   "${PUB_EU_PII_PASSWORD:-pub-eu-pii-pw}"
 
-echo "== 3. Bridges to the 3 cloud brokers =="
-
-create_bridge() {
-  local name="$1" remote_vpn="$2" remote_host="$3" remote_user="$4" remote_pass="$5" export_topic="$6"
-
-  # bridgeVirtualRouter is a required attribute on this broker version (SEMP
-  # error 228 "Expecting value for required attribute bridgeVirtualRouter"
-  # otherwise) -- "auto" is correct for a non-redundant, single-node local
-  # broker (it only matters for HA broker pairs, where it picks primary vs
-  # backup).
-  #
-  # A bridge's SEMP identifier is the COMPOSITE key (bridgeName,
-  # bridgeVirtualRouter), not bridgeName alone -- addressing a specific
-  # bridge's sub-collections (remoteMsgVpns, remoteSubscriptions,
-  # localSubscriptions) requires the comma-joined form
-  # "{bridgeName},{bridgeVirtualRouter}" in the path, confirmed after
-  # "/bridges/${name}/remoteMsgVpns" alone returned "535 INVALID_PATH -- No
-  # paths found" even though the bridge itself was created successfully.
-  local vr="auto"
-  semp POST "/msgVpns/${VPN}/bridges" \
-    "{\"bridgeName\":\"${name}\",\"bridgeVirtualRouter\":\"${vr}\",\"enabled\":true,\"remoteConnectionRetryCount\":10,\"remoteConnectionRetryDelay\":3}"
-
-  # The remote-auth fields (remoteAuthenticationScheme,
-  # remoteAuthenticationBasicClientUsername/Password) belong on the BRIDGE
-  # object itself, not on the remoteMsgVpn sub-object -- confirmed after
-  # POSTing them to .../remoteMsgVpns returned "11 INVALID_PARAMETER:
-  # Unknown attribute 'remoteAuthenticationScheme'". PATCH them onto the
-  # bridge here (idempotent, so this also applies them on a bridge that
-  # already existed from a previous, partially-failed run).
-  semp PATCH "/msgVpns/${VPN}/bridges/${name},${vr}" \
-    "{\"remoteAuthenticationScheme\":\"basic\",\"remoteAuthenticationBasicClientUsername\":\"${remote_user}\",\"remoteAuthenticationBasicPassword\":\"${remote_pass}\"}"
-
-  semp POST "/msgVpns/${VPN}/bridges/${name},${vr}/remoteMsgVpns" \
-    "{\"remoteMsgVpnName\":\"${remote_vpn}\",\"remoteMsgVpnLocation\":\"${remote_host}\",\"remoteMsgVpnInterface\":\"\",\"tlsEnabled\":true,\"enabled\":true}"
-
-  # IMPORTANT -- this remoteSubscriptionTopic configures IMPORT, not
-  # export: a bridge's remoteSubscription makes the LOCAL broker
-  # *subscribe to the REMOTE broker*, i.e. it pulls messages published
-  # directly on the remote (cloud) VPN into the local VPN. It does NOT
-  # export what we publish locally -- that was a wrong assumption on our
-  # part (a "localSubscriptions" sub-resource, which would have been the
-  # obvious fix, does not exist for bridges at all: confirmed both by this
-  # broker's own SEMP response, which only ever lists remoteMsgVpnsUri /
-  # remoteSubscriptionsUri / tlsTrustedCommonNamesUri / uri as bridge
-  # sub-collections, and by Solace's own docs -- see PLAN.md section 13,
-  # "open architectuurpunt": exporting local-VPN-published messages across
-  # a bridge requires a *second, reciprocal* bridge configured ON the
-  # remote (cloud) broker, pulling FROM this local VPN -- which in turn
-  # requires this local broker's SMF port to be reachable from the
-  # internet. Left as an open, unresolved point pending Emil's decision on
-  # how to make the local broker reachable. This remoteSubscriptions call
-  # is kept as-is (harmless; it's how you'd import cloud-originated
-  # messages, which we don't currently need either).
-  semp POST "/msgVpns/${VPN}/bridges/${name},${vr}/remoteSubscriptions" \
-    "{\"remoteSubscriptionTopic\":\"${export_topic}\",\"deliverAlwaysEnabled\":true}"
-
-  echo "  ${name}: exports '${export_topic}' -> vpn '${remote_vpn}' @ ${remote_host}"
-}
-
-create_bridge "bridge-to-aws"     "${AWS_REMOTE_VPN}"     "${AWS_REMOTE_SMF_HOST}"     "${AWS_BRIDGE_USER}"     "${AWS_BRIDGE_PASSWORD}"     "enewable/public/>"
-create_bridge "bridge-to-azure"   "${AZURE_REMOTE_VPN}"   "${AZURE_REMOTE_SMF_HOST}"   "${AZURE_BRIDGE_USER}"   "${AZURE_BRIDGE_PASSWORD}"   "enewable/eu/ops/>"
-# NOTE: STACKIT_* currently points at the interim GCP europe-west1 stand-in
-# until STACKIT is GA in Solace Cloud -- see ../../cloud-setup/stackit-eu01/README.md
-create_bridge "bridge-to-stackit" "${STACKIT_REMOTE_VPN}" "${STACKIT_REMOTE_SMF_HOST}" "${STACKIT_BRIDGE_USER}" "${STACKIT_BRIDGE_PASSWORD}" "enewable/eu/pii/>"
-
-echo "== 4. TEST: subscribe-only client-username for the AWS reciprocal-bridge experiment =="
-# See PLAN.md section 13 and cloud-setup/solace-cloud-api/test-reciprocal-bridge-aws.sh:
-# this is the client-username AWS's *reciprocal* bridge will log in as, to
-# pull enewable/public/> from us -- symmetric to create_scoped_publisher()
-# above, but subscribe-only (never allowed to publish). If this section's
-# variables aren't filled in yet, it's skipped with a clear message rather
-# than failing the whole run.
-create_scoped_subscriber() {
-  local user="$1" topic="$2" pass="$3"
-  local acl="acl-${user}"
-
-  semp POST "/msgVpns/${VPN}/aclProfiles" \
-    "{\"aclProfileName\":\"${acl}\",\"clientConnectDefaultAction\":\"allow\",\"publishTopicDefaultAction\":\"disallow\",\"subscribeTopicDefaultAction\":\"disallow\"}"
-  semp POST "/msgVpns/${VPN}/aclProfiles/${acl}/subscribeTopicExceptions" \
-    "{\"subscribeTopicExceptionSyntax\":\"smf\",\"subscribeTopicException\":\"${topic}\"}"
-  semp POST "/msgVpns/${VPN}/clientUsernames" \
-    "{\"clientUsername\":\"${user}\",\"password\":\"${pass}\",\"enabled\":true,\"aclProfileName\":\"${acl}\",\"clientProfileName\":\"default\"}"
-  echo "  ${user} -> may only subscribe on ${topic} (never publish)"
-}
-
-if [[ -n "${SUB_AWS_USER:-}" && "${SUB_AWS_USER:-}" != "CHANGEME_"* ]]; then
-  create_scoped_subscriber "${SUB_AWS_USER}" "enewable/public/>" "${SUB_AWS_PASSWORD:-sub-aws-pw}"
-else
-  echo "  SKIPPED -- SUB_AWS_USER not filled in in local-broker/.env yet"
-fi
-
 cat <<INFO
 
-Klaar. Controleer nu in Broker Manager (http://localhost:8080 > VPN 'enewable'
-> Bridges) dat alle 3 bridges 'Up' zijn. Als een bridge 'Down' blijft, is dat
-vrijwel altijd een van: verkeerd remote host:port, TLS/CA-vertrouwen, of een
-verkeerde remote client-username/password op de cloud-broker -- zie
-docs/lokale-broker.md.
+Klaar. Volgende stap: local-broker/semp/configure-rdp-export.sh -- richt de
+3 export-queues en REST Delivery Points in die daadwerkelijk naar de 3
+cloud-brokers publiceren (zie docs/lokale-broker.md, "Definitieve keuze").
 INFO

@@ -96,16 +96,15 @@ bleef ook onveranderd. De router-name-discovery uit Solace's
 bi-directional-bridge-documentatie werkt dus niet voor een kale
 Message-VPN-bridge zonder DMR-cluster-lidmaatschap tussen de twee brokers --
 dat opzetten is een te groot traject voor de resterende tijd tot DADD.
-Experiment afgesloten; de testobjecten (`bridge-from-enewable` op AWS,
-`sub-aws` lokaal) blijven onschadelijk staan.
+Experiment afgesloten. (De testobjecten `bridge-from-enewable` op AWS en
+`sub-aws` lokaal zijn later opgeruimd samen met de rest van de
+bridge-configuratie, zie onderaan deze sectie.)
 
-Overgebleven, wél haalbare routes (zie `PLAN.md` sectie 13 voor de volledige
-afweging): de lokale broker publiek bereikbaar maken zodat een échte
-reciprocal bridge per cloud-broker kan dialen, of bridges loslaten voor de
-exportkant. Broker Manager toont zelf geen down-reden;
-`../local-broker/semp/diagnose-bridges.sh` (schrijft naar
-`output/diagnose-bridges.txt`, gitignored) blijft nuttig om dit soort
-dingen te verifiëren i.p.v. te gokken -- zoals hier ook gebeurd is.
+Overgebleven, wél haalbare routes op dat moment (zie `PLAN.md` sectie 13
+voor de volledige afweging): de lokale broker publiek bereikbaar maken
+zodat een échte reciprocal bridge per cloud-broker kan dialen, of bridges
+loslaten voor de exportkant. Emil koos uiteindelijk een derde, betere optie
+-- zie hieronder.
 
 ## ✅ Definitieve keuze: REST Delivery Points i.p.v. bridges voor export
 
@@ -149,9 +148,14 @@ console vanuit deze sessie): `*_REMOTE_REST_HOST`/`*_REMOTE_REST_PORT` in
 poort 9443" -- controleer dit op de Connect-tab (REST-sectie) van elke
 service en zet het REST-protocol aan voor die service als het nog uitstaat.
 
-De 3 oude bridges (`bridge-to-aws/azure/stackit`) blijven ongebruikt maar
-onschadelijk staan in `configure-local-broker.sh` -- niet opgeruimd, tenzij
-Emil dat expliciet wil.
+**Opgeruimd (28/09/2026):** de 3 oude bridge-objecten
+(`bridge-to-aws/azure/stackit`), de reciprocal-bridge-testopstelling
+(`sub-aws`, `bridge-from-enewable` op AWS) en de bijbehorende scripts
+(`test-reciprocal-bridge-aws.sh`, `diagnose-bridges.sh`) zijn verwijderd uit
+de repo -- ze dienden geen doel meer zodra RDP's het exportpad overnamen.
+Draai `configure-local-broker.sh` opnieuw op een broker waar deze objecten
+nog bestaan (van een eerdere sessie) om ze daar handmatig op te ruimen; de
+scripts zelf maken ze niet meer aan.
 
 ## Starten
 
@@ -170,7 +174,7 @@ van het standaard 55555 gepubliceerd, omdat 55555 op macOS regelmatig al in
 gebruik is. Pas dit aan in `docker-run.sh` en `.env` als dat bij jou niet
 nodig is.
 
-## Configureren (Message VPN, ACL's, bridges)
+## Configureren (Message VPN, ACL's)
 
 Zie `../local-broker/semp/configure-local-broker.sh`. Dit script (SEMP v2 /
 curl) doet, in volgorde:
@@ -182,10 +186,9 @@ curl) doet, in volgorde:
 2. Drie client-usernames aanmaken (`pub-public`, `pub-eu-ops`, `pub-eu-pii`),
    elk met een eigen ACL-profiel dat publiceren beperkt tot precies één
    topic-subtree (zie `../docs/topologie.md`).
-3. Drie bridges aanmaken (`bridge-to-aws`, `bridge-to-azure`,
-   `bridge-to-stackit`) -- **historisch/ongebruikt**: dit bleek
-   architecturaal niet te kunnen exporteren zonder reciprocal bridge +
-   publieke bereikbaarheid, zie hieronder. Blijft staan, onschadelijk.
+(De 3 bridges die dit script eerder ook aanmaakte zijn verwijderd -- dat
+bleek architecturaal niet te kunnen exporteren zonder reciprocal bridge +
+publieke bereikbaarheid, zie hieronder.)
 
 Het **daadwerkelijke** exportpad loopt via
 `../local-broker/semp/configure-rdp-export.sh` (los script, ná

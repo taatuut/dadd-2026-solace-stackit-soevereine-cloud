@@ -37,22 +37,27 @@ Screenshots van elke stap staan in
 wordt afgekapt op **26 tekens** als de servicenaam langer is (AWS:
 `ez-dadd-2026-eks-us-east-1a` -> VPN `ez-dadd-2026-eks-us-east-1`; Azure:
 `ez-dadd-2026-aks-westeurope` -> VPN `ez-dadd-2026-aks-westeurop`). Puur
-cosmetisch (een bridge werkt prima met deze naam), maar goed om te weten als
+cosmetisch (een RDP werkt prima met deze naam), maar goed om te weten als
 je een VPN-naam wilt die exact de servicenaam volgt: houd 'm dan onder de
 26 tekens, of zet de VPN-naam handmatig onder "Advanced Connection Options".
 
-## Status: bridge-toegang ingericht
+## Status: publish-toegang ingericht (gebruikt door de RDP)
 
 ✅ `enewable-local-bridge` + ACL-profiel `acl-enewable-local-bridge`
 (publish-only op `enewable/eu/ops/>`) zijn aangemaakt via
 `../solace-cloud-api/configure-remote-bridge-users.sh` (SEMP-admin-username
-`mission-control-manager`). Credentials staan in `../../local-broker/.env`.
+`mission-control-manager`). Credentials staan in `../../local-broker/.env` --
+deze worden nu gebruikt door de REST Delivery Point's REST-consumer
+(`../../local-broker/semp/configure-rdp-export.sh`), niet meer door een
+bridge.
 
 ## Nog te doen voor deze service
 
-1. **Connect-tab**: exacte SMF-poort (verwacht 55443, TLS) bevestigen.
+1. **Connect-tab**: exacte SMF-poort (verwacht 55443, TLS) én REST-poort
+   (aangenomen 9443 -- nog te bevestigen) bevestigen; REST-messaging
+   aanzetten voor deze service als het nog uit staat.
 2. ~~Client-username + ACL-profiel aanmaken~~ ✅ gedaan, zie "Status:
-   bridge-toegang ingericht" hierboven.
+   publish-toegang ingericht" hierboven.
 3. ~~Host, VPN-naam en credentials in `../../local-broker/.env` invullen~~ ✅
-   gedaan (VPN-naam `ez-dadd-2026-aks-westeurop` en bridge-credentials
-   staan er al in onder de `AZURE_*`-variabelen).
+   gedaan (VPN-naam `ez-dadd-2026-aks-westeurop` en credentials staan er al
+   in onder de `AZURE_*`-variabelen).

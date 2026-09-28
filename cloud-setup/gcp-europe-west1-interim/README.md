@@ -37,21 +37,26 @@ sectie "Wat de AWS-, Azure- en GCP-interim-opzet ons hebben geleerd", voor
 de bredere lessen (regio-codes, VPN-naamgeving) die bij het aanmaken van
 deze service zijn bevestigd.
 
-## Status: bridge-toegang ingericht
+## Status: publish-toegang ingericht (gebruikt door de RDP)
 
 ✅ `enewable-local-bridge` + ACL-profiel `acl-enewable-local-bridge`
 (publish-only op `enewable/eu/pii/>`) zijn aangemaakt via
 `../solace-cloud-api/configure-remote-bridge-users.sh` (SEMP-admin-username
-`mission-control-manager`). Credentials staan in `../../local-broker/.env`.
+`mission-control-manager`). Credentials staan in `../../local-broker/.env` --
+deze worden nu gebruikt door de REST Delivery Point's REST-consumer
+(`../../local-broker/semp/configure-rdp-export.sh`), niet meer door een
+bridge.
 
 ## Nog te doen voor deze service
 
-1. Connect-tab openen en het exacte SMF-poortnummer bevestigen (55443/TLS
-   aangenomen, net als bij AWS en Azure).
+1. Connect-tab openen en het exacte SMF-poortnummer (55443/TLS aangenomen)
+   én het REST-poortnummer (9443 aangenomen -- nog te bevestigen) bevestigen;
+   REST-messaging aanzetten voor deze service als het nog uit staat.
 2. ~~Client-username + ACL-profiel aanmaken~~ ✅ gedaan, zie "Status:
-   bridge-toegang ingericht" hierboven.
+   publish-toegang ingericht" hierboven.
 3. ~~De `STACKIT_*`-variabelen in `../../local-broker/.env` invullen~~ ✅
-   gedaan (VPN-naam, SMF-hostname en bridge-credentials staan er al in).
+   gedaan (VPN-naam, SMF-hostname en credentials staan er al in).
 4. Zodra STACKIT GA is: de echte STACKIT eu01-service aanmaken, dezelfde
-   `STACKIT_*`-variabelen bijwerken, `configure-local-broker.sh` opnieuw
-   draaien, en deze interim-service afbouwen.
+   `STACKIT_*`-variabelen bijwerken, `configure-local-broker.sh` en
+   `configure-rdp-export.sh` opnieuw draaien, en deze interim-service
+   afbouwen.

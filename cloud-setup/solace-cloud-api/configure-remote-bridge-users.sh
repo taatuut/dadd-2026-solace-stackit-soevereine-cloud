@@ -1,9 +1,16 @@
 #!/usr/bin/env bash
-# Creates the bridge client-username + scoped ACL profile on each of the 3
+# Creates a scoped publish-client-username + ACL profile on each of the 3
 # remote Solace Cloud brokers (AWS, Azure, STACKIT/GCP-interim), via each
 # broker's OWN SEMP v2 Config API -- i.e. the same kind of call that
 # local-broker/semp/configure-local-broker.sh makes against the local broker,
 # just pointed at a remote host each time.
+#
+# NOTE (script name is historical): this username/password is now used by
+# local-broker/semp/configure-rdp-export.sh as the REST Delivery Point's
+# REST-consumer basic-auth credentials, NOT by a Message VPN bridge -- the
+# bridge-based export approach was tried first and abandoned (see PLAN.md
+# section 13). The username itself is still called "enewable-local-bridge"
+# to avoid re-provisioning it; only what consumes it changed.
 #
 # IMPORTANT -- this is a DIFFERENT API from cloud-setup/solace-cloud-api/create-service.sh:
 #   - create-service.sh talks to the Solace Cloud MISSION CONTROL API

@@ -17,7 +17,7 @@ alleen wat gepland was.
 | Fase 3 -- AWS US East | ✅ Aangemaakt | Service `ez-dadd-2026-eks-us-east-1a`, zie [`cloud-setup/aws-us-east/README.md`](cloud-setup/aws-us-east/README.md) en `screenshots/AWS/` |
 | Fase 3 -- Azure West Europe | ✅ Aangemaakt | Service `ez-dadd-2026-aks-westeurope`, zie [`cloud-setup/azure-west-europe/README.md`](cloud-setup/azure-west-europe/README.md) en `screenshots/Azure/` |
 | Fase 3 -- STACKIT / GCP-interim | ✅ Aangemaakt | Service `ez-dadd-2026-STACKIT-gke-gcp-europe-west1-b` (interim op GCP europe-west1), zie [`cloud-setup/gcp-europe-west1-interim/README.md`](cloud-setup/gcp-europe-west1-interim/README.md) en `screenshots/STACKIT-of-GCP-interim/` -- alle 3 cloud-broker services zijn nu aangemaakt |
-| Fase 4 -- Lokale broker + RDP-export | 🔧 Geimplementeerd, testrun nodig | Emil koos "aangepaste optie 2": apps blijven DIRECT publiceren, 3 queues (`q-export-*`) vangen berichten op via Solace message promotion (automatisch, geen appwijziging nodig), 3 REST Delivery Points sturen elke queue native door naar de bijbehorende cloud-broker. Bridges (`bridge-to-*`) blijven ongebruikt staan. Nieuw script `local-broker/semp/configure-rdp-export.sh` -- wacht op Emils testrun + `*_REMOTE_REST_HOST/PORT` bevestiging in `.env` |
+| Fase 4 -- Lokale broker + RDP-export | 🔧 Geïmplementeerd + opgeruimd, testrun nodig | Emil koos "aangepaste optie 2": apps blijven DIRECT publiceren, 3 queues (`q-export-*`) vangen berichten op via Solace message promotion (automatisch, geen appwijziging nodig), 3 REST Delivery Points sturen elke queue native door naar de bijbehorende cloud-broker. Oude bridge-configuratie/scripts verwijderd. Nieuw script `local-broker/semp/configure-rdp-export.sh` -- wacht op Emils testrun + `*_REMOTE_REST_HOST/PORT` bevestiging in `.env` |
 | Fase 5 -- Demo-apps valideren | Nog te doen | |
 | Fase 6 -- Draaiboek + fallback | Nog te doen | |
 
@@ -83,8 +83,9 @@ willekeurige waarden) -- er wordt nooit echte persoonsdata gebruikt.
 ## 3. Topologie
 
 Zie [`docs/topologie.md`](docs/topologie.md) voor het volledige diagram, de
-brokertabel en de topic-taxonomie. Kort samengevat: lokaal → 3 bridges →
-3 cloud-brokers, 1 topic-subtree per bridge, geen overlap.
+brokertabel en de topic-taxonomie. Kort samengevat: lokaal → 3 queues +
+REST Delivery Points → 3 cloud-brokers, 1 topic-subtree per RDP, geen
+overlap.
 
 ## 4. Architectuurkeuzes en aannames
 
@@ -185,8 +186,7 @@ Zie [`docs/demo-apps.md`](docs/demo-apps.md) en [`demo-apps/`](demo-apps/)
 |   |-- README.md
 |   `-- semp/
 |       |-- configure-local-broker.sh
-|       |-- configure-rdp-export.sh          <- NIEUW: queues + REST Delivery Points voor export naar cloud-brokers
-|       `-- diagnose-bridges.sh              <- read-only: SEMP monitor-data om down-reden te vinden
+|       `-- configure-rdp-export.sh          <- queues + REST Delivery Points voor export naar cloud-brokers
 |-- cloud-setup/
 |   |-- README.md
 |   |-- aws-us-east/README.md
@@ -195,8 +195,7 @@ Zie [`docs/demo-apps.md`](docs/demo-apps.md) en [`demo-apps/`](demo-apps/)
 |   |-- gcp-europe-west1-interim/README.md
 |   `-- solace-cloud-api/
 |       |-- create-service.sh
-|       |-- configure-remote-bridge-users.sh   <- creates bridge client-usernames + ACL's on the 3 cloud brokers
-|       |-- test-reciprocal-bridge-aws.sh      <- experiment: reciprocal bridge op AWS via v:<router-name>
+|       |-- configure-remote-bridge-users.sh   <- creates publish client-usernames + ACL's on the 3 cloud brokers (now consumed by the RDP's REST-consumer)
 |       `-- .env.example
 `-- demo-apps/
     |-- README.md
@@ -226,7 +225,7 @@ nooit gecommit -- alleen `.env.example`-bestanden zitten in de repo.)
 | 1 | STACKIT-beschikbaarheid | ✅ Interim-broker op GCP europe-west1 (België) aangemaakt als stand-in; vlak vóór repetitie/DADD controleren of STACKIT al als datacenter-optie zichtbaar is en zo ja, overstappen | Interim: gereed; overstap-check: kort vóór fase 5/6 |
 | 2 | Solace Cloud account | Account + API-token aanmaken (indien nog niet aanwezig) | Week na fase 0 |
 | 3 | Cloud-brokers aanmaken | ✅ Alle 3 gereed: AWS (`ez-dadd-2026-eks-us-east-1a`), Azure (`ez-dadd-2026-aks-westeurope`), STACKIT/GCP-interim (`ez-dadd-2026-STACKIT-gke-gcp-europe-west1-b`); sovereign-node blijft STACKIT zodra GA, tot dan GCP europe-west1 interim | Gereed |
-| 4 | Lokale broker + RDP-export | 🔧 Aangepaste optie 2 (Emils keuze) geïmplementeerd: queues + REST Delivery Points i.p.v. bridges voor export, apps ongewijzigd. Testrun + validatie door Emil nodig | Testrun nu |
+| 4 | Lokale broker + RDP-export | 🔧 Aangepaste optie 2 (Emils keuze) geïmplementeerd + oude bridge-configuratie opgeruimd: queues + REST Delivery Points i.p.v. bridges voor export, apps ongewijzigd. Testrun + validatie door Emil nodig | Testrun nu |
 | 5 | Demo-apps valideren | Alle 3 tools end-to-end testen (publiceren → juiste cloud-broker, nergens anders) | Meerdere keren voor DADD, niet pas op de dag zelf |
 | 6 | Draaiboek + fallback-opname | Live-timing oefenen, schermopname als fallback maken | Week vóór DADD |
 | 7 | Op de dag zelf | `docker-run.sh` + `configure-local-broker.sh` (of al draaiend laten staan), demo-apps klaarzetten | Vlak voor het slot |
@@ -240,10 +239,11 @@ uitsluitend op zijn eigen broker verschijnt.
 
 ## 12. Testplan / verificatie
 
-Vast controlelijstje, uit te voeren na elke wijziging aan bridge- of
+Vast controlelijstje, uit te voeren na elke wijziging aan RDP- of
 ACL-configuratie, en sowieso nog een keer vlak voor DADD:
 
-1. Alle 3 bridges tonen "Up" in Broker Manager van de lokale broker.
+1. Alle 3 queues (`q-export-*`) ontvangen berichten en alle 3 REST Delivery
+   Points (`rdp-*`) tonen "Up" in Broker Manager van de lokale broker.
 2. `stm-public/publish-public.sh` → bericht verschijnt **alleen** op AWS.
 3. `python-eu-nonpersonal/publisher.py` → bericht verschijnt **alleen** op Azure.
 4. `sdkperf-pii/publish-pii.sh` → bericht verschijnt **alleen** op STACKIT.
@@ -252,11 +252,12 @@ ACL-configuratie, en sowieso nog een keer vlak voor DADD:
    `enewable/eu/pii/...`) → dit moet door de ACL geweigerd worden (negative
    test, laat de governance-garantie zien, niet alleen de happy path).
 6. Herstart de lokale broker-container en herhaal `configure-local-broker.sh`
-   → opnieuw idempotent te draaien zonder handmatige opschoning.
-7. Meet de tijd van "koude start" (docker run tot alle 3 bridges Up) -- moet
+   + `configure-rdp-export.sh` → opnieuw idempotent te draaien zonder
+   handmatige opschoning.
+7. Meet de tijd van "koude start" (docker run tot alle 3 RDP's Up) -- moet
    ruim binnen de gewenste ~5 minuten passen; zo niet, overweeg de
    cloud-brokers al vooraf "warm" te laten draaien en alleen de lokale
-   broker + bridges als het live-onderdeel te zien.
+   broker + RDP's als het live-onderdeel te zien.
 
 ## 13. Wat ontbreekt of beter kan
 
@@ -495,10 +496,7 @@ productieklaar systeem:
      topic-subscription, 3 RDP's (`rdp-aws`/`rdp-azure`/`rdp-stackit`) elk
      met 1 queue-binding en 1 rest-consumer. De rest-consumer hergebruikt de
      bestaande `enewable-local-bridge`-credentials (al publish-only
-     ACL-gescoped per cloud-broker) -- geen nieuwe secrets nodig. De
-     bridges (`bridge-to-aws/azure/stackit`) uit `configure-local-broker.sh`
-     blijven ongebruikt maar onschadelijk staan (niet opgeruimd, tenzij
-     Emil dat expliciet wil).
+     ACL-gescoped per cloud-broker) -- geen nieuwe secrets nodig.
      **Nog open, moet Emil zelf checken/invullen** (geen toegang tot Solace
      Cloud console vanuit deze sessie): `*_REMOTE_REST_HOST`/
      `*_REMOTE_REST_PORT` in `local-broker/.env(.example)` zijn ingevuld
@@ -507,6 +505,43 @@ productieklaar systeem:
      elke service (REST-sectie) en **zet het REST-messaging-protocol aan**
      voor die service als dat nog niet zo is (in tegenstelling tot
      SMF/Web-messaging staat REST niet altijd standaard aan).
+  12. **Opgeruimd: de nu-obsolete bridge-configuratie en -experimenten,
+     zoals Emil vroeg.** Nu de RDP-route werkt volgens plan, dienden de
+     bridge-gerelateerde bestanden en configuratie geen doel meer en zijn
+     verwijderd/aangepast:
+     - Sectie 3 (3 bridges) en sectie 4 (`sub-aws`-testgebruiker) zijn uit
+       `local-broker/semp/configure-local-broker.sh` verwijderd; het script
+       richt nu alleen nog de Message VPN en de 3 scoped publishers in.
+     - `local-broker/semp/diagnose-bridges.sh` en
+       `cloud-setup/solace-cloud-api/test-reciprocal-bridge-aws.sh` zijn
+       verwijderd (`git rm`) -- beide bestonden alleen om de
+       bridge-aanpak te diagnosticeren/testen.
+     - `LOCAL_ROUTER_NAME` en `SUB_AWS_USER`/`SUB_AWS_PASSWORD` zijn uit
+       `local-broker/.env(.example)` verwijderd (waren alleen relevant voor
+       het afgesloten router-name-experiment).
+     - `AWS_BRIDGE_USER`/`AWS_BRIDGE_PASSWORD` (en de Azure/STACKIT-
+       equivalenten) blijven bestaan -- deze credentials zijn nu de RDP's
+       REST-consumer-auth, niet meer een bridge's remote-auth. De naam is
+       met opzet niet veranderd (voorkomt een overbodige her-provisioning
+       op elke cloud-broker); dit staat nu overal expliciet in de
+       commentaren in `.env(.example)` en in `docs/cloud-brokers.md`.
+     - Alle documentatie (`docs/lokale-broker.md`, `docs/topologie.md`,
+       `docs/cloud-brokers.md`, `docs/demo-apps.md`,
+       `demo-apps/README.md`, `local-broker/README.md`,
+       `cloud-setup/README.md` en de 4 provider-`README.md`'s, dit bestand)
+       is bijgewerkt om consistent over queues + REST Delivery Points te
+       spreken in plaats van bridges als het huidige exportmechanisme --
+       de bridge-episode (waarom het niet werkte, wat er geprobeerd is)
+       blijft staan als historie, niet als instructie voor wat nu te
+       draaien.
+     - `cloud-setup/solace-cloud-api/configure-remote-bridge-users.sh`
+       blijft bestaan (het maakt de credentials die de RDP nu gebruikt) --
+       alleen het scriptnaam is historisch, de header-comment legt dit nu
+       uit.
+     Niet verwijderd, met opzet: de historische beschrijving hierboven
+     (punten 6-11) van *waarom* bridges niet werkten en *wat* er geprobeerd
+     is -- dat is waardevolle context voor de presentatie/nagesprek, geen
+     instructie om opnieuw te draaien.
 - **Geen automatische provisioning van alle 4 brokers in één commando.**
   Er is bewust voor losse, leesbare stappen gekozen (console + scripts per
   onderdeel) omdat dat beter uit te leggen en te debuggen is vóór een

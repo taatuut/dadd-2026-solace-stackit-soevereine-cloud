@@ -37,12 +37,12 @@ Cloud HA-service op **GCP, regio europe-west1 (België)** -- inmiddels
 aangemaakt als `ez-dadd-2026-STACKIT-gke-gcp-europe-west1-b` (status:
 Running), zie `../cloud-setup/gcp-europe-west1-interim/README.md` voor de
 details. Functioneel identiek voor de demo (zelfde topics, ACL-profiel en
-bridge-naam `bridge-to-stackit`); alleen de fysieke locatie/provider wijkt
+RDP-naam `rdp-stackit`); alleen de fysieke locatie/provider wijkt
 tijdelijk af van het uiteindelijke soevereine doel. Zodra STACKIT GA is, is
 de overstap een kwestie van de echte service aanmaken, de `STACKIT_*`-
 variabelen in `local-broker/.env` bij te werken en
-`configure-local-broker.sh` opnieuw te draaien -- geen wijziging aan topics,
-ACL's of bridge-configuratie nodig.
+`configure-local-broker.sh` en `configure-rdp-export.sh` opnieuw te draaien --
+geen wijziging aan topics, ACL's of RDP-configuratie nodig.
 
 **Restrisico**: GA-planningen kunnen schuiven. Zolang STACKIT niet
 daadwerkelijk beschikbaar is op het moment van de repetitie/DADD zelf, blijft
@@ -71,10 +71,13 @@ verwarren punt:
    Basic Auth met de **SEMP-admin-username/password van die specifieke
    broker** -- niet het Mission Control-token, en niet `solace-cloud-client`)
    -- beheert **objecten binnen** die broker: Message VPN's,
-   client-usernames, ACL-profielen, bridges. Gebruikt door
-   `../local-broker/semp/configure-local-broker.sh` (lokaal) en
+   client-usernames, ACL-profielen, queues, REST Delivery Points. Gebruikt door
+   `../local-broker/semp/configure-local-broker.sh` en
+   `../local-broker/semp/configure-rdp-export.sh` (lokaal) en
    `../cloud-setup/solace-cloud-api/configure-remote-bridge-users.sh`
-   (op afstand, voor de 3 cloud-brokers). **Bevestigd (28/09/2026)**: de
+   (op afstand, voor de 3 cloud-brokers -- de naam is historisch: dit
+   script maakt de publish-client-username die nu door de RDP's
+   REST-consumer wordt gebruikt, niet meer door een bridge). **Bevestigd (28/09/2026)**: de
    SEMP-admin-username op de Connect-tab van elke Solace Cloud-service heet
    `mission-control-manager` (per service een eigen wachtwoord), op
    `https://<smf-hostnaam>:943`.
@@ -116,8 +119,9 @@ Concrete correcties/aanvullingen op basis daarvan:
   onder "Advanced Connection Options". Dit hoeft dus **niet** voor elke
   broker "enewable" te heten -- de lokale broker heeft zijn eigen VPN-naam
   (`enewable`, door onszelf gekozen) en elke cloud-service heeft zijn eigen
-  (auto-gegenereerde of handmatig gekozen) naam. Een bridge verbindt twee
-  VPN's met verschillende namen probleemloos.
+  (auto-gegenereerde of handmatig gekozen) naam. Een REST Delivery Point post
+  naar een gewoon REST-endpoint (host:poort), dus VPN's met verschillende
+  namen verbinden probleemloos, net als eerder met bridges het geval was.
 - **Naamgevingsconventie**: AWS en Azure volgen `ez-dadd-2026-<provider>-
   <regio>`. Voor de STACKIT/GCP-interim-service is bewust afgeweken naar
   `ez-dadd-2026-STACKIT-gke-gcp-europe-west1-b` -- de expliciete `STACKIT`
@@ -136,10 +140,11 @@ Concrete correcties/aanvullingen op basis daarvan:
   broker-release 10.26 -- gebruik dezelfde class voor Azure en
   STACKIT/GCP-interim voor consistentie, tenzij er een reden is om af te
   wijken.
-- **Connect-tab (exacte host:poort en client-username voor de bridge) is nog
-  niet vastgelegd voor AWS en Azure, en voor GCP-interim staat alleen de
-  SMF-hostnaam uit het Status-scherm vast** -- dat is nu de eerstvolgende
-  sub-stap voor alle drie services, zie `../local-broker/.env.example`.
+- **Connect-tab (exacte REST host:poort voor de RDP, naast de al bekende
+  SMF-hostnaam) is nog niet bevestigd voor AWS, Azure of GCP-interim** --
+  aangenomen is dezelfde hostname als SMF op poort 9443 (Solace Cloud's
+  standaard secure-REST-poort); dit is de eerstvolgende sub-stap voor alle
+  drie services, zie `../local-broker/.env.example`.
 
 ## Concrete gegevens per service
 
@@ -157,7 +162,7 @@ Zegers op 28/09/2026.
 
 Alle cloud-broker services worden aangemaakt in **public clusters** --
 bereikbaar over het publieke internet, TLS + gebruikersnaam/wachtwoord als
-enige beveiligingslaag op de bridge-verbinding. Dat is een bewuste keuze
+enige beveiligingslaag op de RDP-verbinding. Dat is een bewuste keuze
 voor het gemak en de snelheid van deze demo-opzet (geen VPN/peering nodig
 vanaf een laptop op een podium).
 
@@ -173,7 +178,8 @@ al werkt.
 ## Credentials
 
 - Elke service krijgt een eigen, **nieuw aangemaakte** client-username voor
-  de inkomende bridge-verbinding: `enewable-local-bridge` op alle drie de
+  de inkomende verbinding vanaf de lokale broker's REST Delivery Point:
+  `enewable-local-bridge` op alle drie de
   cloud-services, elk met een eigen, al gegenereerd wachtwoord in
   `../local-broker/.env` (niet gecommit). Aanmaken kan handmatig (Manage >
   Client Usernames, zie per submap in `../cloud-setup/`) of via
@@ -186,7 +192,7 @@ al werkt.
   van elke service gebruikt om tijdens de live demo de binnenkomende
   berichten te tonen (zie `docs/demo-apps.md`), en heeft van zichzelf een
   ruim ACL-profiel. Een ACL-restrictie op `solace-cloud-client` zou dus
-  zowel de bridge als de "Try Me!"-subscriptie raken -- en het hele punt van
+  zowel de RDP's REST-consumer als de "Try Me!"-subscriptie raken -- en het hele punt van
   de demo is juist dat de scheiding tussen dataklassen door de ACL wordt
   *afgedwongen*, niet dat hij toevallig lijkt te werken omdat er verder
   niets anders op die topic-subtree publiceert.
