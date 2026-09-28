@@ -17,7 +17,7 @@ alleen wat gepland was.
 | Fase 3 -- AWS US East | ✅ Aangemaakt | Service `ez-dadd-2026-eks-us-east-1a`, zie [`cloud-setup/aws-us-east/README.md`](cloud-setup/aws-us-east/README.md) en `screenshots/AWS/` |
 | Fase 3 -- Azure West Europe | ✅ Aangemaakt | Service `ez-dadd-2026-aks-westeurope`, zie [`cloud-setup/azure-west-europe/README.md`](cloud-setup/azure-west-europe/README.md) en `screenshots/Azure/` |
 | Fase 3 -- STACKIT / GCP-interim | ✅ Aangemaakt | Service `ez-dadd-2026-STACKIT-gke-gcp-europe-west1-b` (interim op GCP europe-west1), zie [`cloud-setup/gcp-europe-west1-interim/README.md`](cloud-setup/gcp-europe-west1-interim/README.md) en `screenshots/STACKIT-of-GCP-interim/` -- alle 3 cloud-broker services zijn nu aangemaakt |
-| Fase 4 -- Lokale broker + RDP-export | 🔴 503 blijft na requestTargetEvaluation-fix; nieuw spoor onderzocht | requestTargetEvaluation-fix bevestigd live op de broker, maar httpRequestTxMsgCount blijft 0 en de 503 verandert niet (ronde 5, spooledMsgCount nu 20) -- dus niet de (enige) oorzaak. Nieuw spoor: REST-consumer toont "Peer TCP Closed" als lastConnectionFailureReason -- mogelijk sluit de cloud-broker de persistente verbindingspool actief. Nieuw script watch-rdp-live.sh moet dit bevestigen (zie PLAN.md sectie 13, punt 24) |
+| Fase 4 -- Lokale broker + RDP-export | ✅ Echte root cause gevonden en gefixt: clientProfileName "default" had allowGuaranteedMsgReceiveEnabled: false | watch-rdp-live.sh bevestigt: de queue-binding bindt zich nooit aan zijn eigen queue (bindRequestCount: 0, "Consumers: 0"), want zowel de RDP als de demo-app publishers gebruikten profiel "default" dat guaranteed-receive verbiedt -- exact wat een RDP-binding nodig heeft. Gefixt met een los profiel "rdp-deliver" (zie PLAN.md sectie 13, punt 26); Emil moet configure-rdp-export.sh opnieuw draaien om te bevestigen |
 | Fase 5 -- Demo-apps valideren | Nog te doen | |
 | Fase 6 -- Draaiboek + fallback | Nog te doen | |
 
@@ -230,7 +230,7 @@ nooit gecommit -- alleen `.env.example`-bestanden zitten in de repo.)
 | 1 | STACKIT-beschikbaarheid | ✅ Interim-broker op GCP europe-west1 (België) aangemaakt als stand-in; vlak vóór repetitie/DADD controleren of STACKIT al als datacenter-optie zichtbaar is en zo ja, overstappen | Interim: gereed; overstap-check: kort vóór fase 5/6 |
 | 2 | Solace Cloud account | Account + API-token aanmaken (indien nog niet aanwezig) | Week na fase 0 |
 | 3 | Cloud-brokers aanmaken | ✅ Alle 3 gereed: AWS (`ez-dadd-2026-eks-us-east-1a`), Azure (`ez-dadd-2026-aks-westeurope`), STACKIT/GCP-interim (`ez-dadd-2026-STACKIT-gke-gcp-europe-west1-b`); sovereign-node blijft STACKIT zodra GA, tot dan GCP europe-west1 interim | Gereed |
-| 4 | Lokale broker + RDP-export | 🔴 requestTargetEvaluation-fix bevestigd live toegepast, maar 503 en httpRequestTxMsgCount: 0 blijven ongewijzigd (ronde 5) -- niet de (enige) oorzaak. Nieuw spoor: REST-consumer se "Peer TCP Closed" op de persistente verbindingspool, mogelijk actief dichtgegooid door de cloud-broker | Emil draait publish-test + nieuw watch-rdp-live.sh (30s polling) om te bevestigen of dit een continue connect/drop-lus is |
+| 4 | Lokale broker + RDP-export | ✅ Root cause gevonden: clientProfileName "default" (RDP + publishers) had allowGuaranteedMsgReceiveEnabled: false, dus de queue-binding kon nooit binden aan zijn eigen queue (bindRequestCount: 0). Gefixt met nieuw profiel "rdp-deliver" | Emil herdraait configure-rdp-export.sh (zet de 3 RDP's op het nieuwe profiel), dan diagnose-rdp.sh + AWS "Try Me!"-tab controleren |
 | 5 | Demo-apps valideren | Alle 3 tools end-to-end testen (publiceren → juiste cloud-broker, nergens anders) | Meerdere keren voor DADD, niet pas op de dag zelf |
 | 6 | Draaiboek + fallback-opname | Live-timing oefenen, schermopname als fallback maken | Week vóór DADD |
 | 7 | Op de dag zelf | `docker-run.sh` + `configure-local-broker.sh` (of al draaiend laten staan), demo-apps klaarzetten | Vlak voor het slot |
@@ -846,6 +846,48 @@ productieklaar systeem:
      `./watch-rdp-live.sh` nogmaals draaien is genoeg om punt 24's
      hypothese (`"Peer TCP Closed"` op de persistente verbindingspool)
      te toetsen.
+  26. **`watch-rdp-live.txt` (herhaalde run, correcte tellers) toont de
+     echte root cause: de queue-binding bindt zich helemaal nooit aan zijn
+     eigen lokale queue (Emil, 28/09/2026).** Over 15 metingen (~35
+     seconden) blijven `httpRequestTxMsgCount`, `httpResponseSuccessRxMsgCount`
+     en `httpResponseErrorRxMsgCount` op alle 3 consumers permanent op 0 --
+     zelfs terwijl de queue 30 berichten bevat en de REST-consumer se
+     verbindingen het grootste deel van die tijd gewoon gezond zijn
+     (`"up": true`, `remoteOutgoingConnectionUpCount: 3`). Bovendien:
+     `bindRequestCount: 0` / `bindSuccessCount: 0` op de queue, exact
+     consistent met "Consumers: 0" in de Broker Manager-schermafbeelding
+     (had 1 moeten zijn -- de RDP zelf). Punt 24's `"Peer TCP Closed"`-spoor
+     is hiermee een **rode haring**: de queue-binding faalt met
+     `"Service Unavailable"` op bijna elke ~2s-poging **onafhankelijk** van
+     of de REST-consumer op dat moment gezond is of niet (1 keer, sample 9,
+     zagen we de consumer daadwerkelijk kortstondig naar 0/3 verbindingen
+     gaan en toen meldde de binding wél terecht `"No REST Consumers Up"` --
+     in alle ANDERE samples, met een gezonde consumer, bleef het toch
+     `"Service Unavailable"`). Conclusie: de binding komt nooit verder dan
+     een poging tot binden aan de LOKALE queue -- de REST-aflevering wordt
+     nooit eens bereikt.
+     **Root cause gevonden:** zowel het RDP-object als alle demo-app
+     client-usernames gebruiken `clientProfileName: "default"`
+     (`configure-local-broker.sh` / `configure-rdp-export.sh`), en
+     `diagnose-local-auth.txt` had al laten zien (28/09/2026, tot nu toe
+     niet aan dit onderzoek verbonden) dat dit profiel
+     `allowGuaranteedMsgReceiveEnabled: false` heeft. Het binden van een
+     RDP aan zijn eigen durable queue om berichten te dequeuen is precies
+     een guaranteed-message-RECEIVE-operatie -- als het clientprofiel dat
+     verbiedt, kan de binding nooit tot stand komen. Dit verklaart elk
+     symptoom: de bind registreert nooit (`bindRequestCount` blijft 0),
+     er wordt nooit een bericht gedequeued om te posten
+     (`httpRequestTxMsgCount` blijft 0), en de generieke
+     `"Service Unavailable"` is wat de broker meldt als hij de operator
+     niets specifieker kan vertellen over waarom de binding niet omhoog
+     komt.
+     **Gefixt:** `configure-rdp-export.sh` maakt nu een los
+     client-profile `rdp-deliver` aan met
+     `allowGuaranteedMsgReceiveEnabled: true` (en voor de zekerheid ook
+     `allowGuaranteedMsgSendEnabled: true`), en elke RDP wordt
+     aangemaakt/gepatcht om dit profiel te gebruiken in plaats van
+     `"default"` -- de demo-app publishers blijven ongewijzigd op
+     `"default"` staan, dus dit raakt niets anders.
 - **Geen automatische provisioning van alle 4 brokers in één commando.**
   Er is bewust voor losse, leesbare stappen gekozen (console + scripts per
   onderdeel) omdat dat beter uit te leggen en te debuggen is vóór een
@@ -927,15 +969,20 @@ productieklaar systeem:
    dus niet de (enige) oorzaak. Zie sectie 13, punt 24 voor het nieuwe
    spoor (`"lastConnectionFailureReason": "Peer TCP Closed"` op de
    REST-consumer). **Nu:** eerst een publish-test draaien, dan meteen
-   ~~`local-broker/semp/watch-rdp-live.sh` draaien.~~ ✅ (poging 1) --
-   leverde alleen `null`-waarden op door een bug in het script se
-   `jq`-filter (las van het top-level object i.p.v. `.data`); geen
-   nieuwe broker-info. Gefixt (zie sectie 13, punt 25). **Nu:**
-   `watch-rdp-live.sh` nogmaals draaien (geen nieuwe publish-test nodig,
-   er liggen al 30 berichten in `q-export-public`) en de output delen --
-   dit moet laten zien of de HTTP-tellers ooit al is het maar heel even
-   bewegen, en of de verbindingen in een continue connect/drop-lus
-   zitten.
+   ~~`local-broker/semp/watch-rdp-live.sh` draaien.~~ ✅ (poging 1: bug in
+   het script, geen info; poging 2: correcte data) -- toont de echte
+   root cause: de queue-binding bindt zich nooit aan zijn eigen lokale
+   queue (`bindRequestCount: 0`, "Consumers: 0" in Broker Manager), omdat
+   het clientprofiel `"default"` (van zowel de RDP als de demo-app
+   publishers) `allowGuaranteedMsgReceiveEnabled: false` heeft -- en een
+   RDP-binding is precies een guaranteed-receive-operatie. Punt 24's
+   `"Peer TCP Closed"`-spoor was een rode haring (zie sectie 13, punt 26).
+   **Gefixt:** `configure-rdp-export.sh` maakt nu een los profiel
+   `rdp-deliver` (`allowGuaranteedMsgReceiveEnabled: true`) en zet alle
+   3 RDP's daarop. **Nu:** Emil draait `configure-rdp-export.sh` opnieuw
+   (patcht de bestaande RDP's naar het nieuwe profiel), dan
+   `diagnose-rdp.sh` en/of de AWS "Try Me!"-tab controleren of het
+   bericht nu eindelijk aankomt.
 5. Eerste end-to-end testronde volgens sectie 12: publiceren met
    stm/python/sdkperf en in de Solace Cloud console van de DOELBROKER
    controleren dat het bericht op dezelfde topic aankomt, en nergens

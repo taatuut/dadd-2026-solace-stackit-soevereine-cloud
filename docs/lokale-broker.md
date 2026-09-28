@@ -302,6 +302,43 @@ al is het maar heel even, van 0 afgaat, en of `lastConnectionFailureTime`
 in een continue connect/drop-ritme staat (i.p.v. een oude, eenmalige
 waarde). Zie `PLAN.md` sectie 13, punt 24.
 
+**✅ Echte root cause gevonden: de queue-binding bindt zich nooit aan zijn
+eigen lokale queue.** De herhaalde (gefixte) `watch-rdp-live.sh`-run toont
+over 15 metingen (~35 seconden): `httpRequestTxMsgCount`,
+`httpResponseSuccessRxMsgCount` en `httpResponseErrorRxMsgCount` blijven
+op alle 3 consumers permanent op 0 -- ook terwijl de queue 30 berichten
+bevat en de REST-consumer se verbindingen het grootste deel van die tijd
+gewoon gezond zijn (`"up": true`, 3/3). Bovendien: `bindRequestCount: 0` /
+`bindSuccessCount: 0` op de queue, precies consistent met "Consumers: 0"
+in Broker Manager (had 1 moeten zijn: de RDP zelf). Cruciaal: in de ene
+meting waarin de consumer daadwerkelijk kortstondig naar 0/3 verbindingen
+ging, meldde de binding terecht `"No REST Consumers Up"` -- in alle
+ANDERE metingen, met een gezonde consumer, bleef het toch
+`"Service Unavailable"`. Dat betekent dat de twee dingen onafhankelijk
+zijn: punt 24's `"Peer TCP Closed"`-spoor is een rode haring. De binding
+komt domweg nooit verder dan een poging tot binden aan de LOKALE queue --
+de REST-aflevering wordt nooit eens bereikt.
+
+Root cause: zowel het RDP-object als alle demo-app client-usernames
+gebruiken `clientProfileName: "default"` (zie `configure-local-broker.sh`
+en `configure-rdp-export.sh`), en `diagnose-local-auth.sh` had al laten
+zien (28/09/2026, tot nu toe niet aan dit onderzoek verbonden) dat dit
+profiel `allowGuaranteedMsgReceiveEnabled: false` heeft. Een RDP die
+berichten dequeuet van zijn eigen durable queue is precies een
+guaranteed-message-RECEIVE-operatie -- verbiedt het clientprofiel dat,
+dan kan de binding nooit tot stand komen. Dit verklaart elk symptoom: de
+bind registreert nooit, er wordt nooit een bericht gedequeued om te
+posten, en de generieke `"Service Unavailable"` is wat de broker meldt
+als hij niets specifieker kan zeggen over waarom de binding niet omhoog
+komt.
+
+Gefixt: `configure-rdp-export.sh` maakt nu een los client-profile
+`rdp-deliver` aan met `allowGuaranteedMsgReceiveEnabled: true` (en voor de
+zekerheid ook `allowGuaranteedMsgSendEnabled: true`), en elke RDP wordt
+aangemaakt/gepatcht om dit profiel te gebruiken in plaats van `"default"`
+-- de demo-app publishers blijven ongewijzigd op `"default"`. Zie
+`PLAN.md` sectie 13, punt 26.
+
 **Gefixt (28/09/2026): `stm publish` bestaat niet.** De geïnstalleerde
 Solace Try-Me CLI (v1.0.0) heeft geen `publish`-subcommando -- de juiste
 is `stm send` (zelfde vlaggen). Gefixt in

@@ -73,6 +73,39 @@
 # POST body, plus an unconditional PATCH so it also fixes bindings
 # created by an earlier, buggy run of this script.
 #
+# CONFIRMED BUG #3, the actual root cause of the persistent 503 (found via
+# watch-rdp-live.sh, 28/09/2026): the queue-binding never even BINDS to its
+# own local queue. Broker Manager's Queues page shows "Consumers: 0" for
+# all 3 queues (should be 1 -- the RDP itself), and SEMP confirms
+# bindRequestCount: 0 / bindSuccessCount: 0 on the queue, unchanged across
+# 15 samples over 35+ seconds while 30 messages sat spooled and the REST
+# consumer's own connections were healthy (up: true, 3/3) for most of that
+# window. The REST-consumer's HTTP counters (httpRequestTxMsgCount etc.)
+# never move either -- consistent with the binding never even reaching the
+# point of dequeuing a message to POST, let alone the POST itself. The
+# earlier "Peer TCP Closed" lead (see PLAN.md section 13, item 24) turned
+# out to be a red herring: the queue-binding fails with "Service
+# Unavailable" on almost every ~2s retry REGARDLESS of whether the REST
+# consumer's connections are currently up -- so the two failures are
+# independent, not cause-and-effect.
+# Root cause: BOTH the RDP object itself AND every demo-app client-username
+# use clientProfileName "default" (see configure-local-broker.sh), and
+# diagnose-local-auth.sh already showed (28/09/2026, unconnected to this
+# investigation until now) that the "default" client-profile has
+# allowGuaranteedMsgReceiveEnabled: false. An RDP's queue-binding dequeues
+# messages from a DURABLE QUEUE -- a guaranteed-message-RECEIVE operation --
+# so if its client-profile forbids that, the binding can never actually
+# bind/consume from the queue at all. This matches every symptom: the bind
+# never registers (bindRequestCount stuck at 0), no message is ever
+# dequeued to POST (httpRequestTxMsgCount stuck at 0), and the generic
+# "Service Unavailable" is what the broker reports when it can't tell the
+# operator anything more specific about why the binding can't come up.
+# Fixed: a dedicated client-profile "rdp-deliver" is now created with
+# allowGuaranteedMsgReceiveEnabled: true (guaranteed-receive is exactly
+# what an RDP's queue-binding needs; nothing else about "default" needs to
+# change, and demo-app publishers keep using "default" unaffected), and
+# every RDP is created/patched to use it instead of "default".
+#
 # Usage: ./configure-rdp-export.sh
 # Requires: curl, and a populated ../.env (same file configure-local-broker.sh
 # uses), PLUS the new *_REMOTE_REST_HOST / *_REMOTE_REST_PORT variables --
@@ -134,8 +167,17 @@ create_export_route() {
 
   # 2. The RDP object itself (the "container" for the queue-binding +
   #    rest-consumer below).
+  #
+  #    BUG FOUND AND FIXED (28/09/2026): "default" (this RDP's original
+  #    clientProfileName) has allowGuaranteedMsgReceiveEnabled: false,
+  #    which blocks the RDP from ever binding/consuming from its own
+  #    durable queue -- see the header comment for the full trail. Uses
+  #    "rdp-deliver" instead (created just above the create_export_route
+  #    calls, once, idempotently).
   semp POST "/msgVpns/${VPN}/restDeliveryPoints" \
-    "{\"restDeliveryPointName\":\"${rdp}\",\"clientProfileName\":\"default\",\"enabled\":true}"
+    "{\"restDeliveryPointName\":\"${rdp}\",\"clientProfileName\":\"rdp-deliver\",\"enabled\":true}"
+  semp PATCH "/msgVpns/${VPN}/restDeliveryPoints/${rdp}" \
+    "{\"clientProfileName\":\"rdp-deliver\"}"
 
   # 3. Queue binding: which queue feeds this RDP, and what URL path
   #    (relative to the rest-consumer's host:port) each drained message is
@@ -179,6 +221,17 @@ create_export_route() {
 
   echo "  OK: ${queue} --[promote]--> ${rdp}/${consumer} --[POST /\${topic()}]--> https://${remote_host}:${remote_port}"
 }
+
+echo "== Client-profile for RDPs: rdp-deliver (allowGuaranteedMsgReceiveEnabled) =="
+# "default" (used by the demo-app publishers, unaffected by this) has
+# allowGuaranteedMsgReceiveEnabled: false, which blocks an RDP's
+# queue-binding from ever binding/consuming from its own durable queue --
+# see header comment (CONFIRMED BUG #3). This profile is dedicated to the
+# RDPs; nothing else uses it, so nothing else is affected by this change.
+semp POST "/msgVpns/${VPN}/clientProfiles" \
+  "{\"clientProfileName\":\"rdp-deliver\",\"allowGuaranteedMsgReceiveEnabled\":true,\"allowGuaranteedMsgSendEnabled\":true}"
+semp PATCH "/msgVpns/${VPN}/clientProfiles/rdp-deliver" \
+  "{\"allowGuaranteedMsgReceiveEnabled\":true,\"allowGuaranteedMsgSendEnabled\":true}"
 
 echo "== REST Delivery Points: export enewable/* to the 3 cloud brokers =="
 
