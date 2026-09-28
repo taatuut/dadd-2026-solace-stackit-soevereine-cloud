@@ -147,14 +147,27 @@ poort 9443" is juist -- de Connect-tab van de AWS-service toont exact
 `https://mr-connection-07w9t1ah76x.messaging.solace.cloud:9443` onder
 "Solace REST Messaging API".
 
-**⛔ Nieuw open punt: alle 3 RDP's tonen "Down" in Broker Manager**, ook na
-een schone `configure-rdp-export.sh`-run (0 WARN) en met het host/poort-
-probleem uitgesloten. Broker Manager zelf geeft geen down-reden (zelfde
-situatie als eerder bij de bridges) -- `local-broker/semp/diagnose-rdp.sh`
-(nieuw, analoog aan het verwijderde `diagnose-bridges.sh`, schrijft naar
-`output/diagnose-rdp.txt`) moet de echte oorzaak blootleggen: verkeerde
-credentials, TLS-vertrouwen, REST-messaging niet aangezet op de
-cloud-broker's VPN, of iets anders. Zie `PLAN.md` sectie 13, punt 14.
+**⛔ Vernauwd: de queue-binding faalt met HTTP 503 "Service Unavailable"**
+(diagnose via `local-broker/semp/diagnose-rdp.sh`, uitgebreid met
+queue-binding- en subscription-checks). Twee mogelijke oorzaken zijn
+inmiddels **uitgesloten**: de REST-consumer's onderliggende TLS+http-basic-
+verbinding naar elke cloud-broker is bevestigd gezond (`"up": true`,
+`remoteOutgoingConnectionUpCount` == `outgoingConnectionCount`), en de
+topic-subscriptie op elke queue is bevestigd aanwezig en correct
+(`enewable/public/>` etc.). De verbinding komt dus tot stand, maar de
+daadwerkelijke POST wordt door de doelbroker afgewezen met 503.
+Vermoedelijke (nog niet bevestigde) oorzaak: de REST-incoming service
+staat niet aan op de doel-Message-VPN -- net als lokaal (zie hierboven,
+"Bekende risico's") is REST niet altijd standaard aan zoals SMF/
+Web-messaging. Nieuw script: `cloud-setup/solace-cloud-api/
+enable-rest-on-cloud-vpns.sh` (checkt en zet zo nodig
+`serviceRestIncomingTlsEnabled` aan op elke cloud-VPN, via elke broker's
+eigen SEMP v2 Config API). Emil moet dit zelf draaien -- deze sessie kan
+`*_SEMP_HOST` niet bereiken -- en daarna `diagnose-rdp.sh` nogmaals draaien
+om te checken of de queue-binding's `lastFailureReason` verandert en de
+RDP op `"up": true"` komt. Niet gegarandeerd de fix: als dit niet werkt,
+kijk naar andere 503-oorzaken (client-profile REST-rechten, VPN-spool/
+shutdown-status). Zie `PLAN.md` sectie 13, punt 16.
 
 **Opgeruimd (28/09/2026):** de 3 oude bridge-objecten
 (`bridge-to-aws/azure/stackit`), de reciprocal-bridge-testopstelling

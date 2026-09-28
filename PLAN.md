@@ -17,7 +17,7 @@ alleen wat gepland was.
 | Fase 3 -- AWS US East | ✅ Aangemaakt | Service `ez-dadd-2026-eks-us-east-1a`, zie [`cloud-setup/aws-us-east/README.md`](cloud-setup/aws-us-east/README.md) en `screenshots/AWS/` |
 | Fase 3 -- Azure West Europe | ✅ Aangemaakt | Service `ez-dadd-2026-aks-westeurope`, zie [`cloud-setup/azure-west-europe/README.md`](cloud-setup/azure-west-europe/README.md) en `screenshots/Azure/` |
 | Fase 3 -- STACKIT / GCP-interim | ✅ Aangemaakt | Service `ez-dadd-2026-STACKIT-gke-gcp-europe-west1-b` (interim op GCP europe-west1), zie [`cloud-setup/gcp-europe-west1-interim/README.md`](cloud-setup/gcp-europe-west1-interim/README.md) en `screenshots/STACKIT-of-GCP-interim/` -- alle 3 cloud-broker services zijn nu aangemaakt |
-| Fase 4 -- Lokale broker + RDP-export | 🔬 Oorzaak ingezoomd: queue-binding, niet de REST-consumer | REST-consumer is gezond (`up:true`, 3 verbindingen); de RDP zelf faalt op "No REST Queue Bindings Up". `diagnose-rdp.sh` uitgebreid met queueBindings-/subscriptions-calls, Emil moet nogmaals draaien (zie PLAN.md sectie 13, punt 15) |
+| Fase 4 -- Lokale broker + RDP-export | 🔬 Oorzaak vernauwd tot HTTP 503 op de queue-binding | Queue-binding faalt met `"lastFailureReason": "Service Unavailable"` (HTTP 503) -- de REST-consumer-verbinding zelf is gezond (`up:true`), de topic-subscriptie op de queue is bevestigd aanwezig. Vermoedelijke oorzaak: REST-incoming service staat niet aan op de cloud-VPN. Nieuw script `cloud-setup/solace-cloud-api/enable-rest-on-cloud-vpns.sh` toegevoegd om dit te checken/aan te zetten (zie PLAN.md sectie 13, punt 16); Emil moet dit draaien |
 | Fase 5 -- Demo-apps valideren | Nog te doen | |
 | Fase 6 -- Draaiboek + fallback | Nog te doen | |
 
@@ -188,6 +188,8 @@ Zie [`docs/demo-apps.md`](docs/demo-apps.md) en [`demo-apps/`](demo-apps/)
 |       |-- configure-local-broker.sh
 |       |-- configure-rdp-export.sh          <- queues + REST Delivery Points voor export naar cloud-brokers
 |       `-- diagnose-rdp.sh                  <- read-only: SEMP monitor-data om RDP down-reden te vinden
+|-- cloud-setup/solace-cloud-api/
+|       `-- enable-rest-on-cloud-vpns.sh     <- checkt/zet serviceRestIncomingTlsEnabled aan op elke cloud-VPN
 |-- cloud-setup/
 |   |-- README.md
 |   |-- aws-us-east/README.md
@@ -226,7 +228,7 @@ nooit gecommit -- alleen `.env.example`-bestanden zitten in de repo.)
 | 1 | STACKIT-beschikbaarheid | ✅ Interim-broker op GCP europe-west1 (België) aangemaakt als stand-in; vlak vóór repetitie/DADD controleren of STACKIT al als datacenter-optie zichtbaar is en zo ja, overstappen | Interim: gereed; overstap-check: kort vóór fase 5/6 |
 | 2 | Solace Cloud account | Account + API-token aanmaken (indien nog niet aanwezig) | Week na fase 0 |
 | 3 | Cloud-brokers aanmaken | ✅ Alle 3 gereed: AWS (`ez-dadd-2026-eks-us-east-1a`), Azure (`ez-dadd-2026-aks-westeurope`), STACKIT/GCP-interim (`ez-dadd-2026-STACKIT-gke-gcp-europe-west1-b`); sovereign-node blijft STACKIT zodra GA, tot dan GCP europe-west1 interim | Gereed |
-| 4 | Lokale broker + RDP-export | 🔬 REST-consumer is gezond; de queue-binding is de boosdoener ("No REST Queue Bindings Up"). `diagnose-rdp.sh` uitgebreid, opnieuw draaien nodig | Diagnose nu (ronde 2) |
+| 4 | Lokale broker + RDP-export | 🔬 Queue-binding faalt met HTTP 503 "Service Unavailable"; REST-consumer en topic-subscriptie zijn beide gezond bevonden. Vermoedelijke oorzaak: REST-incoming staat niet aan op de cloud-VPN | Emil draait `enable-rest-on-cloud-vpns.sh`, dan `diagnose-rdp.sh` opnieuw |
 | 5 | Demo-apps valideren | Alle 3 tools end-to-end testen (publiceren → juiste cloud-broker, nergens anders) | Meerdere keren voor DADD, niet pas op de dag zelf |
 | 6 | Draaiboek + fallback-opname | Live-timing oefenen, schermopname als fallback maken | Week vóór DADD |
 | 7 | Op de dag zelf | `docker-run.sh` + `configure-local-broker.sh` (of al draaiend laten staan), demo-apps klaarzetten | Vlak voor het slot |
@@ -600,6 +602,34 @@ productieklaar systeem:
      eigen GET -- die is normaal leeg totdat je de sub-collectie zelf
      opvraagt, dus geen signaal op zich). Emil moet `diagnose-rdp.sh`
      nogmaals draaien met deze uitgebreide versie.
+  16. **`diagnose-rdp.txt` (ronde 2, Emil, 28/09/2026) wijst de oorzaak aan:
+     de queue-binding faalt met HTTP 503 "Service Unavailable".** Elke
+     queue-binding toont nu `"up": false"`, `"uptime": 0` en
+     **`"lastFailureReason": "Service Unavailable"`** -- de onderliggende
+     TLS+http-basic-verbinding van de RDP's rest-consumer naar elke
+     cloud-broker is bevestigd gezond (`"up": true`,
+     `remoteOutgoingConnectionUpCount` == `outgoingConnectionCount` voor
+     alle 3), en de topic-subscriptie op de queue is onafhankelijk
+     bevestigd aanwezig en correct (`GET .../queues/{queue}/subscriptions`
+     toont bv. `"subscriptionTopic": "enewable/public/>"`). Dus: de
+     verbinding komt tot stand, maar de daadwerkelijke POST wordt door de
+     doelbroker afgewezen. Vermoedelijke (nog niet bevestigde) oorzaak,
+     conform de al langer bestaande waarschuwing in
+     `local-broker/.env.example` dat REST "niet altijd standaard aan staat
+     zoals SMF/Web-messaging": de REST-incoming service staat niet aan op
+     de doel-Message-VPN. Nieuw script toegevoegd:
+     `cloud-setup/solace-cloud-api/enable-rest-on-cloud-vpns.sh` (leest
+     `local-broker/.env`, checkt en zet zo nodig
+     `serviceRestIncomingTlsEnabled` aan op elk van de 3 cloud-VPN's, via
+     elke broker's eigen SEMP v2 Config API met de bestaande
+     `*_SEMP_ADMIN_USER`/`PASSWORD`-credentials). Dit script moet Emil
+     zelf draaien (deze sessie kan `*_SEMP_HOST` niet bereiken, zie sectie
+     13 hierboven) en daarna `diagnose-rdp.sh` nogmaals draaien om te
+     checken of de queue-binding se `lastFailureReason` verandert en de
+     RDP zelf op `"up": true"` komt. **Niet gegarandeerd de fix** -- als
+     dit het niet oplost, moet gekeken worden naar andere 503-oorzaken
+     (client-profile REST-rechten op de cloud-VPN, VPN-spool/
+     shutdown-status).
 - **Geen automatische provisioning van alle 4 brokers in één commando.**
   Er is bewust voor losse, leesbare stappen gekozen (console + scripts per
   onderdeel) omdat dat beter uit te leggen en te debuggen is vóór een
@@ -644,12 +674,15 @@ productieklaar systeem:
    draaien schoon; export via bridges bleek architecturaal niet mogelijk
    zonder reciprocal bridge + publieke bereikbaarheid -- zie sectie 13,
    punten 6-10 -- Emil koos daarom RDP's, zie punt 11 hieronder.)
-4. **Nu:** `*_REMOTE_REST_HOST`/`*_REMOTE_REST_PORT` in `local-broker/.env`
-   controleren/invullen (Connect-tab, REST-sectie, per service -- en REST
-   aanzetten voor die service als het nog uitstaat), daarna
-   `local-broker/semp/configure-rdp-export.sh` draaien en in Broker Manager
-   controleren dat de 3 queues gevuld raken en de 3 RDP's "Up" komen (zie
-   sectie 13, punt 11).
+4. ~~`*_REMOTE_REST_HOST`/`*_REMOTE_REST_PORT` in `local-broker/.env`
+   controleren/invullen en `configure-rdp-export.sh` draaien.~~ ✅ -- alle
+   3 RDP's zijn geconfigureerd (0 WARN), maar staan in Broker Manager op
+   "Down". Diagnose wijst de oorzaak aan op de queue-binding: HTTP 503
+   "Service Unavailable" (zie sectie 13, punt 16). **Nu:**
+   `cloud-setup/solace-cloud-api/enable-rest-on-cloud-vpns.sh` draaien
+   (checkt/zet REST-incoming aan op elke cloud-VPN) en daarna
+   `local-broker/semp/diagnose-rdp.sh` nogmaals draaien om te bevestigen
+   dat de 3 RDP's op "Up" komen.
 5. Eerste end-to-end testronde volgens sectie 12: publiceren met
    stm/python/sdkperf en in de Solace Cloud console van de DOELBROKER
    controleren dat het bericht op dezelfde topic aankomt, en nergens
