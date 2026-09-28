@@ -1,0 +1,8 @@
+{
+  "source": "enewable-market-feed",
+  "type": "day-ahead-price",
+  "market": "NL",
+  "currency": "EUR",
+  "pricePerMWh": 84.37,
+  "timestamp": "2026-09-28T12:00:00Z"
+}

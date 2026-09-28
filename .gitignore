@@ -216,3 +216,11 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# Solace Cloud API tokens / secrets (never commit these)
+token-dadd-2026.txt
+token-*.txt
+*.token
+
+# macOS
+.DS_Store

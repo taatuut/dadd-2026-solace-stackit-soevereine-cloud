@@ -1,0 +1,35 @@
+flowchart LR
+    subgraph LOCAL["Lokale broker (self-managed, single-AZ) - Docker, macOS"]
+        L[("enewable\nMessage VPN")]
+        STM["stm CLI\n(publiek)"]
+        PY["Python-script\n(niet-persoonlijk EU)"]
+        SDK["SDKPerf\n(gevoelige PII)"]
+        STM -- "enewable/public/>" --> L
+        PY -- "enewable/eu/ops/>" --> L
+        SDK -- "enewable/eu/pii/>" --> L
+    end
+
+    L -- "bridge: exporteert\nenewable/public/>" --> AWS
+    L -- "bridge: exporteert\nenewable/eu/ops/>" --> AZ
+    L -- "bridge: exporteert\nenewable/eu/pii/>" --> ST
+
+    subgraph AWS["AWS US East - Solace Cloud HA"]
+        AWSVPN[("enewable\nMessage VPN")]
+    end
+    subgraph AZ["Azure West Europe (NL) - Solace Cloud HA"]
+        AZVPN[("enewable\nMessage VPN")]
+    end
+    subgraph ST["STACKIT eu01 (DE) - sovereign HA"]
+        STVPN[("enewable\nMessage VPN")]
+    end
+
+    AWS --- AWSVPN
+    AZ --- AZVPN
+    ST --- STVPN
+
+    classDef publiek fill:#c8e6c9,stroke:#2e7d32;
+    classDef eu fill:#bbdefb,stroke:#1565c0;
+    classDef pii fill:#ffcdd2,stroke:#c62828;
+    class STM,AWS,AWSVPN publiek
+    class PY,AZ,AZVPN eu
+    class SDK,ST,STVPN pii
