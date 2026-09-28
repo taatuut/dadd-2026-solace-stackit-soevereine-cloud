@@ -1114,6 +1114,16 @@ productieklaar systeem:
      `PLAN.md`'s directory-boom (sectie 9) bijgewerkt: de 2 verwijderde
      per-app `sample-payload.json`-bestanden vervangen door de nieuwe
      gedeelde `demo-apps/sample-payloads/`-map.
+  33. **`run-demo-loop.sh`-opties met concrete voorbeelden in README.md
+     (Emil, 28/09/2026, op verzoek).** De opties (`--interval`, `--count`,
+     `--once`) stonden al volledig uitgelegd in het script se eigen
+     `--help`, en README.md stap 7 verwees daar al naar -- maar zonder
+     kant-en-klare voorbeeldcommando's. Toegevoegd aan stap 7: expliciete
+     voorbeelden voor een ander interval, direct-achter-elkaar (`--interval
+     0`), een vast berichtaantal per klasse (`--count`, te combineren met
+     `--interval`), en één losse testcyclus (`--once --count 1`) -- zodat
+     deze direct te kopiëren zijn zonder eerst `--help` te moeten
+     raadplegen.
 - **Geen automatische provisioning van alle 4 brokers in één commando.**
   Er is bewust voor losse, leesbare stappen gekozen (console + scripts per
   onderdeel) omdat dat beter uit te leggen en te debuggen is vóór een

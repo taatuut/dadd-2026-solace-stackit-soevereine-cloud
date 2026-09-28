@@ -236,10 +236,27 @@ tonen zonder dat iemand steeds handmatig een script opnieuw start:
 ```
 
 Roept alle 3 de bovenstaande scripts steeds opnieuw aan (default: elke 30
-seconden een nieuwe cyclus van alle 3), tot je op Ctrl-C drukt. Zie
-`./local-broker/scripts/run-demo-loop.sh --help` voor de opties (interval,
-berichtaantal per cyclus, of één losse testcyclus). Eén app die faalt (bijv.
-SDKPerf niet gevonden) stopt de andere twee niet.
+seconden een nieuwe cyclus van alle 3), tot je op Ctrl-C drukt (die drukt
+dan een korte samenvatting: aantal cycli en geslaagd/mislukt per app). Eén
+app die faalt (bijv. SDKPerf niet gevonden) stopt de andere twee niet.
+
+Opties (zie ook `./local-broker/scripts/run-demo-loop.sh --help`):
+
+```bash
+# Ander interval tussen cycli (default: 30s)
+./local-broker/scripts/run-demo-loop.sh --interval 10
+
+# Cycli direct achter elkaar, zonder pauze
+./local-broker/scripts/run-demo-loop.sh --interval 0
+
+# Vast aantal berichten per klasse per cyclus (i.p.v. elk script se eigen
+# default: stm 10, python 20, sdkperf 20) -- te combineren met --interval
+./local-broker/scripts/run-demo-loop.sh --interval 10 --count 5
+
+# Precies één cyclus, dan stoppen (sanity-check vóór je het onbeheerd
+# laat draaien op een stand)
+./local-broker/scripts/run-demo-loop.sh --once --count 1
+```
 
 ## Problemen oplossen
 
