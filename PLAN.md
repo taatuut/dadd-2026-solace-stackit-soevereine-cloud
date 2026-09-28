@@ -17,7 +17,7 @@ alleen wat gepland was.
 | Fase 3 -- AWS US East | ✅ Aangemaakt | Service `ez-dadd-2026-eks-us-east-1a`, zie [`cloud-setup/aws-us-east/README.md`](cloud-setup/aws-us-east/README.md) en `screenshots/AWS/` |
 | Fase 3 -- Azure West Europe | ✅ Aangemaakt | Service `ez-dadd-2026-aks-westeurope`, zie [`cloud-setup/azure-west-europe/README.md`](cloud-setup/azure-west-europe/README.md) en `screenshots/Azure/` |
 | Fase 3 -- STACKIT / GCP-interim | ✅ Aangemaakt | Service `ez-dadd-2026-STACKIT-gke-gcp-europe-west1-b` (interim op GCP europe-west1), zie [`cloud-setup/gcp-europe-west1-interim/README.md`](cloud-setup/gcp-europe-west1-interim/README.md) en `screenshots/STACKIT-of-GCP-interim/` -- alle 3 cloud-broker services zijn nu aangemaakt |
-| Fase 4 -- Lokale broker + RDP-export | ✅ Root cause van de 503 gevonden en gefixt: requestTargetEvaluation stond op "none" | Message-promotion bevestigd werkend (queue vulde met 10 berichten), maar queue-binding postte al die tijd naar het letterlijke "/${topic()}" i.p.v. de echte topic -- vermoedelijk WAF-geblokkeerd. Gefixt in configure-rdp-export.sh (zie PLAN.md sectie 13, punt 23) |
+| Fase 4 -- Lokale broker + RDP-export | 🔴 503 blijft na requestTargetEvaluation-fix; nieuw spoor onderzocht | requestTargetEvaluation-fix bevestigd live op de broker, maar httpRequestTxMsgCount blijft 0 en de 503 verandert niet (ronde 5, spooledMsgCount nu 20) -- dus niet de (enige) oorzaak. Nieuw spoor: REST-consumer toont "Peer TCP Closed" als lastConnectionFailureReason -- mogelijk sluit de cloud-broker de persistente verbindingspool actief. Nieuw script watch-rdp-live.sh moet dit bevestigen (zie PLAN.md sectie 13, punt 24) |
 | Fase 5 -- Demo-apps valideren | Nog te doen | |
 | Fase 6 -- Draaiboek + fallback | Nog te doen | |
 
@@ -230,7 +230,7 @@ nooit gecommit -- alleen `.env.example`-bestanden zitten in de repo.)
 | 1 | STACKIT-beschikbaarheid | ✅ Interim-broker op GCP europe-west1 (België) aangemaakt als stand-in; vlak vóór repetitie/DADD controleren of STACKIT al als datacenter-optie zichtbaar is en zo ja, overstappen | Interim: gereed; overstap-check: kort vóór fase 5/6 |
 | 2 | Solace Cloud account | Account + API-token aanmaken (indien nog niet aanwezig) | Week na fase 0 |
 | 3 | Cloud-brokers aanmaken | ✅ Alle 3 gereed: AWS (`ez-dadd-2026-eks-us-east-1a`), Azure (`ez-dadd-2026-aks-westeurope`), STACKIT/GCP-interim (`ez-dadd-2026-STACKIT-gke-gcp-europe-west1-b`); sovereign-node blijft STACKIT zodra GA, tot dan GCP europe-west1 interim | Gereed |
-| 4 | Lokale broker + RDP-export | ✅ Root cause gevonden: requestTargetEvaluation ontbrak, dus ${topic()} werd nooit geëvalueerd -- elke queue-binding postte naar het letterlijke pad "/${topic()}", vermoedelijk WAF-geblokkeerd (503). Gefixt in configure-rdp-export.sh | Emil herdraait configure-rdp-export.sh (patcht bestaande bindings), dan de publish-test + diagnose-rdp.sh |
+| 4 | Lokale broker + RDP-export | 🔴 requestTargetEvaluation-fix bevestigd live toegepast, maar 503 en httpRequestTxMsgCount: 0 blijven ongewijzigd (ronde 5) -- niet de (enige) oorzaak. Nieuw spoor: REST-consumer se "Peer TCP Closed" op de persistente verbindingspool, mogelijk actief dichtgegooid door de cloud-broker | Emil draait publish-test + nieuw watch-rdp-live.sh (30s polling) om te bevestigen of dit een continue connect/drop-lus is |
 | 5 | Demo-apps valideren | Alle 3 tools end-to-end testen (publiceren → juiste cloud-broker, nergens anders) | Meerdere keren voor DADD, niet pas op de dag zelf |
 | 6 | Draaiboek + fallback-opname | Live-timing oefenen, schermopname als fallback maken | Week vóór DADD |
 | 7 | Op de dag zelf | `docker-run.sh` + `configure-local-broker.sh` (of al draaiend laten staan), demo-apps klaarzetten | Vlak voor het slot |
@@ -793,6 +793,44 @@ productieklaar systeem:
      aanmaken van elke queue-binding, plus een aparte, onvoorwaardelijke
      PATCH zodat ook de 3 al bestaande (foutieve) queue-bindings
      gecorrigeerd worden.
+  24. **`requestTargetEvaluation`-fix bevestigd LIVE op de broker (ronde 5,
+     `diagnose-rdp.txt` 10:50:47Z), maar de 503 verandert geen millimeter
+     (Emil, 28/09/2026).** De CONFIG-view van alle 3 queue-bindings toont nu
+     terecht `"requestTargetEvaluation": "substitution-expressions"` -- de
+     fix uit punt 23 staat dus daadwerkelijk op de broker. Maar de
+     MONITOR-view is byte-voor-byte identiek aan vóór de fix:
+     `"lastFailureReason": "Service Unavailable"`, `"up": false`,
+     `"uptime": 0` op de queue-binding, en de REST-consumer se
+     HTTP-tellers (`httpRequestTxMsgCount` e.a.) staan nog steeds op **0**
+     -- ook al is `spooledMsgCount` inmiddels doorgegroeid naar 20 (twee
+     publish-testruns). **Conclusie: punt 23's theorie was een reële bug
+     en terecht gefixt, maar niet de (enige) oorzaak van de 503** -- de
+     werkelijke oorzaak is nog niet gevonden.
+     **Nieuw spoor, tot nu toe niet opgemerkt:** de REST-consumer se eigen
+     monitor-data bevat een veld dat niemand eerder goed had gelezen:
+     `"lastConnectionFailureReason": "Peer TCP Closed"`, met een
+     `lastConnectionFailureTime` die typisch een paar seconden vóór de
+     queue-binding se eigen `lastFailureTime` ligt. Dit beschrijft iets
+     anders dan `"up": true` / `remoteOutgoingConnectionUpCount: 3` (dat
+     is de staat op het moment van de SEMP-meting) -- het zegt dat de
+     CLOUD-broker zelf de persistente/keep-alive verbindingen van de
+     REST-consumer-pool (`outgoingConnectionCount: 3`) actief dichtgooit.
+     Als de queue-binding een bericht wil posten via een verbinding die
+     net dichtgegooid is of aan het dichtgaan is, kan dat mislukken
+     vóórdat er ook maar iets als "verzonden bericht" geteld wordt --
+     wat zou verklaren waarom `httpRequestTxMsgCount` op 0 blijft staan
+     én waarom een losse curl-POST (die altijd een NIEUWE verbinding
+     opent en die na 1 request weer sluit, dus nooit een pool hergebruikt)
+     wél altijd slaagt terwijl de RDP se persistente pool nooit aflevert.
+     **Nog niet bewezen, wel getest kan worden:** nieuw diagnosescript
+     `local-broker/semp/watch-rdp-live.sh` toegevoegd -- pollt (read-only)
+     alle 3 REST-consumers en queue-bindings elke 2 seconden gedurende
+     ~30 seconden, direct ná een publish-test, om te zien of
+     `httpRequestTxMsgCount` ooit al is het maar heel even van 0 afgaat,
+     en of `lastConnectionFailureTime` steeds opnieuw net vóór het
+     meetmoment ligt (= continue connect/drop-lus, niet een oude,
+     eenmalige waarde). Emil moet dit draaien: eerst een publish-test,
+     dan meteen `./watch-rdp-live.sh`.
 - **Geen automatische provisioning van alle 4 brokers in één commando.**
   Er is bewust voor losse, leesbare stappen gekozen (console + scripts per
   onderdeel) omdat dat beter uit te leggen en te debuggen is vóór een
@@ -866,11 +904,19 @@ productieklaar systeem:
    vermoedelijk WAF-geblokkeerd (503) -- root cause:
    `requestTargetEvaluation` ontbrak. Gefixt in
    `local-broker/semp/configure-rdp-export.sh` (zie sectie 13, punt 23).
-   **Nu:** `local-broker/semp/configure-rdp-export.sh` opnieuw draaien
-   (patcht de 3 bestaande queue-bindings), dan
-   `demo-apps/stm-public/publish-public.sh` en meteen daarna
-   `local-broker/semp/diagnose-rdp.sh` herhalen -- en controleren op de
-   AWS "Try Me!"-tab of het bericht nu daadwerkelijk aankomt.
+   ~~`configure-rdp-export.sh` opnieuw draaien (patcht de 3 bestaande
+   queue-bindings), dan publish-test + `diagnose-rdp.sh` herhalen.~~ ✅ --
+   `requestTargetEvaluation: "substitution-expressions"` staat nu
+   bevestigd op de broker, maar de 503 en `httpRequestTxMsgCount: 0`
+   blijven identiek (ronde 5, `spooledMsgCount` nu 20) -- deze fix was
+   dus niet de (enige) oorzaak. Zie sectie 13, punt 24 voor het nieuwe
+   spoor (`"lastConnectionFailureReason": "Peer TCP Closed"` op de
+   REST-consumer). **Nu:** eerst een publish-test draaien, dan meteen
+   `local-broker/semp/watch-rdp-live.sh` draaien (nieuw, read-only,
+   pollt 30 seconden lang elke 2 seconden) en de output delen -- dit
+   moet laten zien of de HTTP-tellers ooit al is het maar heel even
+   bewegen, en of de verbindingen in een continue connect/drop-lus
+   zitten.
 5. Eerste end-to-end testronde volgens sectie 12: publiceren met
    stm/python/sdkperf en in de Solace Cloud console van de DOELBROKER
    controleren dat het bericht op dezelfde topic aankomt, en nergens

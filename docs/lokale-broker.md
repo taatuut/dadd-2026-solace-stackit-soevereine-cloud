@@ -269,6 +269,39 @@ Log4Shell-tijdperk WAF/CDN-regels blokkeren. Gefixt:
 een aparte PATCH die ook de 3 al bestaande, foutieve bindings
 corrigeert. Zie `PLAN.md` sectie 13, punt 23.
 
+**⛔ Vervolg (28/09/2026): de fix staat live, maar de 503 blijft
+onveranderd -- root cause dus nog niet gevonden.** Een nieuwe diagnose-run
+(ronde 5, `spooledMsgCount` inmiddels 20) bevestigt dat
+`requestTargetEvaluation: "substitution-expressions"` daadwerkelijk op de
+broker staat (CONFIG-view klopt), maar de MONITOR-view is verder identiek
+aan vóór de fix: `"lastFailureReason": "Service Unavailable"`,
+`"up": false`, `"uptime": 0`, en de REST-consumer se `httpRequestTxMsgCount`
+blijft op 0. De vorige root-cause-theorie was dus een reële, terecht
+gefixte bug, maar niet de (enige) verklaring voor de 503.
+
+Nieuw, tot nu toe onopgemerkt spoor: de REST-consumer se eigen
+monitor-data bevat `"lastConnectionFailureReason": "Peer TCP Closed"`,
+met een `lastConnectionFailureTime` die telkens een paar seconden vóór de
+queue-binding se eigen `lastFailureTime` ligt. Dat is een ander signaal
+dan `"up": true` / `remoteOutgoingConnectionUpCount: 3` (dat beschrijft
+alleen de staat op het moment van de SEMP-meting): het zegt dat de
+CLOUD-broker de persistente/keep-alive verbindingen van de
+REST-consumer-pool (`outgoingConnectionCount: 3`) zelf actief dichtgooit.
+Als de queue-binding wil posten op een verbinding die net dichtgegooid is
+of aan het sluiten is, kan dat mislukken vóórdat er ook maar iets als
+"verzonden bericht" geteld wordt -- dat zou verklaren waarom
+`httpRequestTxMsgCount` op 0 blijft staan, én waarom een losse curl-POST
+(die telkens een NIEUWE verbinding opent en na 1 request weer sluit,
+dus nooit een pool hergebruikt) wél altijd slaagt.
+
+Nog niet bewezen. Nieuw diagnosescript
+`local-broker/semp/watch-rdp-live.sh` (read-only) pollt alle 3
+REST-consumers en queue-bindings elke 2 seconden gedurende ~30 seconden,
+direct ná een publish-test -- om te zien of `httpRequestTxMsgCount` ooit,
+al is het maar heel even, van 0 afgaat, en of `lastConnectionFailureTime`
+in een continue connect/drop-ritme staat (i.p.v. een oude, eenmalige
+waarde). Zie `PLAN.md` sectie 13, punt 24.
+
 **Gefixt (28/09/2026): `stm publish` bestaat niet.** De geïnstalleerde
 Solace Try-Me CLI (v1.0.0) heeft geen `publish`-subcommando -- de juiste
 is `stm send` (zelfde vlaggen). Gefixt in
