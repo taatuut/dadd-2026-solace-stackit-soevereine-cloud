@@ -33,14 +33,19 @@ bridge.
 
 ## Nog te doen voor deze service
 
-1. **Connect-tab**: exacte SMF-poort (verwacht 55443, TLS) én REST-poort
-   (aangenomen 9443 -- nog te bevestigen) bevestigen; REST-messaging
-   aanzetten voor deze service als het nog uit staat.
+1. ~~**Connect-tab**: exacte SMF-poort en REST-poort bevestigen; REST-
+   messaging aanzetten.~~ ✅ Bevestigd: REST-poort is 9443/TLS (zelfde
+   hostname als SMF), REST-messaging stond al aan. Onafhankelijk bewezen
+   door een geslaagde end-to-end test: `rdp-aws` leverde 21 berichten af,
+   zichtbaar in AWS "Try Me!" op `enewable/public/market/price` (zie
+   `../../docs/lokale-broker.md`, "Eindresultaat").
 2. ~~Client-username + ACL-profiel aanmaken~~ ✅ gedaan, zie "Status:
    publish-toegang ingericht" hierboven.
 3. ~~Host, VPN-naam en credentials in `../../local-broker/.env` invullen~~ ✅
    gedaan (VPN-naam `ez-dadd-2026-eks-us-east-1` en credentials staan er al
    in onder de `AWS_*`-variabelen).
+
+**Deze service is klaar en volledig getest -- geen verdere actie nodig.**
 
 ## Aanmaken (voor de volgende services, Azure/STACKIT/GCP-interim, ter referentie)
 

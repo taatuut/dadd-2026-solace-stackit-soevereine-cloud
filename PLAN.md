@@ -230,7 +230,7 @@ nooit gecommit -- alleen `.env.example`-bestanden zitten in de repo.)
 | 1 | STACKIT-beschikbaarheid | ✅ Interim-broker op GCP europe-west1 (België) aangemaakt als stand-in; vlak vóór repetitie/DADD controleren of STACKIT al als datacenter-optie zichtbaar is en zo ja, overstappen | Interim: gereed; overstap-check: kort vóór fase 5/6 |
 | 2 | Solace Cloud account | Account + API-token aanmaken (indien nog niet aanwezig) | Week na fase 0 |
 | 3 | Cloud-brokers aanmaken | ✅ Alle 3 gereed: AWS (`ez-dadd-2026-eks-us-east-1a`), Azure (`ez-dadd-2026-aks-westeurope`), STACKIT/GCP-interim (`ez-dadd-2026-STACKIT-gke-gcp-europe-west1-b`); sovereign-node blijft STACKIT zodra GA, tot dan GCP europe-west1 interim | Gereed |
-| 4 | Lokale broker + RDP-export | ✅✅ Volledig werkend, end-to-end bevestigd op alle 3 cloud-brokers (AWS, Azure, STACKIT/GCP-interim) | Fase 5 afgerond: volledige testronde met alle 3 demo-apps (stm/python/sdkperf) op alle 3 topic-subtrees, 3/3 geslaagd. Volgende: sectie 14, stap 6 (draaiboek + fallback-opname) |
+| 4 | Lokale broker + RDP-export | ✅✅ Volledig werkend, end-to-end bevestigd op alle 3 cloud-brokers (AWS, Azure, STACKIT/GCP-interim) | Fase 5 afgerond: volledige testronde met alle 3 demo-apps (stm/python/sdkperf) op alle 3 topic-subtrees, 3/3 geslaagd. Volgende: sectie 14, stap 7 (draaiboek + fallback-opname) |
 | 5 | Demo-apps valideren | ✅✅ Alle 3 demo-apps bevestigd (stm-public/AWS, python-eu-nonpersonal/Azure, sdkperf-pii/STACKIT), elk uitsluitend op de eigen doelbroker | Herhalen vóór DADD zelf als extra zekerheid, niet pas op de dag zelf |
 | 6 | Draaiboek + fallback-opname | Live-timing oefenen, schermopname als fallback maken | Week vóór DADD |
 | 7 | Op de dag zelf | `docker-run.sh` + `configure-local-broker.sh` (of al draaiend laten staan), demo-apps klaarzetten | Vlak voor het slot |
@@ -989,6 +989,55 @@ productieklaar systeem:
      kwamen aan op STACKIT's eigen "Try Me!" op
      `enewable/eu/pii/meter/reading` -- de volledige RDP-exportketen
      werkt dus nu end-to-end voor alle 3 cloud-brokers.
+  31. **Documentatie-synchronisatiecheck + README herschreven + nieuw
+     doorlopend-draaien-script (Emil, 28/09/2026).** Op verzoek: de code
+     (scripts) is als leidend genomen en elk document is daar tegen
+     gecontroleerd, in plaats van andersom. Gevonden en gecorrigeerd:
+     - `docs/topologie.md` verwees nog naar een niet-bestaande
+       `bridge-naam (bridge-to-stackit)` in de STACKIT-interim-uitleg --
+       dit moet `rdp-stackit` zijn (bridges zijn al eerder vervangen door
+       RDP's, maar deze ene regel was toen gemist). Gefixt.
+     - `docs/lokale-broker.md`, sectie "Bekende risico's": twee bullets
+       waren achterhaald -- "REST-host/poort nog te bevestigen" (inmiddels
+       lang bevestigd én bewezen werkend end-to-end, zie punt 28-30) en
+       "TLS-vertrouwen" verwees nog naar de afgeschafte bridges als
+       "actueel risico". Beide herschreven naar de huidige, bevestigde
+       stand van zaken. Ook een nieuwe sectie "✅ Eindresultaat"
+       toegevoegd die de punten 27-30 (AWS-sanity-check, volledige
+       end-to-end-bevestiging, Azure/STACKIT-succes, SDKPERF_BIN-fix)
+       samenvat -- dit document stopte voorheen bij punt 26 (de
+       `rdp-deliver`-fix) en liet niet zien dat de RDP-export daarna
+       daadwerkelijk end-to-end werkend is bevestigd.
+     - `cloud-setup/aws-us-east/README.md`,
+       `cloud-setup/azure-west-europe/README.md` en
+       `cloud-setup/gcp-europe-west1-interim/README.md`: elk had nog een
+       "Nog te doen"-punt "REST-poort nog te bevestigen" openstaan --
+       inmiddels bevestigd én bewezen door de geslaagde end-to-end-test
+       per broker. Gefixt, met een concrete verwijzing naar het bewijs
+       (aantal afgeleverde berichten, topic, "Try Me!").
+     - Geen dode/ongebruikte scripts of bestanden gevonden: de eerder
+       afgeschafte bridge-scripts (`diagnose-bridges.sh`,
+       `test-reciprocal-bridge-aws.sh`) waren al in een eerdere sessie
+       verwijderd (zie punt 12); `git ls-files` bevestigt dat elk
+       getrackt bestand nog ergens vandaan wordt verwezen.
+     `README.md` is herschreven van een korte verwijzing naar `PLAN.md`
+     naar een volledige stap-voor-stap-handleiding om de demo vanaf nul
+     te draaien (vereisten, `.env` invullen, lokale broker starten/
+     configureren, RDP-export, elke demo-app installeren/draaien/
+     verifiëren, troubleshooting) -- uitgaand van reeds bestaande Solace
+     Cloud-services en -credentials (het aanmaken daarvan blijft bewust
+     buiten scope, zie `cloud-setup/`).
+     Nieuw: `local-broker/scripts/run-demo-loop.sh` -- roept de 3
+     bestaande publish-scripts (stm/python/sdkperf) herhaald aan, standaard
+     elke 30 seconden een nieuwe cyclus (of direct na elkaar met
+     `--interval 0`), zodat alle 3 cloud "Try Me!"-tabs doorlopend verse
+     data tonen zonder handmatig ingrijpen (bijv. voor een stand/booth).
+     Faalt één app (bijv. SDKPerf niet gevonden), dan gaat de cyclus door
+     met de andere twee -- bevestigd via een testrun in de sandbox (waar
+     geen van de 3 apps kan slagen, maar de cyclus toch netjes alle 3
+     probeert en een samenvatting print bij het stoppen). Bewust GEEN
+     bash associative arrays gebruikt (zelfde macOS-bash-3.2-reden als
+     `configure-local-broker.sh`, zie punt 5).
 - **Geen automatische provisioning van alle 4 brokers in één commando.**
   Er is bewust voor losse, leesbare stappen gekozen (console + scripts per
   onderdeel) omdat dat beter uit te leggen en te debuggen is vóór een
@@ -1108,4 +1157,12 @@ productieklaar systeem:
    **Alle 3 demo-apps nu end-to-end bevestigd, elk uitsluitend op de
    eigen doelbroker -- de volledige testronde van sectie 12 is
    afgerond.**
-6. Draaiboek en fallback-opname voorbereiden (sectie 11, fase 6).
+6. ~~Documentatie synchroniseren met de code, README herschrijven als
+   stap-voor-stap-handleiding, en een doorlopend-draaien-script
+   toevoegen voor stand/booth-gebruik.~~ ✅ Zie sectie 13, punt 31:
+   3 documenten gecorrigeerd (stale RDP/bridge-verwijzingen), `README.md`
+   is nu de volledige from-scratch-handleiding, en
+   `local-broker/scripts/run-demo-loop.sh` roept de 3 demo-apps herhaald
+   aan (default: elke 30s een cyclus, of `--interval 0` voor direct
+   achter elkaar).
+7. Draaiboek en fallback-opname voorbereiden (sectie 11, fase 6).

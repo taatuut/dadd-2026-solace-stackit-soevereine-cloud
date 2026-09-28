@@ -87,7 +87,7 @@ lokale broker nodig -- de RDP dialt net als een bridge zelf uit.
 Tot STACKIT algemeen beschikbaar is in Solace Cloud (verwacht komende week),
 staat er op de plek van "STACKIT eu01" in dit diagram feitelijk een Solace
 Cloud HA-service op **GCP, europe-west1 (België)**. Topics, ACL-profiel en
-bridge-naam (`bridge-to-stackit`) blijven ongewijzigd -- alleen het fysieke
+RDP-naam (`rdp-stackit`) blijven ongewijzigd -- alleen het fysieke
 eindpunt wisselt zodra STACKIT GA is. Zie
 `../cloud-setup/gcp-europe-west1-interim/README.md` en
 `../cloud-setup/stackit-eu01/README.md`.

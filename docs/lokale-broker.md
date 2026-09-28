@@ -354,6 +354,45 @@ Draai `configure-local-broker.sh` opnieuw op een broker waar deze objecten
 nog bestaan (van een eerdere sessie) om ze daar handmatig op te ruimen; de
 scripts zelf maken ze niet meer aan.
 
+## ✅ Eindresultaat: end-to-end bevestigd op alle 3 cloud-brokers (28/09/2026)
+
+Na de `rdp-deliver`-profielfix hierboven is de volledige keten -- publish op
+de lokale broker, message promotion in de queue, RDP-export naar de
+cloud-broker, op precies dezelfde topic -- getest en bevestigd voor **alle
+drie** demo-apps/dataklassen, elk uitsluitend op zijn eigen doelbroker:
+
+- **AWS** (`stm-public/publish-public.sh`, `enewable/public/>`): alle 3
+  queue-bindings `up: true` met `bindSuccessCount: 1` (voor het eerst
+  daadwerkelijk gebonden aan hun eigen queue); `rdp-aws` leverde 21 van de
+  30 wachtende berichten daadwerkelijk af
+  (`httpResponseSuccessRxMsgCount: 21`), zichtbaar in AWS "Try Me!" op
+  `enewable/public/market/price`. Een losse sanity-check (een handmatige
+  curl-POST rechtstreeks naar AWS, buiten de RDP om) gaf onafhankelijk
+  bevestigd 200 OK -- AWS-kant, credentials en topic-mapping waren al die
+  tijd 100% in orde, het probleem zat uitsluitend in de lokale
+  `rdp-deliver`-fix.
+- **Azure** (`python-eu-nonpersonal/publisher.py`, `enewable/eu/ops/>`): 20
+  Direct-berichten aangekomen op Azure "Try Me!" op
+  `enewable/eu/ops/grid/load`, niets op AWS. (Eerste poging liep vast op
+  een instructiefout van de assistent, niet een repo-bug: een inline
+  `# toelichting` aan het eind van een commandoregel, die zsh -- Emils
+  shell, macOS-default -- anders dan bash niet negeert; zie
+  `demo-apps/python-eu-nonpersonal/README.md` als je zelf commando's met
+  `#`-commentaar samenstelt.)
+- **STACKIT/GCP-interim** (`sdkperf-pii/publish-pii.sh`,
+  `enewable/eu/pii/>`): 20 Direct-berichten aangekomen op STACKIT/GCP-interim
+  "Try Me!" op `enewable/eu/pii/meter/reading`, niets op AWS/Azure. (Eerste
+  poging liep vast op `sdkperf_java.sh: command not found` -- SDKPerf stond
+  niet op Emils PATH, geen repo-bug; opgelost met de `SDKPERF_BIN`-variabele
+  in `local-broker/.env`, zie `local-broker/.env.example`.)
+
+**Conclusie**: de architectuur werkt zoals ontworpen -- elke dataklasse
+stroomt automatisch, alleen op basis van zijn topic, naar precies één
+cloud-broker en nergens anders. Zie `README.md` voor de complete
+stap-voor-stap-handleiding om dit vanaf nul te reproduceren, en
+`local-broker/scripts/run-demo-loop.sh` om de 3 demo-apps doorlopend te
+laten publiceren (bijv. voor een standdemo).
+
 ## Starten
 
 Zie `../local-broker/docker-run.sh`. Kort samengevat:
@@ -409,22 +448,24 @@ associative arrays.
   kunnen per broker-release licht verschillen. **Test dit ruim vóór DADD**
   met de "SEMP API Browser" in Broker Manager (About-pagina) op je eigen
   broker-versie, en corrigeer het script waar nodig.
-- **REST-host/poort per cloud-service niet bevestigd**: `*_REMOTE_REST_HOST`
-  gebruikt dezelfde hostname als de SMF-verbinding, `*_REMOTE_REST_PORT` is
-  aangenomen als 9443 (Solace Cloud's standaard secure-REST-poort) -- dit is
-  een aanname, niet bevestigd tegen de Connect-tab. Controleer dit vóór het
-  draaien van `configure-rdp-export.sh`, en zet REST-messaging aan voor die
-  service als het nog uit staat.
-- **TLS-vertrouwen richting Solace Cloud**: bridges naar Solace Cloud
-  gebruiken TLS op poort 55443 met een publiek CA-certificaat. De
-  standaard-broker-image heeft doorgaans de meest gebruikelijke publieke
-  CA's al vertrouwd, maar controleer dit (Broker Manager > CA Certificates)
-  voordat je live gaat -- een niet-vertrouwd certificaat laat de bridge
-  simpelweg "Down" blijven. **Dit risico is nu actueel**: na een volledig
-  schone `configure-local-broker.sh`-run blijven alle 3 bridges toch "Down"
-  -- zie "Status: draait" hierboven en `diagnose-bridges.sh` voor de
-  vervolgstap om de exacte oorzaak (TLS, netwerk, of credentials) vast te
-  stellen in plaats van te gokken.
+- **REST-host/poort per cloud-service**: `*_REMOTE_REST_HOST` gebruikt
+  dezelfde hostname als de SMF-verbinding, `*_REMOTE_REST_PORT` is 9443
+  (Solace Cloud's standaard secure-REST-poort) -- **bevestigd correct voor
+  alle 3 cloud-brokers** (Connect-tab van elke service, en onafhankelijk
+  bevestigd doordat de RDP-export nu daadwerkelijk end-to-end werkt op alle
+  3, zie "Eindresultaat" hierboven). Bij een NIEUWE cloud-service (bijv. de
+  definitieve STACKIT eu01 zodra die GA is) toch even controleren op de
+  Connect-tab voordat je `configure-rdp-export.sh` draait -- dit is een
+  Solace Cloud-default, geen garantie.
+- **TLS-vertrouwen richting Solace Cloud**: de RDP's REST-consumer
+  verbindt met TLS op poort 9443 met een publiek CA-certificaat. De
+  standaard-broker-image heeft de meest gebruikelijke publieke CA's al
+  vertrouwd -- bevestigd werkend in de praktijk (alle 3 REST-consumers
+  zijn nu daadwerkelijk `up: true` en leveren berichten af, zie
+  "Eindresultaat" hierboven), dus geen open punt meer. (Dit was eerder een
+  open risico op de -- inmiddels afgeschafte -- bridge-verbindingen op
+  poort 55443; die tekst is achterhaald sinds bridges zijn vervangen door
+  RDP's.)
 - **Geen persistente opslag**: de container gebruikt geen bind-mount voor
   `/var/lib/solace`. Elke herstart van de container = opnieuw
   `configure-local-broker.sh` draaien. Voor herhaalde oefensessies in de

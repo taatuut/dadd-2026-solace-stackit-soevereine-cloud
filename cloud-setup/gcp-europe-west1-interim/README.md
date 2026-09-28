@@ -49,9 +49,13 @@ bridge.
 
 ## Nog te doen voor deze service
 
-1. Connect-tab openen en het exacte SMF-poortnummer (55443/TLS aangenomen)
-   én het REST-poortnummer (9443 aangenomen -- nog te bevestigen) bevestigen;
-   REST-messaging aanzetten voor deze service als het nog uit staat.
+1. ~~Connect-tab openen en het exacte SMF-poortnummer én het
+   REST-poortnummer bevestigen; REST-messaging aanzetten.~~ ✅ Bevestigd:
+   REST-poort is 9443/TLS (zelfde hostname als SMF), REST-messaging stond
+   al aan. Onafhankelijk bewezen door een geslaagde end-to-end test: 20
+   Direct-berichten aangekomen op deze service se "Try Me!" op
+   `enewable/eu/pii/meter/reading`, niets op AWS/Azure (zie
+   `../../docs/lokale-broker.md`, "Eindresultaat").
 2. ~~Client-username + ACL-profiel aanmaken~~ ✅ gedaan, zie "Status:
    publish-toegang ingericht" hierboven.
 3. ~~De `STACKIT_*`-variabelen in `../../local-broker/.env` invullen~~ ✅
@@ -60,3 +64,7 @@ bridge.
    `STACKIT_*`-variabelen bijwerken, `configure-local-broker.sh` en
    `configure-rdp-export.sh` opnieuw draaien, en deze interim-service
    afbouwen.
+
+**Deze interim-service is klaar en volledig getest -- de overstap naar de
+echte STACKIT eu01-service (punt 4) is de enige nog openstaande stap, en
+alleen afhankelijk van STACKIT's GA-datum, niet van deze configuratie.**
