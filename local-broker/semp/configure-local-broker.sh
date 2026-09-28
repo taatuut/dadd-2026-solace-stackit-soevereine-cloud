@@ -103,6 +103,21 @@ create_scoped_publisher "pub-public"  "enewable/public/>"  "${PUB_PUBLIC_PASSWOR
 create_scoped_publisher "pub-eu-ops"  "enewable/eu/ops/>"   "${PUB_EU_OPS_PASSWORD:-pub-eu-ops-pw}"
 create_scoped_publisher "pub-eu-pii"  "enewable/eu/pii/>"   "${PUB_EU_PII_PASSWORD:-pub-eu-pii-pw}"
 
+echo "== 3. Read-only monitor client-username (visualization tools, e.g. Sunburst Topic Explorer) =="
+# Separate from the 3 scoped publishers above: this one may SUBSCRIBE to
+# the whole enewable/> tree (so a topic-tree visualizer sees all 3 data
+# classes flow to their own subtree) but may NOT publish anything -- a
+# read-only identity, kept out of the publish-governance story on purpose.
+MONITOR_USER="${MONITOR_USER:-monitor}"
+MONITOR_PASSWORD="${MONITOR_PASSWORD:-monitor-pw}"
+semp POST "/msgVpns/${VPN}/aclProfiles" \
+  "{\"aclProfileName\":\"acl-monitor\",\"clientConnectDefaultAction\":\"allow\",\"publishTopicDefaultAction\":\"disallow\",\"subscribeTopicDefaultAction\":\"disallow\"}"
+semp POST "/msgVpns/${VPN}/aclProfiles/acl-monitor/subscribeTopicExceptions" \
+  "{\"subscribeTopicExceptionSyntax\":\"smf\",\"subscribeTopicException\":\"enewable/>\"}"
+semp POST "/msgVpns/${VPN}/clientUsernames" \
+  "{\"clientUsername\":\"${MONITOR_USER}\",\"password\":\"${MONITOR_PASSWORD}\",\"enabled\":true,\"aclProfileName\":\"acl-monitor\",\"clientProfileName\":\"default\"}"
+echo "  ${MONITOR_USER} -> may only SUBSCRIBE, to enewable/> (cannot publish)"
+
 cat <<INFO
 
 Klaar. Volgende stap: local-broker/semp/configure-rdp-export.sh -- richt de

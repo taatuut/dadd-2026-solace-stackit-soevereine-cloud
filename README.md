@@ -112,9 +112,11 @@ de SEMP-management-API bereikbaar is. Bevestig daarna in Broker Manager
 
 Maakt de Message VPN `enewable` aan, plus de 3 scoped publisher
 client-usernames (`pub-public`/`pub-eu-ops`/`pub-eu-pii`) die elk alleen op
-hun eigen topic-subtree mogen publiceren. Idempotent -- veilig om opnieuw
-te draaien (bijv. na een container-restart, zie "Geen persistente opslag"
-in `docs/lokale-broker.md`).
+hun eigen topic-subtree mogen publiceren, en een read-only `monitor`
+client-username die op heel `enewable/>` mag *subscriben* maar nergens op
+mag publiceren (bedoeld voor visualisatietools, zie "Verkeer visualiseren"
+hieronder). Idempotent -- veilig om opnieuw te draaien (bijv. na een
+container-restart, zie "Geen persistente opslag" in `docs/lokale-broker.md`).
 
 ### 3. RDP-export naar de 3 cloud-brokers configureren
 
@@ -257,6 +259,27 @@ Opties (zie ook `./local-broker/scripts/run-demo-loop.sh --help`):
 # laat draaien op een stand)
 ./local-broker/scripts/run-demo-loop.sh --once --count 1
 ```
+
+### 8. Verkeer visualiseren met Sunburst Topic Explorer (optioneel)
+
+[Sunburst Topic Explorer](https://explorer.solace.dev/) laat de topic-boom
+van een broker live zien terwijl er berichten doorheen stromen -- handig om
+tijdens de demo te laten zien hoe `enewable/public/>`,
+`enewable/eu/ops/>` en `enewable/eu/pii/>` zich als 3 losse takken
+gedragen. Connect met:
+
+- **URL**: `ws://localhost:8008` (dezelfde web-messaging-poort als `stm`)
+- **Message VPN**: `enewable`
+- **Username / Password**: `monitor` / de waarde van `MONITOR_PASSWORD` in
+  je `local-broker/.env` (default in `.env.example`: `monitor-pw`)
+
+Dit is *niet* dezelfde combinatie als `default`/`default` waarmee je
+waarschijnlijk al tegen de broker se ingebouwde `default`-VPN hebt getest
+-- die combinatie bestaat alleen op de VPN die letterlijk `default` heet.
+`enewable` heeft zijn eigen client-usernames (stap 2): de 3
+publish-only-accounts (`pub-*`) mogen expliciet niet subscriben, dus
+hiervoor is een apart, read-only `monitor`-account aangemaakt dat wél op
+heel `enewable/>` mag subscriben maar zelf niets kan publiceren.
 
 ## Problemen oplossen
 

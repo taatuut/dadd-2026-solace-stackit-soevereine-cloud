@@ -146,6 +146,10 @@ Zie [`docs/demo-apps.md`](docs/demo-apps.md) en [`demo-apps/`](demo-apps/)
 
 - **ACL-profielen** per publisher: elke demo-app kan fysiek alleen op zijn
   eigen topic-subtree publiceren (zie `local-broker/semp/configure-local-broker.sh`).
+  Een apart, read-only `monitor`-account (eigen ACL-profiel `acl-monitor`)
+  mag op heel `enewable/>` *subscriben* maar helemaal niet publiceren --
+  voor visualisatietools zoals Sunburst Topic Explorer, zonder de
+  publish-governance van de 3 `pub-*`-accounts te doorbreken.
 - **TLS** op alle bridge-verbindingen naar de cloud-brokers (poort 55443).
 - **Netwerktoegang cloud-brokers: public clusters, niet private/VPC-
   gepeerd.** Bewust voor demo-snelheid; in productie zou je de bridges
@@ -1124,6 +1128,34 @@ productieklaar systeem:
      `--interval`), en één losse testcyclus (`--once --count 1`) -- zodat
      deze direct te kopiëren zijn zonder eerst `--help` te moeten
      raadplegen.
+  34. **Read-only `monitor`-account voor Sunburst Topic Explorer (Emil,
+     28/09/2026, op verzoek).** Emil wil
+     [Sunburst Topic Explorer](https://explorer.solace.dev/) gebruiken om
+     het berichtenverkeer op de `enewable`-VPN live te visualiseren; hij
+     kan al met `default`/`default` verbinden met de broker se ingebouwde
+     `default`-VPN, maar die combinatie bestaat niet op `enewable` --
+     geen van de 3 bestaande `pub-*`-client-usernames kan hier ook maar
+     voor dienen, want hun ACL-profiel heeft
+     `subscribeTopicDefaultAction: disallow` zonder enige subscribe-
+     exceptie (ze zijn bewust publish-only, zie sectie 8). Nieuw, apart
+     client-username `monitor` toegevoegd in `configure-local-broker.sh`
+     (stap 3 van dat script) met een eigen ACL-profiel `acl-monitor`:
+     `publishTopicDefaultAction: disallow` (kan zelf niets publiceren) en
+     `subscribeTopicDefaultAction: disallow` met precies één exceptie,
+     `enewable/>` (mag alles onder de VPN's eigen topic-boom volgen). Dit
+     doorbreekt de publish-governance van de 3 bestaande accounts niet --
+     het is een puur read-only, apart identiteitstype. Credentials
+     (`MONITOR_USER`/`MONITOR_PASSWORD`, default `monitor`/`monitor-pw`)
+     toegevoegd aan `local-broker/.env.example`. Connectiegegevens voor
+     Sunburst: `ws://localhost:8008` (dezelfde web-messaging-poort als
+     `stm`), VPN `enewable`, username/password zoals hierboven --
+     gedocumenteerd in `README.md`, nieuwe stap 8 "Verkeer visualiseren
+     met Sunburst Topic Explorer". **Niet in deze sandbox geverifieerd**:
+     geen live broker beschikbaar om het daadwerkelijk verbinden met
+     Sunburst Topic Explorer te bevestigen; wel bevestigd via `bash -n`
+     dat het script syntactisch correct is en dat de SEMP-aanroepen
+     dezelfde vorm hebben als de al bevestigd werkende
+     `create_scoped_publisher()`-aanroepen.
 - **Geen automatische provisioning van alle 4 brokers in één commando.**
   Er is bewust voor losse, leesbare stappen gekozen (console + scripts per
   onderdeel) omdat dat beter uit te leggen en te debuggen is vóór een
