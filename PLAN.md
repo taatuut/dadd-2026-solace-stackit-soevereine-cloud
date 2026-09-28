@@ -17,7 +17,7 @@ alleen wat gepland was.
 | Fase 3 -- AWS US East | ✅ Aangemaakt | Service `ez-dadd-2026-eks-us-east-1a`, zie [`cloud-setup/aws-us-east/README.md`](cloud-setup/aws-us-east/README.md) en `screenshots/AWS/` |
 | Fase 3 -- Azure West Europe | ✅ Aangemaakt | Service `ez-dadd-2026-aks-westeurope`, zie [`cloud-setup/azure-west-europe/README.md`](cloud-setup/azure-west-europe/README.md) en `screenshots/Azure/` |
 | Fase 3 -- STACKIT / GCP-interim | ✅ Aangemaakt | Service `ez-dadd-2026-STACKIT-gke-gcp-europe-west1-b` (interim op GCP europe-west1), zie [`cloud-setup/gcp-europe-west1-interim/README.md`](cloud-setup/gcp-europe-west1-interim/README.md) en `screenshots/STACKIT-of-GCP-interim/` -- alle 3 cloud-broker services zijn nu aangemaakt |
-| Fase 4 -- Lokale broker + RDP-export | ✅ Lokale auth-bug gevonden en gefixt (VPN stond op RADIUS-auth) | `configure-local-broker.sh` PATCHt de VPN nu naar `authenticationBasicType: "internal"`. Emil moet het script herdraaien, dan de echte publish-test + diagnose-rdp.sh (zie PLAN.md sectie 13, punt 21) |
+| Fase 4 -- Lokale broker + RDP-export | ✅ Alle bekende blokkerende bugs gefixt (RADIUS-auth + delivery-mode) | Verbinding werkt nu; `stm send` publiceerde standaard PERSISTENT i.p.v. DIRECT -- gefixt met `--delivery-mode DIRECT`. Klaar voor een schone publish-test + diagnose-rdp.sh (zie PLAN.md sectie 13, punt 22) |
 | Fase 5 -- Demo-apps valideren | Nog te doen | |
 | Fase 6 -- Draaiboek + fallback | Nog te doen | |
 
@@ -230,7 +230,7 @@ nooit gecommit -- alleen `.env.example`-bestanden zitten in de repo.)
 | 1 | STACKIT-beschikbaarheid | ✅ Interim-broker op GCP europe-west1 (België) aangemaakt als stand-in; vlak vóór repetitie/DADD controleren of STACKIT al als datacenter-optie zichtbaar is en zo ja, overstappen | Interim: gereed; overstap-check: kort vóór fase 5/6 |
 | 2 | Solace Cloud account | Account + API-token aanmaken (indien nog niet aanwezig) | Week na fase 0 |
 | 3 | Cloud-brokers aanmaken | ✅ Alle 3 gereed: AWS (`ez-dadd-2026-eks-us-east-1a`), Azure (`ez-dadd-2026-aks-westeurope`), STACKIT/GCP-interim (`ez-dadd-2026-STACKIT-gke-gcp-europe-west1-b`); sovereign-node blijft STACKIT zodra GA, tot dan GCP europe-west1 interim | Gereed |
-| 4 | Lokale broker + RDP-export | ✅ Oorzaak bevestigd (VPN op RADIUS-auth i.p.v. internal, geen RADIUS-profiel aanwezig) en gefixt in configure-local-broker.sh | Emil herdraait configure-local-broker.sh, dan de echte publish-test + diagnose-rdp.sh |
+| 4 | Lokale broker + RDP-export | ✅ RADIUS-auth-bug gefixt; publish-test faalde daarna nog op delivery-mode (stm stuurt standaard PERSISTENT, moet DIRECT zijn) -- ook gefixt | Emil draait de publish-test + diagnose-rdp.sh opnieuw |
 | 5 | Demo-apps valideren | Alle 3 tools end-to-end testen (publiceren → juiste cloud-broker, nergens anders) | Meerdere keren voor DADD, niet pas op de dag zelf |
 | 6 | Draaiboek + fallback-opname | Live-timing oefenen, schermopname als fallback maken | Week vóór DADD |
 | 7 | Op de dag zelf | `docker-run.sh` + `configure-local-broker.sh` (of al draaiend laten staan), demo-apps klaarzetten | Vlak voor het slot |
@@ -744,6 +744,23 @@ productieklaar systeem:
      queue (de publisher blijft op DIRECT QoS; de broker dupliceert
      intern), maar als na de RADIUS-fix berichten nog steeds niet in de
      queue belanden, is dit de volgende kandidaat om te checken.
+  22. **Publish-test na de RADIUS-fix: verbinding lukt nu, maar elk
+     bericht wordt geweigerd met "Sending guaranteed message is not
+     allowed by router for this client" (Emil, 28/09/2026).** Precies
+     het net genoemde watch-item, maar dan bevestigd: `stm send`
+     publiceert **standaard PERSISTENT** (guaranteed), niet DIRECT --
+     zichtbaar in de output ("1 publishing PERSISTENT message"). Het
+     `default` client-profile heeft bewust
+     `allowGuaranteedMsgSendEnabled: false`, want deze hele demo is
+     gebouwd op DIRECT-publiceren + automatische queue-promotion (zie
+     "Definitieve keuze" in `docs/lokale-broker.md`) -- dus dit is geen
+     broker-misconfiguratie maar de publish-test die de verkeerde
+     delivery-mode gebruikte. Gefixt: `--delivery-mode DIRECT`
+     toegevoegd aan `demo-apps/stm-public/publish-public.sh` (en het
+     handmatige voorbeeld in `stm-public/README.md`). De andere 2
+     demo-apps hadden dit probleem niet: `sdkperf-pii` gebruikte al
+     `-mt=direct`, en `python-eu-nonpersonal` gebruikte al
+     `create_direct_message_publisher_builder()`.
 - **Geen automatische provisioning van alle 4 brokers in één commando.**
   Er is bewust voor losse, leesbare stappen gekozen (console + scripts per
   onderdeel) omdat dat beter uit te leggen en te debuggen is vóór een
@@ -809,10 +826,16 @@ productieklaar systeem:
    enig RADIUS-profiel; alle client-usernames waren zelf gewoon
    `enabled: true`. Gefixt in `configure-local-broker.sh` (PATCHt nu
    expliciet naar `"internal"`, zie sectie 13, punt 21). **Nu:**
-   `local-broker/semp/configure-local-broker.sh` opnieuw draaien (idempotent,
-   veilig), dan de echte end-to-end publish-test
-   (`demo-apps/stm-public/publish-public.sh`) en meteen daarna
-   `local-broker/semp/diagnose-rdp.sh` herhalen.
+   ~~`configure-local-broker.sh` opnieuw draaien.~~ ✅ -- verbinding werkt
+   nu. ~~Publish-test draaien.~~ 🔬 -- verbinding lukte, maar elk bericht
+   werd geweigerd met "Sending guaranteed message is not allowed by
+   router for this client": `stm send` publiceert standaard PERSISTENT,
+   niet DIRECT (deze demo is bewust op DIRECT + queue-promotion gebouwd).
+   Gefixt: `--delivery-mode DIRECT` toegevoegd aan
+   `demo-apps/stm-public/publish-public.sh` (zie sectie 13, punt 22).
+   **Nu:** `demo-apps/stm-public/publish-public.sh` opnieuw draaien en
+   meteen daarna `local-broker/semp/diagnose-rdp.sh` herhalen -- dit zou
+   nu daadwerkelijk moeten slagen.
 5. Eerste end-to-end testronde volgens sectie 12: publiceren met
    stm/python/sdkperf en in de Solace Cloud console van de DOELBROKER
    controleren dat het bericht op dezelfde topic aankomt, en nergens

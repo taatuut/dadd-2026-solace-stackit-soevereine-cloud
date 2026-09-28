@@ -7,6 +7,19 @@
 # "error: unknown option '--url'" because there is no "publish" command at
 # all in this version (the full command tree is send/receive/request/
 # reply/config/manage/feed -- see the SolaceLabs/solace-tryme-cli README).
+#
+# NOTE (fixed 28/09/2026, 2nd bug): "stm send" defaults to
+# --delivery-mode PERSISTENT (guaranteed), NOT direct. The local broker's
+# "default" client-profile intentionally has
+# allowGuaranteedMsgSendEnabled: false (this demo's whole design relies
+# on DIRECT publish + automatic queue promotion, see PLAN.md/docs/
+# lokale-broker.md), so every persistent publish attempt failed with
+# "Sending guaranteed message is not allowed by router for this client"
+# -- even though the connection itself succeeded. Fixed by adding
+# --delivery-mode DIRECT explicitly. The other two demo apps
+# (sdkperf-pii: "-mt=direct", python-eu-nonpersonal:
+# create_direct_message_publisher_builder()) were already DIRECT and did
+# not have this bug.
 set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # shellcheck disable=SC1090
@@ -25,4 +38,5 @@ stm send \
   --username "${PUB_PUBLIC_USER}" --password "${PUB_PUBLIC_PASSWORD}" \
   --topic enewable/public/market/price \
   --file "${SCRIPT_DIR}/sample-payload.json" \
+  --delivery-mode DIRECT \
   --count "${COUNT}" --interval 1000

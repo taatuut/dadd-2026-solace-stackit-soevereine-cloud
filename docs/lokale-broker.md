@@ -233,6 +233,20 @@ message-promotion van een DIRECT-publicatie, maar is de volgende
 kandidaat als berichten na deze fix nog steeds niet in de queue
 belanden. Zie `PLAN.md` sectie 13, punt 21.
 
+**✅ En die kandidaat was het: `stm send` publiceerde standaard
+PERSISTENT.** Na de RADIUS-fix lukte de verbinding, maar elk bericht
+werd geweigerd met "Sending guaranteed message is not allowed by router
+for this client" -- precies het net genoemde watch-item. `stm send`
+publiceert standaard PERSISTENT (guaranteed), niet DIRECT; het `default`
+client-profile heeft bewust `allowGuaranteedMsgSendEnabled: false`, want
+deze hele demo is gebouwd op DIRECT-publiceren + automatische
+queue-promotion (zie "Definitieve keuze" hierboven). Gefixt:
+`--delivery-mode DIRECT` toegevoegd aan
+`demo-apps/stm-public/publish-public.sh`. De andere 2 demo-apps hadden
+dit niet: `sdkperf-pii` gebruikte al `-mt=direct`, `python-eu-nonpersonal`
+al `create_direct_message_publisher_builder()`. Zie `PLAN.md` sectie 13,
+punt 22.
+
 **Gefixt (28/09/2026): `stm publish` bestaat niet.** De geïnstalleerde
 Solace Try-Me CLI (v1.0.0) heeft geen `publish`-subcommando -- de juiste
 is `stm send` (zelfde vlaggen). Gefixt in
