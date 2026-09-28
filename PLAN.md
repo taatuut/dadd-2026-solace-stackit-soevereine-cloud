@@ -17,7 +17,7 @@ alleen wat gepland was.
 | Fase 3 -- AWS US East | ✅ Aangemaakt | Service `ez-dadd-2026-eks-us-east-1a`, zie [`cloud-setup/aws-us-east/README.md`](cloud-setup/aws-us-east/README.md) en `screenshots/AWS/` |
 | Fase 3 -- Azure West Europe | ✅ Aangemaakt | Service `ez-dadd-2026-aks-westeurope`, zie [`cloud-setup/azure-west-europe/README.md`](cloud-setup/azure-west-europe/README.md) en `screenshots/Azure/` |
 | Fase 3 -- STACKIT / GCP-interim | ✅ Aangemaakt | Service `ez-dadd-2026-STACKIT-gke-gcp-europe-west1-b` (interim op GCP europe-west1), zie [`cloud-setup/gcp-europe-west1-interim/README.md`](cloud-setup/gcp-europe-west1-interim/README.md) en `screenshots/STACKIT-of-GCP-interim/` -- alle 3 cloud-broker services zijn nu aangemaakt |
-| Fase 4 -- Lokale broker + RDP-export | 🔬 Directe curl-POST werkt (200 OK); RDP-consumer heeft nog nooit een échte POST verstuurd | REST-incoming, auth, host/poort en topic-mapping zijn nu allemaal uitgesloten als oorzaak -- `test-rest-direct.sh` kreeg HTTP 200 van alle 3 brokers. REST-consumer se HTTP-tellers staan op 0: nog geen enkele echte berichtaflevering geprobeerd. Vervolgstap: een echte end-to-end publish-test (zie PLAN.md sectie 13, punt 18) |
+| Fase 4 -- Lokale broker + RDP-export | 🔬 Publish-test gefixt (stm CLI), nog niet opnieuw gedraaid | `stm publish` bestaat niet in stm v1.0.0 (moet `stm send` zijn) -- gefixt in publish-public.sh/README.md. RDP-diagnose staat op: REST-incoming/auth/host/topic uitgesloten, REST-consumer nog 0 echte POSTs (zie PLAN.md sectie 13, punt 19) |
 | Fase 5 -- Demo-apps valideren | Nog te doen | |
 | Fase 6 -- Draaiboek + fallback | Nog te doen | |
 
@@ -229,7 +229,7 @@ nooit gecommit -- alleen `.env.example`-bestanden zitten in de repo.)
 | 1 | STACKIT-beschikbaarheid | ✅ Interim-broker op GCP europe-west1 (België) aangemaakt als stand-in; vlak vóór repetitie/DADD controleren of STACKIT al als datacenter-optie zichtbaar is en zo ja, overstappen | Interim: gereed; overstap-check: kort vóór fase 5/6 |
 | 2 | Solace Cloud account | Account + API-token aanmaken (indien nog niet aanwezig) | Week na fase 0 |
 | 3 | Cloud-brokers aanmaken | ✅ Alle 3 gereed: AWS (`ez-dadd-2026-eks-us-east-1a`), Azure (`ez-dadd-2026-aks-westeurope`), STACKIT/GCP-interim (`ez-dadd-2026-STACKIT-gke-gcp-europe-west1-b`); sovereign-node blijft STACKIT zodra GA, tot dan GCP europe-west1 interim | Gereed |
-| 4 | Lokale broker + RDP-export | 🔬 `test-rest-direct.sh`: alle 3 brokers antwoorden 200 OK op een directe POST. REST-consumer se tellers staan op 0 -- er is nog nooit een échte berichtaflevering geprobeerd, dus de 503 is geen mislukte aflevering | Echte end-to-end publish-test (stm/python/sdkperf), dan diagnose-rdp.sh opnieuw |
+| 4 | Lokale broker + RDP-export | 🔬 Eerste publish-test faalde op de stm CLI zelf (`stm publish` bestaat niet, moet `stm send` zijn) -- gefixt. RDP-diagnose: REST-incoming/auth/host/topic al uitgesloten, REST-consumer nog 0 echte POSTs | Emil draait publish-public.sh opnieuw, dan diagnose-rdp.sh |
 | 5 | Demo-apps valideren | Alle 3 tools end-to-end testen (publiceren → juiste cloud-broker, nergens anders) | Meerdere keren voor DADD, niet pas op de dag zelf |
 | 6 | Draaiboek + fallback-opname | Live-timing oefenen, schermopname als fallback maken | Week vóór DADD |
 | 7 | Op de dag zelf | `docker-run.sh` + `configure-local-broker.sh` (of al draaiend laten staan), demo-apps klaarzetten | Vlak voor het slot |
@@ -679,6 +679,23 @@ productieklaar systeem:
      en `test-rest-direct.sh` zijn beide aangepast om ook naar
      `output/*.txt` te schrijven (zelfde conventie als `diagnose-rdp.sh`),
      zodat toekomstige runs makkelijker te delen zijn.
+  19. **Eerste poging tot de echte end-to-end publish-test (Emil,
+     28/09/2026) liep meteen vast op de demo-app zelf, niet op de
+     RDP-keten:** `demo-apps/stm-public/publish-public.sh` faalde met
+     `error: unknown option '--url'` op de regel `stm publish \`. Oorzaak:
+     de geïnstalleerde Solace Try-Me CLI (stm v1.0.0) heeft helemaal geen
+     `publish`-subcommando -- de echte command-tree is
+     `send`/`receive`/`request`/`reply`/`config`/`manage`/`feed` (bevestigd
+     via de officiële `SolaceLabs/solace-tryme-cli`-documentatie op
+     GitHub: `MESSAGING_PARAMETERS.md` en het README). Alle gebruikte
+     vlaggen (`--url`, `--vpn`, `--username`, `--password`, `--topic`,
+     `--file`, `--count`, `--interval`) bestaan wél, alleen onder
+     `stm send` in plaats van `stm publish`. Gefixt in
+     `demo-apps/stm-public/publish-public.sh` en
+     `demo-apps/stm-public/README.md` (2 vindplaatsen). De echte
+     end-to-end test (landt het bericht in de queue, bewegen de
+     REST-consumer se tellers van 0 af, komt het aan op AWS) moet Emil nu
+     opnieuw draaien.
 - **Geen automatische provisioning van alle 4 brokers in één commando.**
   Er is bewust voor losse, leesbare stappen gekozen (console + scripts per
   onderdeel) omdat dat beter uit te leggen en te debuggen is vóór een
@@ -732,11 +749,13 @@ productieklaar systeem:
    poort en topic-mapping zijn dus uitgesloten als oorzaak. De
    REST-consumer se eigen HTTP-tellers staan echter nog op 0 -- er is nog
    nooit een échte berichtaflevering geprobeerd (zie sectie 13, punt 18).
-   **Nu:** een echte end-to-end publish-test draaien (bijv.
-   `demo-apps/stm-public/publish-public.sh`) en meteen daarna
-   `local-broker/semp/diagnose-rdp.sh` herhalen om te zien of het bericht
-   in de queue landt (`spooledMsgCount`) en of de REST-consumer se
-   tellers dan van 0 af bewegen.
+   Eerste poging tot een echte publish-test liep vast op de stm CLI zelf
+   (`stm publish` bestaat niet, moet `stm send` zijn) -- gefixt in
+   `demo-apps/stm-public/publish-public.sh` (zie sectie 13, punt 19).
+   **Nu:** `demo-apps/stm-public/publish-public.sh` opnieuw draaien en
+   meteen daarna `local-broker/semp/diagnose-rdp.sh` herhalen om te zien
+   of het bericht in de queue landt (`spooledMsgCount`) en of de
+   REST-consumer se tellers dan van 0 af bewegen.
 5. Eerste end-to-end testronde volgens sectie 12: publiceren met
    stm/python/sdkperf en in de Solace Cloud console van de DOELBROKER
    controleren dat het bericht op dezelfde topic aankomt, en nergens

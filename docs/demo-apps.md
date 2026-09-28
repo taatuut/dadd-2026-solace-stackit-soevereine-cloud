@@ -4,6 +4,13 @@ Zie `../demo-apps/README.md` voor het overzicht van de drie tools. Dit
 document geeft het voorgestelde draaiboek voor de live demo, gespiegeld aan
 slide 23 ("Data that can't cross the border") van de sovereign-cloud-deck.
 
+**Gefixt (28/09/2026):** `demo-apps/stm-public/publish-public.sh` gebruikte
+`stm publish`, maar de geïnstalleerde Solace Try-Me CLI (v1.0.0) kent geen
+`publish`-subcommando -- de juiste is `stm send` (zelfde vlaggen: `--url`,
+`--vpn`, `--username`, `--password`, `--topic`, `--file`, `--count`,
+`--interval`). Gefixt in het script en in `stm-public/README.md`. Zie
+`PLAN.md` sectie 13, punt 19.
+
 ## Voorgesteld draaiboek (aansluitend op de presentatie)
 
 1. **Publiek**: `demo-apps/stm-public/publish-public.sh` -- laat in de

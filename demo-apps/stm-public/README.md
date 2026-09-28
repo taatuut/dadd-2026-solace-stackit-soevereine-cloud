@@ -20,7 +20,7 @@ stm --version
 Of handmatig, één bericht:
 
 ```bash
-stm publish \
+stm send \
   --url ws://localhost:8008 \
   --vpn enewable \
   --username pub-public --password "$PUB_PUBLIC_PASSWORD" \
