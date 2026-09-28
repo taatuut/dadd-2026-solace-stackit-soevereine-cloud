@@ -42,8 +42,11 @@ SEMP-configuratiefout maar een probleem op het niveau van de daadwerkelijke
 bridge-verbindingspoging. Broker Manager toont zelf geen down-reden, dus is
 `../local-broker/semp/diagnose-bridges.sh` toegevoegd: een read-only script
 dat i.p.v. de SEMP v2 **Config**-API de **Monitor**-API opvraagt (die wel een
-verbindingsfout-detail bevat) voor alle 3 bridges. Volgende sub-stap: dit
-script draaien en de output beoordelen.
+verbindingsfout-detail bevat) voor alle 3 bridges. De output is lang, dus het
+script schrijft naar `output/diagnose-bridges.txt` (repo-root, gitignored) in
+plaats van naar stdout -- dat bestand kan als bijlage aangeleverd worden in
+plaats van de output te plakken. Volgende sub-stap: dit script draaien en het
+outputbestand beoordelen.
 
 ## Starten
 

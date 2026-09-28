@@ -224,3 +224,6 @@ token-*.txt
 
 # macOS
 .DS_Store
+
+# Diagnostic script output (can echo back hostnames/usernames from .env)
+output/

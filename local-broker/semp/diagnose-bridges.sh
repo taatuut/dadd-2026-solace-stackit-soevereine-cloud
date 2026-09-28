@@ -12,10 +12,18 @@
 # Usage: ./diagnose-bridges.sh
 # Requires: curl, and a populated ../.env (same file configure-local-broker.sh uses)
 # Makes NO changes -- GET requests only.
+#
+# Output goes to <repo-root>/output/diagnose-bridges.txt instead of stdout
+# (the dump is long -- easier to attach the file than paste it). That
+# output/ folder is gitignored: SEMP responses can echo back
+# hostnames/usernames from .env, so treat it like .env itself.
 
 set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ENV_FILE="${SCRIPT_DIR}/../.env"
+REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
+OUT_DIR="${REPO_ROOT}/output"
+OUT_FILE="${OUT_DIR}/diagnose-bridges.txt"
 
 if [[ ! -f "${ENV_FILE}" ]]; then
   echo "Missing ${ENV_FILE}."
@@ -23,6 +31,8 @@ if [[ ! -f "${ENV_FILE}" ]]; then
 fi
 # shellcheck disable=SC1090
 source "${ENV_FILE}"
+
+mkdir -p "${OUT_DIR}"
 
 CONFIG="${LOCAL_SEMP_HOST}/SEMP/v2/config"
 MONITOR="${LOCAL_SEMP_HOST}/SEMP/v2/monitor"
@@ -45,19 +55,25 @@ get() {
   echo
 }
 
-for entry in "bridge-to-aws" "bridge-to-azure" "bridge-to-stackit"; do
-  vr="auto"
-  echo "======================================================"
-  echo "  ${entry}"
-  echo "======================================================"
-  get "${CONFIG}"  "/msgVpns/${VPN}/bridges/${entry},${vr}"
-  get "${CONFIG}"  "/msgVpns/${VPN}/bridges/${entry},${vr}/remoteMsgVpns"
-  get "${CONFIG}"  "/msgVpns/${VPN}/bridges/${entry},${vr}/tlsOptions"
-  get "${MONITOR}" "/msgVpns/${VPN}/bridges/${entry},${vr}"
-  get "${MONITOR}" "/msgVpns/${VPN}/bridges/${entry},${vr}/remoteMsgVpns"
+{
+  echo "diagnose-bridges.sh -- $(date -u +%Y-%m-%dT%H:%M:%SZ)"
   echo
-done
 
-echo "Klaar. Plak de volledige output terug -- met name de MONITOR secties"
-echo "bevatten normaal gesproken het echte down-reden veld (bv. authentication"
-echo "failure, TLS handshake failure, connect timeout)."
+  for entry in "bridge-to-aws" "bridge-to-azure" "bridge-to-stackit"; do
+    vr="auto"
+    echo "======================================================"
+    echo "  ${entry}"
+    echo "======================================================"
+    get "${CONFIG}"  "/msgVpns/${VPN}/bridges/${entry},${vr}"
+    get "${CONFIG}"  "/msgVpns/${VPN}/bridges/${entry},${vr}/remoteMsgVpns"
+    get "${CONFIG}"  "/msgVpns/${VPN}/bridges/${entry},${vr}/tlsOptions"
+    get "${MONITOR}" "/msgVpns/${VPN}/bridges/${entry},${vr}"
+    get "${MONITOR}" "/msgVpns/${VPN}/bridges/${entry},${vr}/remoteMsgVpns"
+    echo
+  done
+} > "${OUT_FILE}"
+
+echo "Klaar. Output geschreven naar: ${OUT_FILE}"
+echo "Voeg dit bestand toe (in plaats van de output te plakken) -- met name de"
+echo "MONITOR-secties bevatten normaal gesproken het echte down-reden-veld"
+echo "(bv. authentication failure, TLS handshake failure, connect timeout)."

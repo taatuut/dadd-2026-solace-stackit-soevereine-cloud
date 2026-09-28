@@ -364,7 +364,9 @@ productieklaar systeem:
      Broker Manager toont zelf geen down-reden; daarom is
      `local-broker/semp/diagnose-bridges.sh` toegevoegd (read-only, haalt de
      SEMP v2 **MONITOR**-API op i.p.v. de config-API, die het echte
-     verbindingsfout-veld bevat) -- wacht op de output daarvan.
+     verbindingsfout-veld bevat). Schrijft naar `output/diagnose-bridges.txt`
+     (gitignored) i.p.v. stdout, omdat de output te lang is om te plakken --
+     wacht op dat bestand.
 - **Geen automatische provisioning van alle 4 brokers in één commando.**
   Er is bewust voor losse, leesbare stappen gekozen (console + scripts per
   onderdeel) omdat dat beter uit te leggen en te debuggen is vóór een
