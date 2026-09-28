@@ -109,8 +109,18 @@ create_bridge() {
   semp POST "/msgVpns/${VPN}/bridges" \
     "{\"bridgeName\":\"${name}\",\"bridgeVirtualRouter\":\"${vr}\",\"enabled\":true,\"remoteConnectionRetryCount\":10,\"remoteConnectionRetryDelay\":3}"
 
+  # The remote-auth fields (remoteAuthenticationScheme,
+  # remoteAuthenticationBasicClientUsername/Password) belong on the BRIDGE
+  # object itself, not on the remoteMsgVpn sub-object -- confirmed after
+  # POSTing them to .../remoteMsgVpns returned "11 INVALID_PARAMETER:
+  # Unknown attribute 'remoteAuthenticationScheme'". PATCH them onto the
+  # bridge here (idempotent, so this also applies them on a bridge that
+  # already existed from a previous, partially-failed run).
+  semp PATCH "/msgVpns/${VPN}/bridges/${name},${vr}" \
+    "{\"remoteAuthenticationScheme\":\"basic\",\"remoteAuthenticationBasicClientUsername\":\"${remote_user}\",\"remoteAuthenticationBasicPassword\":\"${remote_pass}\"}"
+
   semp POST "/msgVpns/${VPN}/bridges/${name},${vr}/remoteMsgVpns" \
-    "{\"remoteMsgVpnName\":\"${remote_vpn}\",\"remoteMsgVpnLocation\":\"${remote_host}\",\"remoteMsgVpnInterface\":\"\",\"remoteAuthenticationScheme\":\"basic\",\"remoteAuthenticationBasicClientUsername\":\"${remote_user}\",\"remoteAuthenticationBasicPassword\":\"${remote_pass}\",\"tlsEnabled\":true,\"enabled\":true}"
+    "{\"remoteMsgVpnName\":\"${remote_vpn}\",\"remoteMsgVpnLocation\":\"${remote_host}\",\"remoteMsgVpnInterface\":\"\",\"tlsEnabled\":true,\"enabled\":true}"
 
   semp POST "/msgVpns/${VPN}/bridges/${name},${vr}/remoteSubscriptions" \
     "{\"remoteSubscriptionTopic\":\"${export_topic}\",\"deliverAlwaysEnabled\":true}"

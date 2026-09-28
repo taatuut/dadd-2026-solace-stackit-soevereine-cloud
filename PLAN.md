@@ -17,7 +17,7 @@ alleen wat gepland was.
 | Fase 3 -- AWS US East | ✅ Aangemaakt | Service `ez-dadd-2026-eks-us-east-1a`, zie [`cloud-setup/aws-us-east/README.md`](cloud-setup/aws-us-east/README.md) en `screenshots/AWS/` |
 | Fase 3 -- Azure West Europe | ✅ Aangemaakt | Service `ez-dadd-2026-aks-westeurope`, zie [`cloud-setup/azure-west-europe/README.md`](cloud-setup/azure-west-europe/README.md) en `screenshots/Azure/` |
 | Fase 3 -- STACKIT / GCP-interim | ✅ Aangemaakt | Service `ez-dadd-2026-STACKIT-gke-gcp-europe-west1-b` (interim op GCP europe-west1), zie [`cloud-setup/gcp-europe-west1-interim/README.md`](cloud-setup/gcp-europe-west1-interim/README.md) en `screenshots/STACKIT-of-GCP-interim/` -- alle 3 cloud-broker services zijn nu aangemaakt |
-| Fase 4 -- Lokale broker + bridges | 🔄 Bezig | ✅ Broker, VPN, publisher-ACL's gereed. ✅ 3 bridge-objecten aangemaakt (met `bridgeVirtualRouter`). 4e bug gevonden: `remoteMsgVpns`/`remoteSubscriptions` gaven `535 INVALID_PATH` omdat een bridge geadresseerd moet worden via het samengestelde pad `{naam},{bridgeVirtualRouter}` -- gefixt. 🔄 Emil draait het script opnieuw (bridges bestaan al, alleen remoteMsgVpn+remoteSubscription ontbreken nog) en verifieert dat alle 3 bridges "Up" tonen |
+| Fase 4 -- Lokale broker + bridges | 🔄 Bezig | ✅ Broker, VPN, ACL's, 3 bridge-objecten gereed (bevestigd in Broker Manager: alle 3 zichtbaar, status Down). 5e bug gevonden: de remote-auth-velden (`remoteAuthenticationScheme` e.a.) horen op het bridge-object zelf, niet op `remoteMsgVpns` (SEMP-fout 11 "Unknown attribute") -- gefixt. 🔄 Emil draait het script opnieuw en verifieert dat alle 3 bridges "Up" tonen |
 | Fase 5 -- Demo-apps valideren | Nog te doen | |
 | Fase 6 -- Draaiboek + fallback | Nog te doen | |
 
@@ -223,7 +223,7 @@ nooit gecommit -- alleen `.env.example`-bestanden zitten in de repo.)
 | 1 | STACKIT-beschikbaarheid | ✅ Interim-broker op GCP europe-west1 (België) aangemaakt als stand-in; vlak vóór repetitie/DADD controleren of STACKIT al als datacenter-optie zichtbaar is en zo ja, overstappen | Interim: gereed; overstap-check: kort vóór fase 5/6 |
 | 2 | Solace Cloud account | Account + API-token aanmaken (indien nog niet aanwezig) | Week na fase 0 |
 | 3 | Cloud-brokers aanmaken | ✅ Alle 3 gereed: AWS (`ez-dadd-2026-eks-us-east-1a`), Azure (`ez-dadd-2026-aks-westeurope`), STACKIT/GCP-interim (`ez-dadd-2026-STACKIT-gke-gcp-europe-west1-b`); sovereign-node blijft STACKIT zodra GA, tot dan GCP europe-west1 interim | Gereed |
-| 4 | Lokale broker + bridges | ✅ VPN + publisher-ACL's + 3 bridge-objecten gereed; `configure-local-broker.sh` 4 bugs gefixt (bash 3.2, REST listen-port, `bridgeVirtualRouter`, samengesteld bridge-pad); 🔄 opnieuw te draaien voor remoteMsgVpn/remoteSubscription | Bezig |
+| 4 | Lokale broker + bridges | ✅ VPN + ACL's + bridge-objecten gereed (bridges zichtbaar, nog Down); `configure-local-broker.sh` 5 bugs gefixt; 🔄 opnieuw te draaien | Bezig |
 | 5 | Demo-apps valideren | Alle 3 tools end-to-end testen (publiceren → juiste cloud-broker, nergens anders) | Meerdere keren voor DADD, niet pas op de dag zelf |
 | 6 | Draaiboek + fallback-opname | Live-timing oefenen, schermopname als fallback maken | Week vóór DADD |
 | 7 | Op de dag zelf | `docker-run.sh` + `configure-local-broker.sh` (of al draaiend laten staan), demo-apps klaarzetten | Vlak voor het slot |
@@ -341,6 +341,15 @@ productieklaar systeem:
      door `bridgeName` alleen -- de sub-resources moeten dus via
      `.../bridges/{naam},{bridgeVirtualRouter}/...` (met een komma)
      aangesproken worden. Gefixt door dat samengestelde pad te gebruiken.
+  5. Met het samengestelde pad gefixt bleven de bridges alle drie zichtbaar
+     maar "Down" (bevestigd via screenshots van Broker Manager > Bridges:
+     Remote Message VPN/Remote Broker leeg) -- de `POST .../remoteMsgVpns`
+     gaf SEMP-fout 11 ("Unknown attribute 'remoteAuthenticationScheme'").
+     Oorzaak: de remote-authenticatievelden
+     (`remoteAuthenticationScheme`/`remoteAuthenticationBasicClientUsername`/
+     `remoteAuthenticationBasicPassword`) horen op het **bridge-object zelf**
+     (`.../bridges/{naam},{vr}`, via PATCH), niet op het `remoteMsgVpns`-
+     sub-object -- verplaatst.
 - **Geen automatische provisioning van alle 4 brokers in één commando.**
   Er is bewust voor losse, leesbare stappen gekozen (console + scripts per
   onderdeel) omdat dat beter uit te leggen en te debuggen is vóór een
