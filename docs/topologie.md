@@ -63,19 +63,21 @@ Mermaid-viewer of `mmdc`.)
 | `enewable/eu/ops/>`        | Niet-persoonlijk, EU    | Geaggregeerde netbelasting per postcodegebied | Azure       |
 | `enewable/eu/pii/>`        | Gevoelige PII           | Individuele slimme-meterstand + klant-ID      | STACKIT     |
 
-Elke bridge exporteert (via een SEMP `localSubscription` op de bridge) 
-uitsluitend zijn eigen subtree, en elke publicerende client-username mag (via
-een ACL-profiel) uitsluitend op zijn eigen subtree publiceren. Dat is de
-dubbele "governed export": eenmaal aan de bron (publish-ACL) en eenmaal aan de
-grens (bridge-subscriptie) -- zie `../docs/lokale-broker.md`.
+Elke bridge moet uitsluitend zijn eigen subtree exporteren, en elke
+publicerende client-username mag (via een ACL-profiel) uitsluitend op zijn
+eigen subtree publiceren -- de dubbele "governed export": eenmaal aan de bron
+(publish-ACL) en eenmaal aan de grens (bridge-subscriptie).
 
-(Let op de richting: een bridge's **`remoteSubscription`** trekt juist
-berichten van de remote broker naar binnen (import); het is de
-**`localSubscription`** op de bridge die lokaal gepubliceerde berichten over
-de bridge naar buiten stuurt (export). Deze demo gebruikt uitsluitend
-`localSubscriptions` om te exporteren -- zie `../docs/lokale-broker.md`,
-sectie "Status: draait", voor hoe deze verwisseling in de eerste versie van
-het script is gevonden.)
+**❗ Open punt (zie `PLAN.md` sectie 13 en `../docs/lokale-broker.md`,
+"Open architectuurpunt"):** een bridge's `remoteSubscription` trekt berichten
+van de remote broker naar binnen (import) -- er bestaat geen "local
+subscription" op een bridge om lokaal gepubliceerde berichten naar buiten te
+sturen. Om echt te exporteren is een **tweede, wederkerige bridge nodig, op
+elke cloud-broker zelf**, die vanaf daar naar de lokale broker toe verbindt
+en op de topic-subtree subscribet. Dat vereist dat de lokale broker vanaf het
+publieke internet bereikbaar is (nu alleen `localhost`) -- een netwerkkeuze
+die nog met Emil afgestemd moet worden voordat dit verder geïmplementeerd
+wordt.
 
 ## Interim: STACKIT-knooppunt tijdelijk gemimickt op GCP België
 
@@ -92,7 +94,8 @@ eindpunt wisselt zodra STACKIT GA is. Zie
 De presentatie noemt `#noexport` als Solace-mechanisme om data fysiek te
 laten blokkeren over Dynamic Message Routing (DMR)-links tussen
 geclusterde brokers. Deze demo gebruikt in plaats daarvan gewone
-**Message VPN Bridges** met topic-scoped `localSubscriptions`: functioneel
+**Message VPN Bridges** met topic-scoped `remoteSubscriptions` (nu nog:
+wederkerig op te zetten vanaf elke cloud-broker, zie het open punt hierboven): functioneel
 identiek voor deze demo (data die niet in een subtree zit, kan een bridge
 niet verlaten), maar architecturaal een ander mechanisme dan DMR/`#noexport`.
 Zie `PLAN.md`, sectie "Wat ontbreekt of kan beter" voor de afweging en hoe je

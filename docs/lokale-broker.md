@@ -41,25 +41,37 @@ Message Flow in beide richtingen) -- ondanks dat `diagnose-bridges.sh` liet
 zien dat de onderliggende verbinding zelf prima werkte:
 `remoteMsgVpns[].up: true`, `lastConnectionFailureReason: ""`,
 `rxConnectionFailureCategory: "no-failure"`, uptime > 900s, TLS + basic-auth
-allebei geslaagd (`remoteRouterName` kwam terug van de cloud-broker). De
-oorzaak bleek geen verbindings- maar een **richtingsfout**: het bridge-object
-had `inboundState: "ready-subscribing"` en `outboundState: "not-applicable"`,
-en de `localSubscriptions`-collectie was leeg. Een bridge's
-**`remoteSubscription`** (wat het script tot dan toe alleen aanmaakte) laat de
-**lokale** broker juist berichten **importeren** vanaf de **remote** VPN --
-precies de verkeerde richting voor dit doel. Om lokaal gepubliceerde
-berichten over de bridge naar de cloud-broker te **exporteren**, moet het
-topic een **`localSubscription`** op de bridge zijn (een subscriptie die de
-bridge op de lokale broker zelf neemt; matches daarvan worden over de bridge
-naar de remote VPN gestuurd). Gefixt: `configure-local-broker.sh` maakt nu
-voor elk topic zowel de (onschadelijke, ongebruikte) `remoteSubscription` als
--- de daadwerkelijk benodigde -- `localSubscription` aan. Broker Manager
-toonde overigens zelf geen down-reden; daarom blijft
-`../local-broker/semp/diagnose-bridges.sh` (schrijft naar
-`output/diagnose-bridges.txt`, gitignored) nuttig om dit soort dingen te
-verifiëren i.p.v. te gokken. Volgende sub-stap: script opnieuw draaien en
-controleren dat alle 3 bridges nu "Up" tonen mét actieve outbound message
-flow.
+allebei geslaagd (`remoteRouterName` kwam terug van de cloud-broker). Geen
+verbindingsfout dus, maar het bridge-object had wel
+`inboundState: "ready-subscribing"` / `outboundState: "not-applicable"`.
+
+**❗ Open architectuurpunt (niet langer een scriptbug, maar een fundamentele
+richtingskwestie in hoe Solace-bridges werken):** een bridge's
+**`remoteSubscription`** (het enige dat een bridge op de LOKALE broker kan
+configureren) trekt berichten van de REMOTE broker NAAR BINNEN -- import, niet
+export. Een eerste poging om dit te fixen met een verondersteld
+`localSubscription`-sub-object bleek onjuist: dat bestaat niet voor bridges
+(bevestigd door zowel de broker zelf -- de bridge-links in SEMP noemen alleen
+`remoteMsgVpnsUri`/`remoteSubscriptionsUri`/`tlsTrustedCommonNamesUri`/`uri`
+-- als door Solace's eigen documentatie). Volgens die documentatie is de
+enige manier om berichten die lokaal gepubliceerd worden over een bridge naar
+een remote VPN te exporteren: **een tweede, wederkerige bridge**, dit keer
+geconfigureerd OP de cloud-broker zelf, met "enewable" (lokaal) als *diens*
+remote VPN en een `remoteSubscriptionTopic` die overeenkomt met de
+gewenste topic-subtree. Zo'n bridge wordt door de cloud-broker actief
+OPGEZET NAAR ONZE lokale broker toe -- wat betekent dat de lokale broker's
+SMF-poort **vanaf het publieke internet bereikbaar** moet zijn (nu alleen
+`localhost:55554`). Dat is een netwerk-/infrastructuurbeslissing, niet iets
+wat met een scriptfix op te lossen is -- zie `PLAN.md`, sectie 13, voor de
+opties (tunnel, port-forwarding, of de lokale broker op een cloud-VM in
+plaats van Emils laptop) en de vraag die daar aan Emil is voorgelegd.
+
+De bestaande 3 bridges (`bridge-to-aws` e.a., op de lokale broker) blijven
+vooralsnog ongewijzigd staan (ze doen feitelijk niets schadelijks, alleen
+niets nuttigs voor export) totdat de architectuurbeslissing is genomen.
+Broker Manager toont zelf geen down-reden; `../local-broker/semp/diagnose-bridges.sh`
+(schrijft naar `output/diagnose-bridges.txt`, gitignored) blijft nuttig om
+dit soort dingen te verifiëren i.p.v. te gokken -- zoals hier ook gebeurd is.
 
 ## Starten
 

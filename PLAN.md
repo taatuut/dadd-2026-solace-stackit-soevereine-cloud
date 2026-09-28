@@ -17,7 +17,7 @@ alleen wat gepland was.
 | Fase 3 -- AWS US East | ✅ Aangemaakt | Service `ez-dadd-2026-eks-us-east-1a`, zie [`cloud-setup/aws-us-east/README.md`](cloud-setup/aws-us-east/README.md) en `screenshots/AWS/` |
 | Fase 3 -- Azure West Europe | ✅ Aangemaakt | Service `ez-dadd-2026-aks-westeurope`, zie [`cloud-setup/azure-west-europe/README.md`](cloud-setup/azure-west-europe/README.md) en `screenshots/Azure/` |
 | Fase 3 -- STACKIT / GCP-interim | ✅ Aangemaakt | Service `ez-dadd-2026-STACKIT-gke-gcp-europe-west1-b` (interim op GCP europe-west1), zie [`cloud-setup/gcp-europe-west1-interim/README.md`](cloud-setup/gcp-europe-west1-interim/README.md) en `screenshots/STACKIT-of-GCP-interim/` -- alle 3 cloud-broker services zijn nu aangemaakt |
-| Fase 4 -- Lokale broker + bridges | 🔄 Bezig | ✅ Root cause gevonden via `diagnose-bridges.sh`: de bridge-verbinding zelf was al gezond (TLS+auth ok, `up:true`, geen failure) -- de bug was een **richtingsfout**: het script gebruikte `remoteSubscriptions` (import, verkeerd) i.p.v. `localSubscriptions` (export, correct) om te bepalen welk topic over de bridge naar buiten gaat. 6e bug gefixt in `configure-local-broker.sh`. 🔄 Emil draait het script opnieuw en verifieert dat alle 3 bridges "Up" tonen mét actieve message flow |
+| Fase 4 -- Lokale broker + bridges | ⛔ Open architectuurpunt | De bridge-verbinding zelf is gezond (TLS+auth ok via `diagnose-bridges.sh`), maar een bridge kan überhaupt niet lokaal-gepubliceerde berichten exporteren via `remoteSubscription` (dat importeert juist) -- en een verondersteld `localSubscription`-fix bestaat niet (bevestigd door broker + Solace-docs). De enige juiste oplossing is een **wederkerige bridge op elke cloud-broker**, die naar de lokale broker toe verbindt -- wat vereist dat de lokale broker publiek bereikbaar is. Dit is een netwerk-/infra-beslissing, geen scriptfix; vraag aan Emil uitstaand (zie sectie 13) |
 | Fase 5 -- Demo-apps valideren | Nog te doen | |
 | Fase 6 -- Draaiboek + fallback | Nog te doen | |
 
@@ -224,7 +224,7 @@ nooit gecommit -- alleen `.env.example`-bestanden zitten in de repo.)
 | 1 | STACKIT-beschikbaarheid | ✅ Interim-broker op GCP europe-west1 (België) aangemaakt als stand-in; vlak vóór repetitie/DADD controleren of STACKIT al als datacenter-optie zichtbaar is en zo ja, overstappen | Interim: gereed; overstap-check: kort vóór fase 5/6 |
 | 2 | Solace Cloud account | Account + API-token aanmaken (indien nog niet aanwezig) | Week na fase 0 |
 | 3 | Cloud-brokers aanmaken | ✅ Alle 3 gereed: AWS (`ez-dadd-2026-eks-us-east-1a`), Azure (`ez-dadd-2026-aks-westeurope`), STACKIT/GCP-interim (`ez-dadd-2026-STACKIT-gke-gcp-europe-west1-b`); sovereign-node blijft STACKIT zodra GA, tot dan GCP europe-west1 interim | Gereed |
-| 4 | Lokale broker + bridges | ✅ Root cause gevonden: `remoteSubscriptions` (import) i.p.v. `localSubscriptions` (export) gebruikt -- verbinding zelf was al gezond. Gefixt; 🔄 opnieuw draaien en bridges + message flow verifiëren | Bezig |
+| 4 | Lokale broker + bridges | ⛔ Bridge-export via `remoteSubscription` alleen werkt niet -- vereist wederkerige bridge per cloud-broker + publiek bereikbare lokale broker. Wacht op Emils keuze (tunnel / port-forward / cloud-VM) | Geblokkeerd op infra-beslissing |
 | 5 | Demo-apps valideren | Alle 3 tools end-to-end testen (publiceren → juiste cloud-broker, nergens anders) | Meerdere keren voor DADD, niet pas op de dag zelf |
 | 6 | Draaiboek + fallback-opname | Live-timing oefenen, schermopname als fallback maken | Week vóór DADD |
 | 7 | Op de dag zelf | `docker-run.sh` + `configure-local-broker.sh` (of al draaiend laten staan), demo-apps klaarzetten | Vlak voor het slot |
@@ -360,29 +360,50 @@ productieklaar systeem:
      SEMP v2 **MONITOR**-API op i.p.v. de config-API). Schrijft naar
      `output/diagnose-bridges.txt` (gitignored) i.p.v. stdout, omdat de
      output te lang is om te plakken.
-  7. **De output van `diagnose-bridges.sh` gaf de daadwerkelijke oorzaak.**
-     De onderliggende bridge-verbinding was al die tijd al gezond:
-     `remoteMsgVpns[].up: true`, `lastConnectionFailureReason: ""`,
-     `rxConnectionFailureCategory: "no-failure"`, uptime > 900s, en
-     `remoteRouterName` liet zien dat TLS + basic-auth allebei geslaagd
-     waren richting elke cloud-broker. Geen verbindingsfout dus, maar een
-     **richtingsfout**: het bridge-object had
-     `"inboundState": "ready-subscribing"` en
-     `"outboundState": "not-applicable"`, en de `localSubscriptions`-
-     collectie was leeg. Een bridge's **`remoteSubscription`** (het enige
-     wat het script tot dan toe aanmaakte) laat de **lokale** broker
-     berichten **importeren** vanaf de **remote** VPN -- exact de verkeerde
-     richting voor "lokaal publiceren -> naar de juiste cloud-broker
-     exporteren". Om lokaal gepubliceerde berichten over de bridge naar de
-     cloud-broker te **exporteren**, moet het topic een
-     **`localSubscription`** op de bridge zijn (een subscriptie die de
-     bridge zelf op de lokale broker neemt; matches daarvan worden over de
-     bridge naar de remote VPN gestuurd). Dit verklaart ook meteen waarom
-     de eerdere "clean run" niets opleverde: de configuratie werd wel
-     zonder fouten toegepast, maar configureerde domweg het verkeerde
-     mechanisme. Gefixt: `configure-local-broker.sh` maakt nu voor elk
-     topic zowel de (onschadelijke, ongebruikte) `remoteSubscription` als
-     -- de daadwerkelijk benodigde -- `localSubscription` aan.
+  7. **De output van `diagnose-bridges.sh` gaf de daadwerkelijke oorzaak --
+     en die is groter dan een scriptbug.** De onderliggende bridge-
+     verbinding was al die tijd al gezond: `remoteMsgVpns[].up: true`,
+     `lastConnectionFailureReason: ""`, `rxConnectionFailureCategory:
+     "no-failure"`, uptime > 900s, en `remoteRouterName` liet zien dat TLS
+     + basic-auth allebei geslaagd waren richting elke cloud-broker. Geen
+     verbindingsfout dus, maar het bridge-object had wel
+     `"inboundState": "ready-subscribing"` / `"outboundState":
+     "not-applicable"`. Een bridge's **`remoteSubscription`** (het enige
+     wat een bridge op de LOKALE broker kan configureren) laat de
+     **lokale** broker berichten **importeren** vanaf de **remote** VPN --
+     niet exporteren.
+  8. **Eerste poging tot fix was zelf onjuist, en is teruggedraaid.** Er
+     werd verondersteld dat een `localSubscription`-sub-object op de
+     bridge het exporteren zou regelen (symmetrisch met
+     `remoteSubscriptions`). Dat bleek niet te bestaan: de POST gaf `535
+     INVALID_PATH`, en de eerdere CONFIG-GET op het bridge-object had ook
+     al nooit een `localSubscriptionsUri` in zijn `links` staan (alleen
+     `remoteMsgVpnsUri`/`remoteSubscriptionsUri`/`tlsTrustedCommonNamesUri`/
+     `uri`) -- de broker zelf had het antwoord dus al gegeven voordat de
+     WARN het bevestigde. Navraag bij Solace's eigen documentatie
+     (Message-VPN-Bridges-Overview, Configuring-VPN-Bridges) bevestigt dit:
+     er is geen "local subscription"-concept op een bridge. De aanroep is
+     verwijderd uit `configure-local-broker.sh`.
+  9. **❗ Open architectuurpunt (blokkerend voor fase 4, nog niet
+     opgelost):** volgens Solace's documentatie is de enige manier om
+     lokaal-gepubliceerde berichten over een bridge naar een remote VPN te
+     exporteren een **tweede, wederkerige bridge**, dit keer
+     geconfigureerd OP DE CLOUD-BROKER zelf (via diens eigen SEMP, waarvoor
+     we al `SEMP_ADMIN_USER`/`PASSWORD` in `.env` hebben), met "enewable"
+     als *diens* remote VPN en een `remoteSubscriptionTopic` die
+     overeenkomt met de gewenste topic-subtree. Zo'n bridge wordt door de
+     cloud-broker actief opgezet NAAR de lokale broker toe -- wat betekent
+     dat de lokale broker's SMF-poort **vanaf het publieke internet
+     bereikbaar** moet zijn (nu alleen `localhost:55554`, achter NAT op
+     Emils Mac). Dit is een netwerk-/infrastructuurbeslissing, geen
+     scriptfix, en is aan Emil voorgelegd (tunnel zoals ngrok/Cloudflare
+     Tunnel, port-forwarding op zijn eigen router, of de lokale broker op
+     een kleine cloud-VM i.p.v. zijn laptop draaien -- elke optie heeft
+     eigen afwegingen rond betrouwbaarheid op de dag zelf, beveiliging, en
+     hoeveel tijd het nog kost vóór DADD). De bestaande 3 bridges op de
+     lokale broker (`bridge-to-aws` e.a.) blijven ongewijzigd staan tot die
+     keuze gemaakt is -- ze zijn niet schadelijk, alleen (nog) niet
+     nuttig voor export.
 - **Geen automatische provisioning van alle 4 brokers in één commando.**
   Er is bewust voor losse, leesbare stappen gekozen (console + scripts per
   onderdeel) omdat dat beter uit te leggen en te debuggen is vóór een

@@ -122,29 +122,26 @@ create_bridge() {
   semp POST "/msgVpns/${VPN}/bridges/${name},${vr}/remoteMsgVpns" \
     "{\"remoteMsgVpnName\":\"${remote_vpn}\",\"remoteMsgVpnLocation\":\"${remote_host}\",\"remoteMsgVpnInterface\":\"\",\"tlsEnabled\":true,\"enabled\":true}"
 
-  # BUG FOUND via diagnose-bridges.sh (SEMP v2 MONITOR data), after the
-  # bridge connection itself came up cleanly (auth+TLS succeeded,
-  # remoteMsgVpns "up":true, uptime > 900s, "no-failure") but Broker
-  # Manager still showed "Bridge Status: Down" and 0 msg/s both ways:
-  # remoteSubscriptions is the WRONG direction for what we want. A
-  # bridge's remoteSubscription makes the LOCAL broker *subscribe to the
-  # REMOTE broker* -- i.e. it IMPORTS messages published directly on the
-  # remote (cloud) VPN into the local VPN. It does nothing to export what
-  # we publish locally. To export local publishes on a topic OUT across
-  # the bridge to the remote VPN, the topic must instead be a
-  # localSubscription (a subscription taken on the LOCAL broker itself,
-  # whose matches get forwarded across the bridge) -- confirmed via the
-  # monitor API showing "outboundState":"not-applicable" and an empty
-  # "localSubscriptions" collection on every bridge. Kept the
-  # remoteSubscriptions call below (harmless, and it's genuinely how you'd
-  # additionally import cloud-originated messages if that were ever
-  # needed) and added the localSubscriptions call, which is what actually
-  # makes the export/demo scenario work.
+  # IMPORTANT -- this remoteSubscriptionTopic configures IMPORT, not
+  # export: a bridge's remoteSubscription makes the LOCAL broker
+  # *subscribe to the REMOTE broker*, i.e. it pulls messages published
+  # directly on the remote (cloud) VPN into the local VPN. It does NOT
+  # export what we publish locally -- that was a wrong assumption on our
+  # part (a "localSubscriptions" sub-resource, which would have been the
+  # obvious fix, does not exist for bridges at all: confirmed both by this
+  # broker's own SEMP response, which only ever lists remoteMsgVpnsUri /
+  # remoteSubscriptionsUri / tlsTrustedCommonNamesUri / uri as bridge
+  # sub-collections, and by Solace's own docs -- see PLAN.md section 13,
+  # "open architectuurpunt": exporting local-VPN-published messages across
+  # a bridge requires a *second, reciprocal* bridge configured ON the
+  # remote (cloud) broker, pulling FROM this local VPN -- which in turn
+  # requires this local broker's SMF port to be reachable from the
+  # internet. Left as an open, unresolved point pending Emil's decision on
+  # how to make the local broker reachable. This remoteSubscriptions call
+  # is kept as-is (harmless; it's how you'd import cloud-originated
+  # messages, which we don't currently need either).
   semp POST "/msgVpns/${VPN}/bridges/${name},${vr}/remoteSubscriptions" \
     "{\"remoteSubscriptionTopic\":\"${export_topic}\",\"deliverAlwaysEnabled\":true}"
-
-  semp POST "/msgVpns/${VPN}/bridges/${name},${vr}/localSubscriptions" \
-    "{\"localSubscriptionTopic\":\"${export_topic}\"}"
 
   echo "  ${name}: exports '${export_topic}' -> vpn '${remote_vpn}' @ ${remote_host}"
 }
