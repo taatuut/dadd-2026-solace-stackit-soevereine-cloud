@@ -306,6 +306,33 @@ de topic die Sunburst zelf standaard invult.
   concreet probleem hebben blootgelegd -- zie hun eigen header-commentaar en
   `docs/lokale-broker.md` voor de volledige geschiedenis.
 
+## Sessie hervatten / werken met een AI-coding-agent aan deze repo
+
+Deze repo is interactief opgebouwd met een AI-coding-agent en is zo
+gedocumenteerd dat je (of een agent) een sessie kan sluiten en later
+zonder verlies van context weer kan oppakken:
+
+- **[`TODO.md`](TODO.md)** -- start hier. De actuele, geprioriteerde
+  actielijst (moet vóór DADD / zou goed zijn / kan na DADD), elk item met
+  een verwijzing naar het bijbehorende punt in `PLAN.md`.
+- **[`PLAN.md`](PLAN.md)** -- het volledige, chronologische logboek: elke
+  stap, beslissing, bug en fix, met sectie- en puntnummers. Bij twijfel is
+  dit bestand altijd de meest actuele en volledige bron, ook t.o.v. de
+  Woord-samenvatting.
+- **[`AGENTS.md`](AGENTS.md)** -- architectuurfeiten en werkconventies die
+  je moet kennen vóór je code/config wijzigt (bijv. het
+  wildcard-topic-subtree-patroon dat broker-herconfiguratie overbodig
+  maakt, en de documentatie-/commit-conventie die deze repo consequent
+  volgt).
+- **[`SKILLS.md`](SKILLS.md)** -- concrete, herbruikbare recepten die
+  tijdens het bouwen zijn ontdekt (dry-run-testmethode zonder live broker,
+  correcte SDKPerf-vlaggen, Sunburst-gotcha's, ...). Check dit vóórdat je
+  een probleem opnieuw uitzoekt dat hier al is opgelost.
+
+Een nieuwe sessie (mens of agent) begint dus met `TODO.md`, gebruikt
+`AGENTS.md`/`SKILLS.md` als naslagwerk tijdens het werk, en verwijst naar
+`PLAN.md` voor de volledige achtergrond van een specifiek item.
+
 ## Taal
 
 Documentatie (`PLAN.md`, `docs/`, dit README) is in het Nederlands. Code en

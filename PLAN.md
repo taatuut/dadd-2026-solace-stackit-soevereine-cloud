@@ -1325,6 +1325,42 @@ productieklaar systeem:
      3 klassen werkt). `python-eu-nonpersonal/publisher.py`'s uitgebreide
      lijsten gecontroleerd via `python -m py_compile`. `bash -n` op beide
      bash-scripts: allemaal ok.
+  39. **`TODO.md`, `AGENTS.md`, `SKILLS.md` toegevoegd (Emil, 28/09/2026,
+     op verzoek).** Op verzoek: de 12 prioriteitspunten uit de laatste
+     sessie-samenvatting (voortbouwend op deze sectie 13 en op sectie 10/
+     12/14) zijn omgezet naar een los, actiegericht `TODO.md` in de
+     repo-root, zodat een sessie gesloten en later hervat kan worden
+     zonder eerst dit hele logboek door te moeten. `TODO.md` groepeert de
+     punten in "Moet vóór DADD" (draaiboek + fallback-opname; de nieuwe
+     variatie-uitbreidingen echt op een cloud-broker bevestigen, niet
+     alleen dry-run; STACKIT GA-check; fase 5 herhalen vóór DADD), "Zou
+     goed zijn vóór DADD" (negative ACL-test; koude-starttijd meten; Azure-
+     hyperscaler en public-clusters expliciet benoemen in de talk), en
+     "Kan na DADD" (provisioning-automatisering, monitoring, CI,
+     secretsbeheer, DMR-cluster voor `#noexport`) -- elk item met een
+     verwijzing naar het bijbehorende punt hier in `PLAN.md`.
+     Daarnaast, zoals gevraagd: gecontroleerd of er verder nog losse
+     TODO's/open acties in code of configuratie stonden (`git grep` op
+     `TODO|FIXME|XXX|HACK` over alle getrackte `.sh`/`.py`/`.json`/
+     `.env*`-bestanden) -- geen treffers buiten wat al in `TODO.md` staat.
+     `local-broker/.env` vergeleken met `local-broker/.env.example`: alle
+     42 sleutels aanwezig, elk met een echte (niet-placeholder) waarde.
+     De twee andere `.env.example`-bestanden
+     (`demo-apps/python-eu-nonpersonal/`, `cloud-setup/solace-cloud-api/`)
+     hebben bewust geen eigen `.env`: het Python-script valt automatisch
+     terug op `local-broker/.env`, en het Solace-Cloud-API-`.env` is alleen
+     nodig voor `create-service.sh` (fase 2/3, al afgerond) -- geen van
+     beide is dus een gat.
+     Verder toegevoegd: `AGENTS.md` (architectuurfeiten en werkconventies
+     voor een AI-coding-agent of nieuwe bijdrager -- o.a. het
+     wildcard-topic-subtree-patroon, de macOS-bash-3.2-beperking, en de
+     documentatie-/commit-conventie die deze sectie 13 zelf illustreert)
+     en `SKILLS.md` (herbruikbare recepten: dry-run-testmethode zonder
+     live broker, de no-jq-fallback-testmethode, correcte
+     SDKPerf-vlaggen, de Sunburst-Topic(s)-veld-gotcha, het
+     docx-herbouwrecept). `README.md` kreeg een nieuwe sectie "Sessie
+     hervatten / werken met een AI-coding-agent aan deze repo" die uitlegt
+     hoe deze 3 bestanden samen met `PLAN.md` te gebruiken zijn.
 - **Geen automatische provisioning van alle 4 brokers in één commando.**
   Er is bewust voor losse, leesbare stappen gekozen (console + scripts per
   onderdeel) omdat dat beter uit te leggen en te debuggen is vóór een
@@ -1360,6 +1396,11 @@ productieklaar systeem:
   volledige bron.
 
 ## 14. Vervolgstappen
+
+**Zie ook [`TODO.md`](TODO.md)** in de repo-root voor de actuele,
+geprioriteerde actielijst (sectie 13, punt 39) -- dit is de historische
+lijst per stap; nieuwe/openstaande acties worden vanaf nu primair in
+`TODO.md` bijgehouden.
 
 1. ~~Dit plan doornemen en de STACKIT-beslissing (sectie 4/10) maken.~~ ✅
 2. ~~De 3 Solace Cloud-services daadwerkelijk aanmaken.~~ ✅ AWS, Azure en
