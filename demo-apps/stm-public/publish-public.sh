@@ -30,6 +30,17 @@
 # -- even though the connection itself succeeded. Fixed by adding
 # --delivery-mode DIRECT explicitly.
 #
+# Topics are built dynamically from the payload file's own fields, not
+# hardcoded -- e.g. "enewable/public/market/price/day-ahead-price/NL" (the
+# last 2 levels come from the JSON's "type"/"market" fields). This still
+# lands correctly: the RDP-export queues and the pub-*-usernames' ACL
+# exceptions all subscribe/publish on the "enewable/<class>/>" SUBTREE
+# (see local-broker/semp/configure-local-broker.sh and
+# configure-rdp-export.sh), so extra topic levels below the existing base
+# topic are automatically included -- no broker reconfiguration needed.
+# Uses jq if available (see README.md, "Vereisten"), else a plain
+# grep/sed fallback for these flat, single-level JSON files.
+#
 # Usage: ./publish-public.sh [--class public|eu-ops|eu-pii] [COUNT]
 #   --class   Restrict to a single data class (default: all 3, in order:
 #             public, eu-ops, eu-pii).
@@ -48,6 +59,20 @@ PAYLOAD_DIR="${SCRIPT_DIR}/../sample-payloads"
 : "${PUB_EU_OPS_PASSWORD:?Set PUB_EU_OPS_PASSWORD (see local-broker/.env)}"
 : "${PUB_EU_PII_USER:=pub-eu-pii}"
 : "${PUB_EU_PII_PASSWORD:?Set PUB_EU_PII_PASSWORD (see local-broker/.env)}"
+
+json_field() {
+  # json_field FILE KEY -- extract a top-level string field's value.
+  # Prefers jq (see README.md, "Vereisten"); falls back to a plain
+  # grep/sed pattern that works for these flat, single-level JSON files
+  # (no nested objects/arrays) when jq isn't installed.
+  local file="$1" key="$2"
+  if command -v jq >/dev/null 2>&1; then
+    jq -r ".${key}" "${file}"
+  else
+    grep -o "\"${key}\"[[:space:]]*:[[:space:]]*\"[^\"]*\"" "${file}" \
+      | sed -E 's/.*:[[:space:]]*"(.*)"/\1/'
+  fi
+}
 
 CLASS_FILTER=""
 COUNT=10
@@ -78,9 +103,23 @@ publish_class() {
     --count "${COUNT}" --interval 1000
 }
 
-run_public() { publish_class "public" "enewable/public/market/price" "${PUB_PUBLIC_USER}" "${PUB_PUBLIC_PASSWORD}" "${PAYLOAD_DIR}/public.json"; }
-run_eu_ops() { publish_class "eu-ops" "enewable/eu/ops/grid/load" "${PUB_EU_OPS_USER}" "${PUB_EU_OPS_PASSWORD}" "${PAYLOAD_DIR}/eu-ops.json"; }
-run_eu_pii() { publish_class "eu-pii" "enewable/eu/pii/meter/reading" "${PUB_EU_PII_USER}" "${PUB_EU_PII_PASSWORD}" "${PAYLOAD_DIR}/eu-pii.json"; }
+run_public() {
+  local file="${PAYLOAD_DIR}/public.json" type market
+  type="$(json_field "${file}" type)"; : "${type:=unknown}"
+  market="$(json_field "${file}" market)"; : "${market:=unknown}"
+  publish_class "public" "enewable/public/market/price/${type}/${market}" "${PUB_PUBLIC_USER}" "${PUB_PUBLIC_PASSWORD}" "${file}"
+}
+run_eu_ops() {
+  local file="${PAYLOAD_DIR}/eu-ops.json" type postcode_area
+  type="$(json_field "${file}" type)"; : "${type:=unknown}"
+  postcode_area="$(json_field "${file}" postcodeArea)"; : "${postcode_area:=unknown}"
+  publish_class "eu-ops" "enewable/eu/ops/grid/load/${type}/${postcode_area}" "${PUB_EU_OPS_USER}" "${PUB_EU_OPS_PASSWORD}" "${file}"
+}
+run_eu_pii() {
+  local file="${PAYLOAD_DIR}/eu-pii.json" customer_id
+  customer_id="$(json_field "${file}" customerId)"; : "${customer_id:=unknown}"
+  publish_class "eu-pii" "enewable/eu/pii/meter/reading/${customer_id}" "${PUB_EU_PII_USER}" "${PUB_EU_PII_PASSWORD}" "${file}"
+}
 
 # Each class is attempted independently -- one class failing (e.g. a wrong
 # password for just that credential) does not abort the others, so a

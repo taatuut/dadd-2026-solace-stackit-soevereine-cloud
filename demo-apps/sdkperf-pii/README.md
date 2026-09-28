@@ -22,10 +22,14 @@ zet het volledige pad in `SDKPERF_BIN` in `local-broker/.env`.
 ./publish-pii.sh
 ```
 
-Publiceert, in volgorde: publiek (`enewable/public/market/price`, als
-`pub-public`) -> niet-persoonlijk EU (`enewable/eu/ops/grid/load`, als
-`pub-eu-ops`) -> gevoelige PII (`enewable/eu/pii/meter/reading`, als
-`pub-eu-pii`). Beperk tot één klasse met `--class`:
+Publiceert, in volgorde: publiek (`enewable/public/market/price/<type>/
+<market>`, als `pub-public`) -> niet-persoonlijk EU
+(`enewable/eu/ops/grid/load/<type>/<postcodeArea>`, als `pub-eu-ops`) ->
+gevoelige PII (`enewable/eu/pii/meter/reading/<customerId>`, als
+`pub-eu-pii`). De `<...>`-delen worden bij elke run uit
+`../sample-payloads/<class>.json` gelezen (met `jq`, of een
+grep/sed-fallback als `jq` niet geïnstalleerd is). Beperk tot één klasse
+met `--class`:
 
 ```bash
 ./publish-pii.sh --class eu-pii 20
@@ -36,9 +40,13 @@ geparametriseerde versie):
 
 ```bash
 sdkperf_java.sh -cip=localhost:55554 -cu=pub-eu-pii@enewable -cp="$PUB_EU_PII_PASSWORD" \
-  -ptl=enewable/eu/pii/meter/reading -pal=../sample-payloads/eu-pii.json \
+  -ptl=enewable/eu/pii/meter/reading/ENW-NL-000482 -pal=../sample-payloads/eu-pii.json \
   -mn=20 -mr=2 -mt=direct -md   # -md drukt elk verzonden bericht af, handig live op het podium
 ```
+
+(Het laatste topicniveau, `ENW-NL-000482`, is de `customerId` uit
+`../sample-payloads/eu-pii.json` -- het script leest dit veld zelf uit
+het bestand in plaats van het hardcoded te laten staan.)
 
 (`-pal` = payload-attachment-list: stuurt de ruwe inhoud van het bestand
 als binary attachment. Niet `-mf` -- die optie bestaat niet en geeft

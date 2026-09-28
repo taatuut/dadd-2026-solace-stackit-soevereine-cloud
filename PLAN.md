@@ -1182,6 +1182,49 @@ productieklaar systeem:
      deze fix (dat vereist een volgende testronde door Emil); wel
      bevestigd dat `-pal` de door de Solace-community gedocumenteerde,
      juiste vlag is voor dit doel.
+  36. **Dynamische topics: veldwaarden uit het bericht toegevoegd aan de
+     topic (Emil, 28/09/2026, op verzoek).** Op verzoek: elke topic krijgt
+     nu extra niveaus met echte veldwaarden uit het bericht zelf, in
+     plaats van een vaste string:
+     - `enewable/public/market/price` -> `.../price/<type>/<market>`
+       (bijv. `.../price/day-ahead-price/NL`).
+     - `enewable/eu/ops/grid/load` -> `.../load/<type>/<postcodeArea>`
+       (bijv. `.../load/grid-load-aggregate/3500-NL`).
+     - `enewable/eu/pii/meter/reading` -> `.../reading/<customerId>`
+       (bijv. `.../reading/ENW-NL-000482`).
+     Dit vereist GEEN wijziging aan de broker-configuratie: alle 3
+     ACL-publishTopicExceptions (`configure-local-broker.sh`) en alle 3
+     RDP-export-queue-subscriptions (`configure-rdp-export.sh`) staan al
+     op de hele `enewable/<klasse>/>`-subtree (multi-level wildcard), niet
+     op een exacte topic -- extra niveaus erbij vallen er automatisch
+     onder. Ook mooi bijeffect: in Sunburst Topic Explorer (punt 34) krijgt
+     elke klasse nu zichtbaar meerdere takken in de topic-boom in plaats
+     van telkens exact dezelfde ene topic.
+     - `stm-public/publish-public.sh` en `sdkperf-pii/publish-pii.sh`
+       (beide lezen een STATISCH JSON-bestand uit `sample-payloads/`):
+       nieuwe `json_field()`-helper leest het gevraagde veld uit dat
+       bestand -- gebruikt `jq` als dat geïnstalleerd is (zie README.md,
+       "Vereisten"), anders een plain grep/sed-fallback (deze JSON-
+       bestanden zijn plat, geen geneste objecten/arrays, dus dat volstaat).
+       Elke `run_*()`-functie bouwt zijn topic nu op met die veldwaarden
+       vóór het aanroepen van `publish_class()`.
+     - `python-eu-nonpersonal/publisher.py` (bouwt elk bericht dynamisch in
+       code, met `postcodeArea`/`customerId` die per bericht rouleren uit
+       een vaste lijst): de topic wordt nu PER BERICHT opgebouwd, binnen de
+       publicatielus, in plaats van één keer buiten de lus -- want de
+       veldwaarden verschillen per bericht. `CLASSES` kreeg een extra
+       `topic_fields`-lijst per klasse (`["type","market"]`,
+       `["type","postcodeArea"]`, `["customerId"]`).
+     **Bevestigd via echte dry-runs** (geen live broker nodig voor deze
+     specifieke test): `json_field()` getest tegen de 3 echte
+     `sample-payloads/*.json`-bestanden, zowel met `jq` als via de
+     grep/sed-fallback (beide geven identieke, juiste waarden); de 2
+     bash-scripts getest met een gestubde `publish_class()` (bevestigt de
+     exacte topic-string die aan `publish_class()` wordt doorgegeven,
+     inclusief `--class`-filtering); `publisher.py`'s topic-opbouwlogica
+     los getest (3x per klasse, bevestigt dat de topic per bericht
+     meevarieert met `postcodeArea`/`customerId`). `bash -n` en
+     `python -m py_compile` op de definitieve versies: allemaal ok.
 - **Geen automatische provisioning van alle 4 brokers in één commando.**
   Er is bewust voor losse, leesbare stappen gekozen (console + scripts per
   onderdeel) omdat dat beter uit te leggen en te debuggen is vóór een

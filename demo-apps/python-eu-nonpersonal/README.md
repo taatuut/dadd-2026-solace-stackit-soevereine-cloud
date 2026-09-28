@@ -23,10 +23,16 @@ cp .env.example .env   # of laat leeg en hergebruik ../../local-broker/.env
 python publisher.py
 ```
 
-Publiceert, in volgorde: publiek (`enewable/public/market/price`, als
-`pub-public`) -> niet-persoonlijk EU (`enewable/eu/ops/grid/load`, als
-`pub-eu-ops`) -> gevoelige PII (`enewable/eu/pii/meter/reading`, als
-`pub-eu-pii`), elk 20 berichten. Beperk tot één klasse met `--class`:
+Publiceert, in volgorde: publiek (`enewable/public/market/price/<type>/
+<market>`, als `pub-public`) -> niet-persoonlijk EU
+(`enewable/eu/ops/grid/load/<type>/<postcodeArea>`, als `pub-eu-ops`) ->
+gevoelige PII (`enewable/eu/pii/meter/reading/<customerId>`, als
+`pub-eu-pii`), elk 20 berichten. Anders dan `stm`/SDKPerf (die een
+statisch JSON-bestand lezen) bouwt dit script de topic per verstuurd
+bericht opnieuw op, want `postcodeArea` en `customerId` rouleren hier per
+bericht (bijv. `enewable/eu/pii/meter/reading/ENW-NL-000917` op het ene
+bericht, `.../ENW-NL-002203` op het volgende). Beperk tot één klasse met
+`--class`:
 
 ```bash
 python publisher.py --class eu-ops --count 20 --interval 1

@@ -33,7 +33,13 @@ Het draaiboek hieronder is bijgewerkt om dat te benutten.
 3. Optioneel, als er tijd is: laat in Broker Manager van de lokale broker de
    3 REST Delivery Points en hun queue message-counts zien, als "achter de
    schermen"-bewijs dat dit door topic-routering komt, niet door drie
-   losse handmatige acties.
+   losse handmatige acties. Nog visueler: [Sunburst Topic
+   Explorer](https://explorer.solace.dev/) (zie `../README.md`, "Verkeer
+   visualiseren") laat live zien hoe elke klasse zijn eigen tak in de
+   topic-boom krijgt -- de topics zijn dynamisch (bijv.
+   `enewable/eu/pii/meter/reading/<customerId>`), dus de boom groeit
+   zichtbaar per verstuurd bericht in plaats van steeds hetzelfde ene
+   topic te herhalen.
 4. Optioneel, voor een dieper punt: draai één tool met `--class` beperkt tot
    één klasse (bijv. `--class public`) om te laten zien dat je ook gericht
    één klasse kan testen/isoleren -- handig voor troubleshooting, niet

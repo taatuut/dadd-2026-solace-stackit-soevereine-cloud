@@ -19,6 +19,16 @@ identity is tied to one client-username at a time) -- not one shared
 connection reused for all 3, so the ACL enforcement at the source stays
 real and per-class, exactly like the other 2 demo-apps.
 
+Topics are built dynamically per message from that message's own field
+values, not hardcoded -- e.g.
+"enewable/eu/pii/meter/reading/ENW-NL-000917" (the last level is that
+message's actual "customerId"). This still lands correctly: the
+RDP-export queues and the pub-*-usernames' ACL exceptions all
+subscribe/publish on the "enewable/<class>/>" SUBTREE (see
+local-broker/semp/configure-local-broker.sh and configure-rdp-export.sh),
+so extra topic levels below the existing base topic are automatically
+included -- no broker reconfiguration needed.
+
 Usage:
     pip install -r requirements.txt
     python publisher.py [--class public|eu-ops|eu-pii] [--count 20] [--interval 1.0]
@@ -97,18 +107,20 @@ def make_eu_pii_message() -> dict:
     }
 
 
-# (topic, env var prefix, message generator) per class -- kept in one place
-# so the 3 demo-apps stay easy to compare (see stm-public/publish-public.sh
-# and sdkperf-pii/publish-pii.sh, which mirror this same structure in bash).
+# (topic base, fields appended to the topic per message, env var prefix,
+# message generator) per class -- kept in one place so the 3 demo-apps
+# stay easy to compare (see stm-public/publish-public.sh and
+# sdkperf-pii/publish-pii.sh, which mirror this same structure in bash,
+# but from a static payload FILE instead of a per-message dict).
 CLASSES = {
-    "public": ("enewable/public/market/price", "PUB_PUBLIC", make_public_message),
-    "eu-ops": ("enewable/eu/ops/grid/load", "PUB_EU_OPS", make_eu_ops_message),
-    "eu-pii": ("enewable/eu/pii/meter/reading", "PUB_EU_PII", make_eu_pii_message),
+    "public": ("enewable/public/market/price", ["type", "market"], "PUB_PUBLIC", make_public_message),
+    "eu-ops": ("enewable/eu/ops/grid/load", ["type", "postcodeArea"], "PUB_EU_OPS", make_eu_ops_message),
+    "eu-pii": ("enewable/eu/pii/meter/reading", ["customerId"], "PUB_EU_PII", make_eu_pii_message),
 }
 
 
 def publish_class(class_name: str, config: dict, count: int, interval: float) -> None:
-    topic_str, env_prefix, make_message = CLASSES[class_name]
+    topic_base, topic_fields, env_prefix, make_message = CLASSES[class_name]
     username = os.environ.get(f"{env_prefix}_USER")
     password = os.environ.get(f"{env_prefix}_PASSWORD")
     if not password:
@@ -117,7 +129,7 @@ def publish_class(class_name: str, config: dict, count: int, interval: float) ->
             f"needed to publish the '{class_name}' class."
         )
 
-    print(f"-- {class_name}: {topic_str} (as {username}) --")
+    print(f"-- {class_name}: {topic_base}/<{'/'.join(topic_fields)}> (as {username}) --")
 
     messaging_service = (
         MessagingService.builder()
@@ -135,11 +147,19 @@ def publish_class(class_name: str, config: dict, count: int, interval: float) ->
 
     publisher = messaging_service.create_direct_message_publisher_builder().build()
     publisher.start()
-    topic = Topic.of(topic_str)
 
     try:
         for i in range(count):
             payload = make_message()
+            # Built per message (not once, outside the loop) because the
+            # field values -- e.g. postcodeArea/customerId -- vary per
+            # message. Still lands correctly: the RDP-export queues and
+            # the pub-*-usernames' ACL exceptions subscribe/publish on
+            # the "enewable/<class>/>" SUBTREE, so any topic depth below
+            # the existing base topic is automatically included.
+            topic_suffix = "/".join(str(payload[field]) for field in topic_fields)
+            topic_str = f"{topic_base}/{topic_suffix}"
+            topic = Topic.of(topic_str)
             outbound_message = messaging_service.message_builder().build(
                 json.dumps(payload)
             )

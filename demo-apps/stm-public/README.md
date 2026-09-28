@@ -20,10 +20,15 @@ stm --version
 ./publish-public.sh
 ```
 
-Publiceert, in volgorde: publiek (`enewable/public/market/price`, als
-`pub-public`) -> niet-persoonlijk EU (`enewable/eu/ops/grid/load`, als
-`pub-eu-ops`) -> gevoelige PII (`enewable/eu/pii/meter/reading`, als
-`pub-eu-pii`). Beperk tot één klasse met `--class`:
+Publiceert, in volgorde: publiek (`enewable/public/market/price/<type>/
+<market>`, als `pub-public`) -> niet-persoonlijk EU
+(`enewable/eu/ops/grid/load/<type>/<postcodeArea>`, als `pub-eu-ops`) ->
+gevoelige PII (`enewable/eu/pii/meter/reading/<customerId>`, als
+`pub-eu-pii`). De `<...>`-delen worden bij elke run uit
+`../sample-payloads/<class>.json` gelezen (met `jq`, of een
+grep/sed-fallback als `jq` niet geïnstalleerd is) -- bijv.
+`enewable/public/market/price/day-ahead-price/NL`. Beperk tot één klasse
+met `--class`:
 
 ```bash
 ./publish-public.sh --class eu-pii        # alleen de PII-klasse
@@ -37,7 +42,7 @@ stm send \
   --url ws://localhost:8008 \
   --vpn enewable \
   --username pub-public --password "$PUB_PUBLIC_PASSWORD" \
-  --topic enewable/public/market/price \
+  --topic enewable/public/market/price/day-ahead-price/NL \
   --file ../sample-payloads/public.json \
   --delivery-mode DIRECT
 ```
