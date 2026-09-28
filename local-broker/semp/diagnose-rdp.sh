@@ -1,13 +1,26 @@
 #!/usr/bin/env bash
 # Read-only diagnostic: dumps SEMP v2 CONFIG + MONITOR views of the 3 REST
-# Delivery Points, their REST consumers, and their bound queues -- to find
-# WHY all 3 RDPs show "Down" in Broker Manager even though
-# configure-rdp-export.sh now reports 0 WARN.
+# Delivery Points, their REST consumers, their queue-bindings, and their
+# bound queues (incl. topic subscriptions) -- to find WHY all 3 RDPs show
+# "Down" in Broker Manager even though configure-rdp-export.sh reports
+# 0 WARN.
 #
 # Broker Manager itself gives no down-reason for an RDP, same situation as
 # we hit earlier with the (now removed) bridges -- see PLAN.md section 13,
 # item 6/7. The SEMP v2 MONITOR API carries the actual connection-failure
 # detail (TLS handshake failure, auth rejected, connect timeout, etc.).
+#
+# ROUND 1 RESULT (Emil, 28/09/2026): the REST CONSUMER itself is actually
+# fine -- monitor shows "up": true and remoteOutgoingConnectionUpCount: 3
+# for all 3. The RDP's own monitor view instead says
+# "lastFailureReason": "No REST Queue Bindings Up" -- i.e. the QUEUE
+# BINDING, not the REST consumer, is the thing that is not up. Round 1
+# never queried the queueBindings sub-object itself (only the parent RDP
+# and the queue), so this round adds those calls plus the queue's own
+# subscriptions list (to directly confirm the topic subscription is
+# really there, not just infer it from an empty "collections" placeholder
+# -- see PLAN.md section 13 for why that placeholder is not itself a
+# smoking gun).
 #
 # Usage: ./diagnose-rdp.sh
 # Requires: curl, and a populated ../.env
@@ -64,9 +77,12 @@ get() {
     echo "======================================================"
     get "${CONFIG}"  "/msgVpns/${VPN}/restDeliveryPoints/${rdp}"
     get "${CONFIG}"  "/msgVpns/${VPN}/restDeliveryPoints/${rdp}/restConsumers/${consumer}"
+    get "${CONFIG}"  "/msgVpns/${VPN}/restDeliveryPoints/${rdp}/queueBindings/${queue}"
     get "${MONITOR}" "/msgVpns/${VPN}/restDeliveryPoints/${rdp}"
     get "${MONITOR}" "/msgVpns/${VPN}/restDeliveryPoints/${rdp}/restConsumers/${consumer}"
+    get "${MONITOR}" "/msgVpns/${VPN}/restDeliveryPoints/${rdp}/queueBindings/${queue}"
     get "${MONITOR}" "/msgVpns/${VPN}/queues/${queue}"
+    get "${MONITOR}" "/msgVpns/${VPN}/queues/${queue}/subscriptions"
     echo
   done
 } > "${OUT_FILE}"

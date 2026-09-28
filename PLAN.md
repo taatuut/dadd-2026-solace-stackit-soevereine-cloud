@@ -17,7 +17,7 @@ alleen wat gepland was.
 | Fase 3 -- AWS US East | ✅ Aangemaakt | Service `ez-dadd-2026-eks-us-east-1a`, zie [`cloud-setup/aws-us-east/README.md`](cloud-setup/aws-us-east/README.md) en `screenshots/AWS/` |
 | Fase 3 -- Azure West Europe | ✅ Aangemaakt | Service `ez-dadd-2026-aks-westeurope`, zie [`cloud-setup/azure-west-europe/README.md`](cloud-setup/azure-west-europe/README.md) en `screenshots/Azure/` |
 | Fase 3 -- STACKIT / GCP-interim | ✅ Aangemaakt | Service `ez-dadd-2026-STACKIT-gke-gcp-europe-west1-b` (interim op GCP europe-west1), zie [`cloud-setup/gcp-europe-west1-interim/README.md`](cloud-setup/gcp-europe-west1-interim/README.md) en `screenshots/STACKIT-of-GCP-interim/` -- alle 3 cloud-broker services zijn nu aangemaakt |
-| Fase 4 -- Lokale broker + RDP-export | ⛔ Alle 3 RDP's tonen "Down", oorzaak nog onbekend | `configure-rdp-export.sh` draait schoon (0 WARN), REST-host:poort bevestigd correct via Connect-tab -- toch alle 3 RDP's Down. Nieuw diagnostisch script `local-broker/semp/diagnose-rdp.sh` wacht op Emils run (zie PLAN.md sectie 13, punt 14) |
+| Fase 4 -- Lokale broker + RDP-export | 🔬 Oorzaak ingezoomd: queue-binding, niet de REST-consumer | REST-consumer is gezond (`up:true`, 3 verbindingen); de RDP zelf faalt op "No REST Queue Bindings Up". `diagnose-rdp.sh` uitgebreid met queueBindings-/subscriptions-calls, Emil moet nogmaals draaien (zie PLAN.md sectie 13, punt 15) |
 | Fase 5 -- Demo-apps valideren | Nog te doen | |
 | Fase 6 -- Draaiboek + fallback | Nog te doen | |
 
@@ -226,7 +226,7 @@ nooit gecommit -- alleen `.env.example`-bestanden zitten in de repo.)
 | 1 | STACKIT-beschikbaarheid | ✅ Interim-broker op GCP europe-west1 (België) aangemaakt als stand-in; vlak vóór repetitie/DADD controleren of STACKIT al als datacenter-optie zichtbaar is en zo ja, overstappen | Interim: gereed; overstap-check: kort vóór fase 5/6 |
 | 2 | Solace Cloud account | Account + API-token aanmaken (indien nog niet aanwezig) | Week na fase 0 |
 | 3 | Cloud-brokers aanmaken | ✅ Alle 3 gereed: AWS (`ez-dadd-2026-eks-us-east-1a`), Azure (`ez-dadd-2026-aks-westeurope`), STACKIT/GCP-interim (`ez-dadd-2026-STACKIT-gke-gcp-europe-west1-b`); sovereign-node blijft STACKIT zodra GA, tot dan GCP europe-west1 interim | Gereed |
-| 4 | Lokale broker + RDP-export | ⛔ Alle 3 RDP's tonen "Down" (host/poort bevestigd correct, dus iets anders). `diagnose-rdp.sh` toegevoegd, wacht op Emils run + output | Diagnose nu |
+| 4 | Lokale broker + RDP-export | 🔬 REST-consumer is gezond; de queue-binding is de boosdoener ("No REST Queue Bindings Up"). `diagnose-rdp.sh` uitgebreid, opnieuw draaien nodig | Diagnose nu (ronde 2) |
 | 5 | Demo-apps valideren | Alle 3 tools end-to-end testen (publiceren → juiste cloud-broker, nergens anders) | Meerdere keren voor DADD, niet pas op de dag zelf |
 | 6 | Draaiboek + fallback-opname | Live-timing oefenen, schermopname als fallback maken | Week vóór DADD |
 | 7 | Op de dag zelf | `docker-run.sh` + `configure-local-broker.sh` (of al draaiend laten staan), demo-apps klaarzetten | Vlak voor het slot |
@@ -578,6 +578,28 @@ productieklaar systeem:
      wacht op Emils run en de output om de echte oorzaak te vinden in
      plaats van te gokken (verkeerde credentials, TLS-vertrouwen,
      REST-messaging niet aangezet op de cloud-VPN, of iets anders).
+  15. **`diagnose-rdp.txt` (Emil, 28/09/2026) laat zien: de REST-consumer
+     zelf is gezond, het probleem zit bij de queue-binding.** Per RDP:
+     `restConsumers/consumer-*` toont `"up": true`,
+     `"remoteOutgoingConnectionUpCount": 3` (== `outgoingConnectionCount`)
+     -- de TLS+http-basic-verbinding naar elke cloud-broker werkt dus
+     daadwerkelijk. De wél aanwezige `"lastConnectionFailureReason": "Peer
+     TCP Closed"` en `"lastFailureReason": "No Consumer Connections Up"`
+     zijn **historisch** (tijdstip identiek aan de EERSTE, mislukte run
+     vóór de authenticationScheme-fix) -- geen actueel probleem. Het echte
+     signaal staat op de RDP zelf, niet de consumer:
+     `"up": false`, `"lastFailureReason": "No REST Queue Bindings Up"`
+     (zelfde tijdstip voor alle 3 RDP's -- vermoedelijk een
+     reconciliatie-moment vlak na de fix-run). `diagnose-rdp.sh` had de
+     queue-binding zelf nooit opgevraagd (alleen de queue en de RDP/
+     consumer) -- toegevoegd: GET op
+     `restDeliveryPoints/{rdp}/queueBindings/{queue}` (CONFIG + MONITOR)
+     en op `queues/{queue}/subscriptions` (om de topic-subscriptie zelf te
+     bevestigen, in plaats van te concluderen uit de lege
+     `"collections": {"subscriptions": {}}`-placeholder in de queue's
+     eigen GET -- die is normaal leeg totdat je de sub-collectie zelf
+     opvraagt, dus geen signaal op zich). Emil moet `diagnose-rdp.sh`
+     nogmaals draaien met deze uitgebreide versie.
 - **Geen automatische provisioning van alle 4 brokers in één commando.**
   Er is bewust voor losse, leesbare stappen gekozen (console + scripts per
   onderdeel) omdat dat beter uit te leggen en te debuggen is vóór een
