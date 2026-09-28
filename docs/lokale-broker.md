@@ -142,11 +142,19 @@ maar gecrosscheckt tegen een werkende Go SEMP-client
 voor RDP's (Services/Managing-RDPs.htm) geen REST-attribuutnamen geeft --
 zie `PLAN.md` sectie 13, punt 11 voor de volledige onderbouwing.
 
-**Nog open, moet Emil zelf checken** (geen toegang tot de Solace Cloud
-console vanuit deze sessie): `*_REMOTE_REST_HOST`/`*_REMOTE_REST_PORT` in
-`.env(.example)` zijn ingevuld met de aanname "zelfde hostname als SMF,
-poort 9443" -- controleer dit op de Connect-tab (REST-sectie) van elke
-service en zet het REST-protocol aan voor die service als het nog uitstaat.
+**Bevestigd correct (28/09/2026):** de aanname "zelfde hostname als SMF,
+poort 9443" is juist -- de Connect-tab van de AWS-service toont exact
+`https://mr-connection-07w9t1ah76x.messaging.solace.cloud:9443` onder
+"Solace REST Messaging API".
+
+**⛔ Nieuw open punt: alle 3 RDP's tonen "Down" in Broker Manager**, ook na
+een schone `configure-rdp-export.sh`-run (0 WARN) en met het host/poort-
+probleem uitgesloten. Broker Manager zelf geeft geen down-reden (zelfde
+situatie als eerder bij de bridges) -- `local-broker/semp/diagnose-rdp.sh`
+(nieuw, analoog aan het verwijderde `diagnose-bridges.sh`, schrijft naar
+`output/diagnose-rdp.txt`) moet de echte oorzaak blootleggen: verkeerde
+credentials, TLS-vertrouwen, REST-messaging niet aangezet op de
+cloud-broker's VPN, of iets anders. Zie `PLAN.md` sectie 13, punt 14.
 
 **Opgeruimd (28/09/2026):** de 3 oude bridge-objecten
 (`bridge-to-aws/azure/stackit`), de reciprocal-bridge-testopstelling
