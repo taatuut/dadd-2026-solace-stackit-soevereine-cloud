@@ -18,7 +18,7 @@ alleen wat gepland was.
 | Fase 3 -- Azure West Europe | ✅ Aangemaakt | Service `ez-dadd-2026-aks-westeurope`, zie [`cloud-setup/azure-west-europe/README.md`](cloud-setup/azure-west-europe/README.md) en `screenshots/Azure/` |
 | Fase 3 -- STACKIT / GCP-interim | ✅ Aangemaakt | Service `ez-dadd-2026-STACKIT-gke-gcp-europe-west1-b` (interim op GCP europe-west1), zie [`cloud-setup/gcp-europe-west1-interim/README.md`](cloud-setup/gcp-europe-west1-interim/README.md) en `screenshots/STACKIT-of-GCP-interim/` -- alle 3 cloud-broker services zijn nu aangemaakt |
 | Fase 4 -- Lokale broker + RDP-export | ✅✅ VOLLEDIG WERKEND, end-to-end bevestigd | Na de rdp-deliver-profiel-fix: alle 3 queue-bindings up:true met bindSuccessCount:1, RDP-aws leverde daadwerkelijk 21 berichten af (httpResponseSuccessRxMsgCount:21) en AWS "Try Me!" toont het echte bericht aankomen op enewable/public/market/price. Zie PLAN.md sectie 13, punt 28. Klaar voor volledige testronde (fase 5) |
-| Fase 5 -- Demo-apps valideren | 🟡 2/3 geslaagd | stm-public (AWS) ✅, python-eu-nonpersonal (Azure) ✅ (na een zsh-commentaar-instructiefout, zie sectie 13 punt 29), sdkperf-pii (STACKIT) nog te doen |
+| Fase 5 -- Demo-apps valideren | 🟡 2/3 geslaagd | stm-public (AWS) ✅, python-eu-nonpersonal (Azure) ✅ (na een zsh-commentaar-instructiefout, zie sectie 13 punt 29), sdkperf-pii (STACKIT) klaar om te retesten na SDKPERF_BIN-fix (sectie 13, punt 30) |
 | Fase 6 -- Draaiboek + fallback | Nog te doen | |
 
 ## Inhoud
@@ -230,7 +230,7 @@ nooit gecommit -- alleen `.env.example`-bestanden zitten in de repo.)
 | 1 | STACKIT-beschikbaarheid | ✅ Interim-broker op GCP europe-west1 (België) aangemaakt als stand-in; vlak vóór repetitie/DADD controleren of STACKIT al als datacenter-optie zichtbaar is en zo ja, overstappen | Interim: gereed; overstap-check: kort vóór fase 5/6 |
 | 2 | Solace Cloud account | Account + API-token aanmaken (indien nog niet aanwezig) | Week na fase 0 |
 | 3 | Cloud-brokers aanmaken | ✅ Alle 3 gereed: AWS (`ez-dadd-2026-eks-us-east-1a`), Azure (`ez-dadd-2026-aks-westeurope`), STACKIT/GCP-interim (`ez-dadd-2026-STACKIT-gke-gcp-europe-west1-b`); sovereign-node blijft STACKIT zodra GA, tot dan GCP europe-west1 interim | Gereed |
-| 4 | Lokale broker + RDP-export | ✅✅ Volledig werkend, end-to-end bevestigd op AWS (bindSuccessCount:1, 21 berichten daadwerkelijk afgeleverd, zichtbaar in AWS "Try Me!" op de juiste topic). Azure/STACKIT staan klaar (up:true), nog geen verkeer getest | Fase 5: volledige testronde met alle 3 demo-apps (stm/python/sdkperf) op alle 3 topic-subtrees |
+| 4 | Lokale broker + RDP-export | ✅✅ Volledig werkend, end-to-end bevestigd op AWS (bindSuccessCount:1, 21 berichten daadwerkelijk afgeleverd, zichtbaar in AWS "Try Me!" op de juiste topic). Azure/STACKIT staan klaar (up:true), nog geen verkeer getest | Fase 5: volledige testronde met alle 3 demo-apps (stm/python/sdkperf) op alle 3 topic-subtrees -- 2/3 geslaagd (AWS, Azure), sdkperf-pii/STACKIT klaar om te retesten na SDKPERF_BIN-fix |
 | 5 | Demo-apps valideren | 🟡 stm-public (AWS) ✅ en python-eu-nonpersonal (Azure) ✅ bevestigd, elk alleen op de eigen broker; sdkperf-pii (STACKIT) nog te doen | Meerdere keren voor DADD, niet pas op de dag zelf |
 | 6 | Draaiboek + fallback-opname | Live-timing oefenen, schermopname als fallback maken | Week vóór DADD |
 | 7 | Op de dag zelf | `docker-run.sh` + `configure-local-broker.sh` (of al draaiend laten staan), demo-apps klaarzetten | Vlak voor het slot |
@@ -960,11 +960,27 @@ productieklaar systeem:
        `#`-commentaar opnieuw laten draaien. ~~Opnieuw draaien.~~ ✅
        Geslaagd: 20 Direct-berichten op Azure "Try Me!"
        (`enewable/eu/ops/grid/load`), niets op AWS.
-     - `sdkperf-pii/publish-pii.sh` -> alleen STACKIT: **nog te doen.**
+     - `sdkperf-pii/publish-pii.sh` -> alleen STACKIT: eerste poging liep vast
+       op `line 20: sdkperf_java.sh: command not found` -- geen repo-bug,
+       zie punt 30 hieronder voor de fix.
      **Les voor de rest van deze sessie:** geen losse `# toelichting`
      meer aan het eind van een commando-regel die Emil moet copy-pasten --
      die toelichting hoort op een eigen regel, of helemaal weg, om dit
      zsh-verschil niet opnieuw te raken.
+  30. **`sdkperf_java.sh: command not found` -- Emils eigen omgeving, geen
+     repo-bug (Emil, 28/09/2026).** `demo-apps/sdkperf-pii/publish-pii.sh`
+     gaat er standaard van uit dat `sdkperf_java.sh` op de PATH staat
+     (`: "${SDKPERF_BIN:=sdkperf_java.sh}"`); bij Emil staat het echte
+     binary op `/Users/emilzegers/sdkperf/sdkperf-jcsmp-8.4.17.5/sdkperf_java.sh`,
+     niet op de PATH. Het script ondersteunt hiervoor al een
+     `SDKPERF_BIN`-override, en source't `local-broker/.env` ook al
+     automatisch bij elke run (`[[ -f ".../.env" ]] && source ...`) --
+     een handmatige `source .env`-stap is dus niet nodig. **Fix:** de
+     regel `SDKPERF_BIN=/Users/emilzegers/sdkperf/sdkperf-jcsmp-8.4.17.5/sdkperf_java.sh`
+     toegevoegd aan Emils echte (git-genegeerde) `local-broker/.env`, en
+     als gedocumenteerd voorbeeld (met de generieke default
+     `sdkperf_java.sh`) aan `local-broker/.env.example`. Script simpelweg
+     opnieuw draaien; geen andere wijziging nodig.
 - **Geen automatische provisioning van alle 4 brokers in één commando.**
   Er is bewust voor losse, leesbare stappen gekozen (console + scripts per
   onderdeel) omdat dat beter uit te leggen en te debuggen is vóór een
@@ -1072,5 +1088,14 @@ productieklaar systeem:
 5. Eerste end-to-end testronde volgens sectie 12: publiceren met
    stm/python/sdkperf en in de Solace Cloud console van de DOELBROKER
    controleren dat het bericht op dezelfde topic aankomt, en nergens
-   anders.
+   anders. ~~`stm-public/publish-public.sh` -> AWS.~~ ✅ Geslaagd.
+   ~~`python-eu-nonpersonal/publisher.py` -> Azure.~~ ✅ Geslaagd (na
+   een zsh-commentaar-instructiefout, zie sectie 13 punt 29): 20
+   Direct-berichten op `enewable/eu/ops/grid/load`, niets op AWS.
+   `sdkperf-pii/publish-pii.sh` -> STACKIT: liep vast op
+   `sdkperf_java.sh: command not found` (Emils PATH, geen repo-bug) --
+   gefixt via `SDKPERF_BIN` in `local-broker/.env` (zie sectie 13, punt
+   30). **Nu:** script opnieuw draaien, dan STACKIT "Try Me!" op
+   `enewable/eu/pii/meter/reading` controleren (en dat er niets op
+   AWS/Azure verschijnt).
 6. Draaiboek en fallback-opname voorbereiden (sectie 11, fase 6).
