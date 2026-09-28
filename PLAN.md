@@ -1150,12 +1150,17 @@ productieklaar systeem:
      Sunburst: `ws://localhost:8008` (dezelfde web-messaging-poort als
      `stm`), VPN `enewable`, username/password zoals hierboven --
      gedocumenteerd in `README.md`, nieuwe stap 8 "Verkeer visualiseren
-     met Sunburst Topic Explorer". **Niet in deze sandbox geverifieerd**:
-     geen live broker beschikbaar om het daadwerkelijk verbinden met
-     Sunburst Topic Explorer te bevestigen; wel bevestigd via `bash -n`
-     dat het script syntactisch correct is en dat de SEMP-aanroepen
-     dezelfde vorm hebben als de al bevestigd werkende
-     `create_scoped_publisher()`-aanroepen.
+     met Sunburst Topic Explorer". **Bevestigd door Emil (28/09/2026):**
+     verbinden met VPN `enewable` + username/password `monitor` lukt, maar
+     "Start/Subscribe" gaf eerst "Subscription ACL Denied on Topic:
+     #noexport/>" -- geen ACL-bug: Sunburst vult het "Topic(s)"-veld
+     standaard met `#noexport/>, #noexport/#P2P/>` (een intern
+     Solace-topicprefix, los van onze demo-data), en dat topic zit terecht
+     niet in `acl-monitor`'s enige subscribe-exceptie (`enewable/>`). Geen
+     scriptwijziging nodig -- oplossing is het "Topic(s)"-veld in Sunburst
+     zelf aanpassen naar `enewable/>` vóór het (opnieuw) klikken op
+     "Start/Subscribe". `README.md`, sectie "Verkeer visualiseren",
+     uitgebreid met deze toelichting.
 - **Geen automatische provisioning van alle 4 brokers in één commando.**
   Er is bewust voor losse, leesbare stappen gekozen (console + scripts per
   onderdeel) omdat dat beter uit te leggen en te debuggen is vóór een

@@ -281,6 +281,13 @@ publish-only-accounts (`pub-*`) mogen expliciet niet subscriben, dus
 hiervoor is een apart, read-only `monitor`-account aangemaakt dat wél op
 heel `enewable/>` mag subscriben maar zelf niets kan publiceren.
 
+**Let op het "Topic(s)"-veld in Sunburst zelf**: dat staat standaard op
+`#noexport/>, #noexport/#P2P/>` (een intern Solace-topicprefix, niet onze
+demo-data) -- verander dit naar `enewable/>` vóór je op "Start/Subscribe"
+klikt, anders krijg je een "Subscription ACL Denied"-foutmelding. Dit is
+geen ACL-probleem (`acl-monitor` staat al goed, zie hierboven) maar puur
+de topic die Sunburst zelf standaard invult.
+
 ## Problemen oplossen
 
 - **RDP staat op "Down" / queue-binding geeft een fout**: zie stap 4
