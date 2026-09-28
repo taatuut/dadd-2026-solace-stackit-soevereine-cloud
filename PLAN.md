@@ -888,6 +888,22 @@ productieklaar systeem:
      aangemaakt/gepatcht om dit profiel te gebruiken in plaats van
      `"default"` -- de demo-app publishers blijven ongewijzigd op
      `"default"` staan, dus dit raakt niets anders.
+  27. **Sanity-check vóór de profiel-fix: handmatige curl-POST rechtstreeks
+     naar AWS bevestigt dat AWS-kant, credentials en topic-mapping
+     volledig los van het lokale-broker-probleem staan (Emil,
+     28/09/2026).** Zelfde aanpak als `test-rest-direct.sh`, maar
+     handmatig uitgevoerd om ook de visuele aankomst in Try Me! te
+     bevestigen (dat had de eerdere `test-rest-direct.sh`-run nooit
+     expliciet laten zien): `curl -u ${AWS_BRIDGE_USER}:${AWS_BRIDGE_PASSWORD}
+     -X POST https://${AWS_REMOTE_REST_HOST}:${AWS_REMOTE_REST_PORT}/enewable/public/curl-sanity-check`
+     geeft `HTTP/1.1 200 OK`, en het bericht verschijnt meteen in de AWS
+     "Try Me!"-subscriber op `enewable/public/>`
+     (`2026-09-28 13:28:59:336 [Topic enewable/public/curl-sanity-check]`,
+     Direct, inhoud "manual curl sanity check, ..."). Dit bevestigt
+     definitief: AWS-credentials, REST-incoming, TLS/poort en
+     topic-naar-URL-mapping zijn 100% in orde -- het probleem zit
+     uitsluitend op de lokale broker (punt 26's `rdp-deliver`-profiel-fix),
+     niet aan de AWS-kant.
 - **Geen automatische provisioning van alle 4 brokers in één commando.**
   Er is bewust voor losse, leesbare stappen gekozen (console + scripts per
   onderdeel) omdat dat beter uit te leggen en te debuggen is vóór een
@@ -979,10 +995,14 @@ productieklaar systeem:
    `"Peer TCP Closed"`-spoor was een rode haring (zie sectie 13, punt 26).
    **Gefixt:** `configure-rdp-export.sh` maakt nu een los profiel
    `rdp-deliver` (`allowGuaranteedMsgReceiveEnabled: true`) en zet alle
-   3 RDP's daarop. **Nu:** Emil draait `configure-rdp-export.sh` opnieuw
-   (patcht de bestaande RDP's naar het nieuwe profiel), dan
-   `diagnose-rdp.sh` en/of de AWS "Try Me!"-tab controleren of het
-   bericht nu eindelijk aankomt.
+   3 RDP's daarop. ~~Sanity-check: handmatige curl-POST rechtstreeks
+   naar AWS.~~ ✅ -- 200 OK, bericht verschijnt meteen in AWS "Try Me!"
+   (zie sectie 13, punt 27) -- AWS-kant, credentials en topic-mapping zijn
+   dus 100% in orde, het probleem zit uitsluitend lokaal. **Nu:** Emil
+   draait `configure-rdp-export.sh` opnieuw (patcht de bestaande RDP's
+   naar het nieuwe `rdp-deliver`-profiel), dan `diagnose-rdp.sh` en/of de
+   AWS "Try Me!"-tab controleren of het bericht nu via de RDP-keten
+   (i.p.v. handmatige curl) eindelijk aankomt.
 5. Eerste end-to-end testronde volgens sectie 12: publiceren met
    stm/python/sdkperf en in de Solace Cloud console van de DOELBROKER
    controleren dat het bericht op dezelfde topic aankomt, en nergens
