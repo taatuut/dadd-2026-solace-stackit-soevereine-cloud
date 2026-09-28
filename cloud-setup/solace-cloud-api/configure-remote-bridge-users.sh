@@ -61,6 +61,11 @@ configure_remote_bridge_user() {
     return
   fi
 
+  # Accept the host with or without a scheme prefix (the Connect tab may show
+  # it either way) -- strip any existing http(s):// before rebuilding the URL,
+  # so a value like "https://mr-connection-...:943" doesn't get doubled up.
+  semp_host="${semp_host#https://}"
+  semp_host="${semp_host#http://}"
   local semp_base="https://${semp_host}/SEMP/v2/config"
   local acl="acl-enewable-local-bridge"
 

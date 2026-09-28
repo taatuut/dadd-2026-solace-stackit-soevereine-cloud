@@ -17,7 +17,7 @@ alleen wat gepland was.
 | Fase 3 -- AWS US East | ✅ Aangemaakt | Service `ez-dadd-2026-eks-us-east-1a`, zie [`cloud-setup/aws-us-east/README.md`](cloud-setup/aws-us-east/README.md) en `screenshots/AWS/` |
 | Fase 3 -- Azure West Europe | ✅ Aangemaakt | Service `ez-dadd-2026-aks-westeurope`, zie [`cloud-setup/azure-west-europe/README.md`](cloud-setup/azure-west-europe/README.md) en `screenshots/Azure/` |
 | Fase 3 -- STACKIT / GCP-interim | ✅ Aangemaakt | Service `ez-dadd-2026-STACKIT-gke-gcp-europe-west1-b` (interim op GCP europe-west1), zie [`cloud-setup/gcp-europe-west1-interim/README.md`](cloud-setup/gcp-europe-west1-interim/README.md) en `screenshots/STACKIT-of-GCP-interim/` -- alle 3 cloud-broker services zijn nu aangemaakt |
-| Fase 4 -- Lokale broker + bridges | 🔄 Bezig | Lokale broker draait. Bridge-username `enewable-local-bridge` + wachtwoorden voorbereid; SEMP-config-script geschreven (`cloud-setup/solace-cloud-api/configure-remote-bridge-users.sh`) maar niet door de assistent uit te voeren (netwerktoegang tot de broker-SEMP-hosts is geblokkeerd, zelfde als bij de Mission Control API -- zie `docs/cloud-brokers.md`). Jij draait dit script (of maakt de client-usernames handmatig aan), daarna `configure-local-broker.sh` |
+| Fase 4 -- Lokale broker + bridges | 🔄 Bezig | Lokale broker draait. `local-broker/.env` ingevuld met SEMP-admin-credentials (username `mission-control-manager` per service, bevestigd). Eerste run van `configure-remote-bridge-users.sh` faalde op een scheme-verdubbelingsbug (`https://https://...`) -- gefixt (accepteert host met of zonder `https://` nu). Emil draait het script opnieuw, daarna `configure-local-broker.sh` |
 | Fase 5 -- Demo-apps valideren | Nog te doen | |
 | Fase 6 -- Draaiboek + fallback | Nog te doen | |
 
@@ -303,6 +303,12 @@ productieklaar systeem:
   `<host>:943` breekt daar op (bash interpreteert `<` als
   input-redirectie). Alle placeholders zijn nu `CHANGEME_...`-stijl
   (bash-veilig, geen haakjes).
+- **Scheme-verdubbelingsbug in `configure-remote-bridge-users.sh` gevonden
+  en gecorrigeerd** na de eerste echte testrun door Emil: het script voegde
+  altijd zelf `https://` toe, terwijl `*_SEMP_HOST` in `.env` het (redelijk,
+  gezien de Connect-tab) al met `https://` was ingevuld, wat een dubbel
+  scheme opleverde (`curl: Could not resolve host: https`). Het script
+  accepteert de host nu met of zonder scheme-prefix.
 - **Geen automatische provisioning van alle 4 brokers in één commando.**
   Er is bewust voor losse, leesbare stappen gekozen (console + scripts per
   onderdeel) omdat dat beter uit te leggen en te debuggen is vóór een

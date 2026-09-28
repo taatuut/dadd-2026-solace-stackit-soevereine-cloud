@@ -74,7 +74,10 @@ verwarren punt:
    client-usernames, ACL-profielen, bridges. Gebruikt door
    `../local-broker/semp/configure-local-broker.sh` (lokaal) en
    `../cloud-setup/solace-cloud-api/configure-remote-bridge-users.sh`
-   (op afstand, voor de 3 cloud-brokers).
+   (op afstand, voor de 3 cloud-brokers). **Bevestigd (28/09/2026)**: de
+   SEMP-admin-username op de Connect-tab van elke Solace Cloud-service heet
+   `mission-control-manager` (per service een eigen wachtwoord), op
+   `https://<smf-hostnaam>:943`.
 
 **Netwerktoegang vanuit deze sessie is getest en geblokkeerd voor beide.**
 Zowel `api.solace.cloud` als de drie broker-hostnamen
