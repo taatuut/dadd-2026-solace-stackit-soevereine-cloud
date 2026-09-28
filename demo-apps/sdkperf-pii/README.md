@@ -28,17 +28,19 @@ Publiceert, in volgorde: publiek (`enewable/public/market/price/<type>/
 gevoelige PII (`enewable/eu/pii/meter/reading/<customerId>`, als
 `pub-eu-pii`).
 
-Voor **eu-ops**/**eu-pii** komen de `<...>`-delen uit het vaste
-`../sample-payloads/<class>.json`-bestand (met `jq`, of een
-grep/sed-fallback als `jq` niet geïnstalleerd is). Voor **public**
-variëren `<type>` en `<market>` per bericht -- willekeurig gekozen uit 3
-types (`day-ahead-price`/`intraday-price`/`imbalance-price`) en 5 markten
-(`NL`/`BE`/`LU`/`DE`/`FR`). Dit betekent dat `sdkperf_java.sh` voor de
-public-klasse COUNT keer los wordt aangeroepen (één bericht per keer),
-i.p.v. één `-mn=N`-batch zoals eu-ops/eu-pii nog doen -- dus zichtbaar
-langzamer per bericht (JVM-opstarttijd elke keer), maar nodig voor echte
-variatie. Verlaag `COUNT` (bijv. `5`) voor een snellere pas als de
-demotijd beperkt is. Beperk tot één klasse met `--class`:
+Alle 3 klassen variëren nu per bericht, willekeurig gekozen uit een vaste
+lijst (basiswaarden komen uit `../sample-payloads/<class>.json`, met `jq`
+of een grep/sed-fallback als `jq` niet geïnstalleerd is, en worden per
+bericht overschreven): **public** uit 3 types
+(`day-ahead-price`/`intraday-price`/`imbalance-price`) x 5 markten
+(`NL`/`BE`/`LU`/`DE`/`FR`); **eu-ops** uit 10 `postcodeArea`-waarden
+(`1000-NL` .. `9700-NL`); **eu-pii** uit 20 fictieve `customerId`-waarden
+(`ENW-NL-000482` .. `ENW-NL-010799`). Dit betekent dat `sdkperf_java.sh`
+nu voor ELKE klasse COUNT keer los wordt aangeroepen (één bericht per
+keer), i.p.v. één `-mn=N`-batch -- zichtbaar langzamer per bericht
+(JVM-opstarttijd elke keer), maar nodig voor echte variatie. Verlaag
+`COUNT` (bijv. `5`) voor een snellere pas als de demotijd beperkt is.
+Beperk tot één klasse met `--class`:
 
 ```bash
 ./publish-pii.sh --class eu-pii 20
@@ -53,9 +55,11 @@ sdkperf_java.sh -cip=localhost:55554 -cu=pub-eu-pii@enewable -cp="$PUB_EU_PII_PA
   -mn=20 -mr=2 -mt=direct -md   # -md drukt elk verzonden bericht af, handig live op het podium
 ```
 
-(Het laatste topicniveau, `ENW-NL-000482`, is de `customerId` uit
-`../sample-payloads/eu-pii.json` -- het script leest dit veld zelf uit
-het bestand in plaats van het hardcoded te laten staan.)
+(Het laatste topicniveau, `ENW-NL-000482`, is één van de 20
+`customerId`-waarden waaruit het script per bericht willekeurig kiest --
+het overschrijft daarmee het `customerId`-veld uit
+`../sample-payloads/eu-pii.json` in plaats van dat vaste veld te
+hergebruiken.)
 
 (`-pal` = payload-attachment-list: stuurt de ruwe inhoud van het bestand
 als binary attachment. Niet `-mf` -- die optie bestaat niet en geeft

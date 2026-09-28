@@ -1270,6 +1270,61 @@ productieklaar systeem:
      getest over 30 aanroepen: alle 3 types en alle 5 markten kwamen voor.
      `bash -n` en `python -m py_compile` op de definitieve versies:
      allemaal ok.
+  38. **Eu-ops/eu-pii: meer variatie in `<postcodeArea>`/`<customerId>`
+     (Emil, 28/09/2026, op verzoek).** Punt 36's `eu-ops`/`eu-pii`-topics
+     varieerden nog op maar 4 resp. 3 vaste waarden (uit de statische
+     `sample-payloads/*.json`-bestanden) -- geen echte variatie, en veel
+     minder dan punt 37 net had toegevoegd voor `public` (3 x 5 = 15
+     combinaties). Uitgebreid naar 10 `postcodeArea`-waarden voor eu-ops
+     (`1000-NL`, `2000-NL`, `3500-NL`, `4000-NL`, `5600-NL`, `6500-NL`,
+     `7500-NL`, `8000-NL`, `9000-NL`, `9700-NL`) en 20 fictieve
+     `customerId`-waarden voor eu-pii (`ENW-NL-000482` t/m
+     `ENW-NL-010799`, oplopende gefingeerde klantnummers), willekeurig
+     gekozen PER BERICHT:
+     - `python-eu-nonpersonal/publisher.py`: `POSTCODE_AREAS`/
+       `CUSTOMER_IDS`-lijsten uitgebreid van 4/3 naar 10/20 waarden
+       (zelfde `random.choice()`-mechanisme als al gebruikt; geen verdere
+       codewijziging nodig).
+     - `stm-public/publish-public.sh` en `sdkperf-pii/publish-pii.sh`
+       (deze publiceerden `eu-ops`/`eu-pii` tot nu toe nog als één
+       STATISCHE batch uit `sample-payloads/*.json`, in tegenstelling tot
+       `public`, dat punt 37 al per bericht liet variëren): dezelfde
+       aanpak als punt 37 nu ook toegepast op `eu-ops`/`eu-pii` --
+       nieuwe `POSTCODE_AREAS_EU_OPS`/`CUSTOMER_IDS_EU_PII`-arrays (plain
+       indexed arrays), en `run_eu_ops()`/`run_eu_pii()` herschreven van
+       één aanroep naar een lus van COUNT iteraties, elk met een eigen
+       willekeurige `postcodeArea`/`customerId`, eigen topic (via
+       `render_payload()`, al geïntroduceerd in punt 37), en `-mn=1`/
+       `--count 1` per bericht. Voor eu-ops blijft `type` een vast veld
+       (gelezen met `json_field()`, want dat veld varieert bij deze
+       klasse niet). **Gevolg**: ALLE 3 klassen roepen `stm`/
+       `sdkperf_java.sh` nu COUNT keer los aan per klasse (was: alleen
+       `public`) -- een default-run is dus tot 3x zoveel proces-
+       aanroepen als vóór punt 37 (bijv. 60 voor SDKPerf's default
+       COUNT=20 i.p.v. 20). `docs/demo-apps.md`'s Timing-sectie is
+       hierop aangepast: het advies om `COUNT` laag te houden voor de
+       live demo geldt nu voor de hele run, niet meer alleen voor
+       `--class public`.
+     **Bewuste veiligheidskeuze (ongewijzigd van punt 37)**: geen
+     poging om SDKPerf's `-ptl=lijst`/`-pal=lijst`-stijl comma-
+     separated cycling te proberen (ook al accepteert `-ptl` officieel
+     lijsten) -- `-pal` zelf is niet officieel gedocumenteerd (alleen via
+     een community-thread gevonden, zie punt 35), en na de eerdere
+     `-mf`-misser leek de al-geverifieerde per-bericht-lus-aanpak
+     veiliger dan een ongeteste aanname.
+     **Bevestigd via echte dry-runs** (dezelfde nep-`stm`/
+     nep-`sdkperf_java.sh`-scripts als punt 37): `stm-public/
+     publish-public.sh` getest met een fake `stm`-binary -- alle 10
+     distincte `postcodeArea`-waarden en alle 20 distincte
+     `customerId`-waarden kwamen voor over resp. 30- en 60-berichten-
+     runs, zowel met `jq` beschikbaar als via de grep/sed-fallback (apart
+     getest met een PATH die `jq` daadwerkelijk uitsluit, gecontroleerd
+     met `command -v jq`). `sdkperf-pii/publish-pii.sh` identiek getest
+     met een fake `sdkperf_java.sh`-binary -- zelfde resultaat (10/20
+     distincte waarden, beide fallback-paden, gecombineerde run van alle
+     3 klassen werkt). `python-eu-nonpersonal/publisher.py`'s uitgebreide
+     lijsten gecontroleerd via `python -m py_compile`. `bash -n` op beide
+     bash-scripts: allemaal ok.
 - **Geen automatische provisioning van alle 4 brokers in één commando.**
   Er is bewust voor losse, leesbare stappen gekozen (console + scripts per
   onderdeel) omdat dat beter uit te leggen en te debuggen is vóór een

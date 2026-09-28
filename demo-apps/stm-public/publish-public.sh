@@ -41,16 +41,17 @@
 # Uses jq if available (see README.md, "Vereisten"), else a plain
 # grep/sed fallback for these flat, single-level JSON files.
 #
-# The "public" class additionally VARIES "type" and "market" per message
-# (TYPES_PUBLIC/MARKETS_PUBLIC below, picked at random per message) --
-# public.json is only the base template; render_payload() overrides those
-# 2 fields per message before publishing. This means "public" publishes
-# COUNT separate messages one at a time (COUNT stm invocations), instead
-# of one "stm send --count N" batch call like eu-ops/eu-pii still do --
-# noticeably slower per message (Node process startup each time), but
-# needed to get real variety per message rather than repeating one fixed
-# combination. Lower COUNT (e.g. "5") for a quicker pass if demo time is
-# tight; eu-ops/eu-pii are unaffected and stay fast/batched.
+# All 3 classes VARY one or more topic fields per message, picked at
+# random from a small fixed list each (below): public -> "type"+"market"
+# (TYPES_PUBLIC/MARKETS_PUBLIC), eu-ops -> "postcodeArea"
+# (POSTCODE_AREAS_EU_OPS), eu-pii -> "customerId" (CUSTOMER_IDS_EU_PII).
+# The sample-payloads/*.json files are only the base template;
+# render_payload() overrides the relevant field(s) per message before
+# publishing. This means EVERY class now publishes COUNT separate
+# messages one at a time (COUNT stm invocations per class), instead of
+# one "stm send --count N" batch call -- noticeably slower than a single
+# batch (Node process startup each time). Lower COUNT (e.g. "5") for a
+# quicker pass if demo time is tight -- see docs/demo-apps.md, "Timing".
 #
 # Usage: ./publish-public.sh [--class public|eu-ops|eu-pii] [COUNT]
 #   --class   Restrict to a single data class (default: all 3, in order:
@@ -85,11 +86,19 @@ json_field() {
   fi
 }
 
-# 3 realistic electricity-market price types and the 5 markets Emil asked
-# for -- deliberately small, fixed lists (not exhaustive) so a short demo
-# run visibly cycles through more than one value of each.
+# Deliberately small, fixed lists (not exhaustive) so a short demo run
+# visibly cycles through more than one value of each. Kept identical to
+# publisher.py's PRICE_TYPES/MARKETS/POSTCODE_AREAS/CUSTOMER_IDS so all 3
+# tools show the same "known" set of values, whichever tool you run.
 TYPES_PUBLIC=(day-ahead-price intraday-price imbalance-price)
 MARKETS_PUBLIC=(NL BE LU DE FR)
+POSTCODE_AREAS_EU_OPS=(1000-NL 2000-NL 3500-NL 4000-NL 5600-NL 6500-NL 7500-NL 8000-NL 9000-NL 9700-NL)
+CUSTOMER_IDS_EU_PII=(
+  ENW-NL-000482 ENW-NL-000917 ENW-NL-001188 ENW-NL-001654 ENW-NL-002203
+  ENW-NL-002877 ENW-NL-003340 ENW-NL-003912 ENW-NL-004561 ENW-NL-005098
+  ENW-NL-005734 ENW-NL-006220 ENW-NL-006803 ENW-NL-007415 ENW-NL-007960
+  ENW-NL-008522 ENW-NL-009107 ENW-NL-009684 ENW-NL-010233 ENW-NL-010799
+)
 
 render_payload() {
   # render_payload BASE_FILE OUT_FILE KEY1 VAL1 [KEY2 VAL2 ...] -- copies
@@ -161,15 +170,33 @@ run_public() {
   rm -f "${tmp_file}"
 }
 run_eu_ops() {
-  local file="${PAYLOAD_DIR}/eu-ops.json" type postcode_area
-  type="$(json_field "${file}" type)"; : "${type:=unknown}"
-  postcode_area="$(json_field "${file}" postcodeArea)"; : "${postcode_area:=unknown}"
-  publish_class "eu-ops" "enewable/eu/ops/grid/load/${type}/${postcode_area}" "${PUB_EU_OPS_USER}" "${PUB_EU_OPS_PASSWORD}" "${file}" "${COUNT}"
+  local base="${PAYLOAD_DIR}/eu-ops.json" type
+  type="$(json_field "${base}" type)"; : "${type:=unknown}"
+  local tmp_file postcode_area i
+  tmp_file="$(mktemp "${TMPDIR:-/tmp}/enewable-eu-ops.XXXXXX.json")" || return 1
+  for (( i=0; i<COUNT; i++ )); do
+    postcode_area="${POSTCODE_AREAS_EU_OPS[$(( RANDOM % ${#POSTCODE_AREAS_EU_OPS[@]} ))]}"
+    render_payload "${base}" "${tmp_file}" postcodeArea "${postcode_area}"
+    if ! publish_class "eu-ops" "enewable/eu/ops/grid/load/${type}/${postcode_area}" "${PUB_EU_OPS_USER}" "${PUB_EU_OPS_PASSWORD}" "${tmp_file}" 1; then
+      rm -f "${tmp_file}"
+      return 1
+    fi
+  done
+  rm -f "${tmp_file}"
 }
 run_eu_pii() {
-  local file="${PAYLOAD_DIR}/eu-pii.json" customer_id
-  customer_id="$(json_field "${file}" customerId)"; : "${customer_id:=unknown}"
-  publish_class "eu-pii" "enewable/eu/pii/meter/reading/${customer_id}" "${PUB_EU_PII_USER}" "${PUB_EU_PII_PASSWORD}" "${file}" "${COUNT}"
+  local base="${PAYLOAD_DIR}/eu-pii.json"
+  local tmp_file customer_id i
+  tmp_file="$(mktemp "${TMPDIR:-/tmp}/enewable-eu-pii.XXXXXX.json")" || return 1
+  for (( i=0; i<COUNT; i++ )); do
+    customer_id="${CUSTOMER_IDS_EU_PII[$(( RANDOM % ${#CUSTOMER_IDS_EU_PII[@]} ))]}"
+    render_payload "${base}" "${tmp_file}" customerId "${customer_id}"
+    if ! publish_class "eu-pii" "enewable/eu/pii/meter/reading/${customer_id}" "${PUB_EU_PII_USER}" "${PUB_EU_PII_PASSWORD}" "${tmp_file}" 1; then
+      rm -f "${tmp_file}"
+      return 1
+    fi
+  done
+  rm -f "${tmp_file}"
 }
 
 # Each class is attempted independently -- one class failing (e.g. a wrong

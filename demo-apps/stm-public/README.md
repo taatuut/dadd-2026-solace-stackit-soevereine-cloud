@@ -26,19 +26,21 @@ Publiceert, in volgorde: publiek (`enewable/public/market/price/<type>/
 gevoelige PII (`enewable/eu/pii/meter/reading/<customerId>`, als
 `pub-eu-pii`).
 
-Voor **eu-ops**/**eu-pii** komen de `<...>`-delen uit het vaste
-`../sample-payloads/<class>.json`-bestand (met `jq`, of een
-grep/sed-fallback als `jq` niet geïnstalleerd is). Voor **public**
-variëren `<type>` en `<market>` per bericht -- willekeurig gekozen uit 3
-types (`day-ahead-price`/`intraday-price`/`imbalance-price`) en 5 markten
+Alle 3 klassen variëren nu per bericht, willekeurig gekozen uit een vaste
+lijst (basiswaarden komen uit `../sample-payloads/<class>.json`, met `jq`
+of een grep/sed-fallback als `jq` niet geïnstalleerd is, en worden per
+bericht overschreven): **public** uit 3 types
+(`day-ahead-price`/`intraday-price`/`imbalance-price`) x 5 markten
 (`NL`/`BE`/`LU`/`DE`/`FR`), bijv. `.../price/intraday-price/BE` op het
-ene bericht, `.../price/day-ahead-price/DE` op het volgende. Dit betekent
-dat `stm send` voor de public-klasse COUNT keer los wordt aangeroepen
-(één bericht per keer, telkens met een eigen topic + payload), i.p.v. één
-`--count N`-batch zoals eu-ops/eu-pii nog doen -- dus zichtbaar
-langzamer per bericht (Node-opstarttijd elke keer), maar nodig voor
-echte variatie. Verlaag `COUNT` (bijv. `5`) voor een snellere pas als de
-demotijd beperkt is. Beperk tot één klasse met `--class`:
+ene bericht, `.../price/day-ahead-price/DE` op het volgende; **eu-ops**
+uit 10 `postcodeArea`-waarden (`1000-NL` .. `9700-NL`); **eu-pii** uit 20
+fictieve `customerId`-waarden (`ENW-NL-000482` .. `ENW-NL-010799`). Dit
+betekent dat `stm send` nu voor ELKE klasse COUNT keer los wordt
+aangeroepen (één bericht per keer, telkens met een eigen topic + payload),
+i.p.v. één `--count N`-batch -- zichtbaar langzamer per bericht
+(Node-opstarttijd elke keer), maar nodig voor echte variatie. Verlaag
+`COUNT` (bijv. `5`) voor een snellere pas als de demotijd beperkt is.
+Beperk tot één klasse met `--class`:
 
 ```bash
 ./publish-public.sh --class eu-pii        # alleen de PII-klasse

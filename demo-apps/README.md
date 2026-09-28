@@ -34,17 +34,19 @@ ACL-exceptions en RDP-export-queue-subscriptions staan al op de hele
 `enewable/<klasse>/>`-subtree, niet op een exacte topic -- extra niveaus
 erbij komt er automatisch in mee.
 
-Voor **eu-ops**/**eu-pii** lezen `stm`/`sdkperf` deze velden uit hun
-statische JSON-bestand in `sample-payloads/` (met `jq`, of een
-grep/sed-fallback als `jq` ontbreekt) -- die blijven per run vast. Voor
-**publiek** variëren `type` en `market` juist WEL per bericht, willekeurig
-gekozen uit 3 types (`day-ahead-price`/`intraday-price`/`imbalance-price`)
-en de 5 markten (`NL`/`BE`/`LU`/`DE`/`FR`) -- alle 3 tools bouwen daarvoor
-per bericht een nieuwe payload/topic op (`stm`/`sdkperf`: COUNT losse
-CLI-aanroepen i.p.v. één batch, dus zichtbaar langzamer voor de
-publiek-klasse; het Python-script deed dit al zo voor zijn eigen
-velden). Het Python-script bouwt de topic voor alle 3 klassen per
-verstuurd bericht op, omdat de veldwaarden daar per bericht rouleren.
+Alle 3 klassen variëren nu per bericht, willekeurig gekozen uit een vaste
+lijst: **publiek** uit 3 types
+(`day-ahead-price`/`intraday-price`/`imbalance-price`) x 5 markten
+(`NL`/`BE`/`LU`/`DE`/`FR`), **eu-ops** uit 10 `postcodeArea`-waarden
+(`1000-NL` .. `9700-NL`), **eu-pii** uit 20 fictieve `customerId`-waarden
+(`ENW-NL-000482` .. `ENW-NL-010799`). Alle 3 tools bouwen daarvoor per
+bericht een nieuwe payload/topic op: `stm`/`sdkperf` roepen daarom nu voor
+ELKE klasse COUNT losse CLI-aanroepen aan (één bericht per keer) i.p.v.
+één batch-aanroep -- zichtbaar langzamer dan de oorspronkelijke opzet met
+één vaste combinatie per klasse (zie `../docs/demo-apps.md`, "Timing",
+voor het advies om `COUNT` tijdens de live demo laag te houden). Het
+Python-script deed dit al zo voor alle 3 klassen (bouwt de topic per
+verstuurd bericht op, omdat de veldwaarden daar per bericht rouleren).
 
 Voor elke klasse gebruikt elke tool zijn eigen, met een ACL-profiel
 beperkte client-username (`pub-public`/`pub-eu-ops`/`pub-eu-pii`,

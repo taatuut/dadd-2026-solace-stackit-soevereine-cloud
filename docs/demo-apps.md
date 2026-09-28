@@ -55,16 +55,19 @@ draagt de hoofdboodschap al. Totaal ruim binnen de 4 minuten die de
 presentatie zelf voor de live demo reserveert (zie de sprekersnotities bij
 slide 23 van de deck).
 
-**Let op de publiek-klasse** (sinds de dynamische `type`/`market`-variatie,
-zie `../demo-apps/README.md`): die roept `stm`/`sdkperf_java.sh` nu COUNT
-keer los aan (één bericht per keer) in plaats van één batch-aanroep, dus
-de default COUNT (10 voor stm, 20 voor SDKPerf) kan op het podium langer
-duren dan de 60-90s-inschatting hierboven, vooral bij SDKPerf (JVM-
-opstarttijd per aanroep). Gebruik `--class public 5` (of een vergelijkbaar
-laag getal) voor de publiek-klasse tijdens de live demo om dit
-voorspelbaar kort te houden -- 5 berichten laat, dankzij de willekeurige
-keuze uit 3 types en 5 markten, meestal al meerdere verschillende
-combinaties zien.
+**Let op: dit geldt nu voor ALLE 3 klassen**, niet meer alleen publiek
+(sinds ook `eu-ops`/`eu-pii` per bericht variëren -- 10 `postcodeArea`-/
+20 `customerId`-waarden, zie `../demo-apps/README.md`): `stm`/
+`sdkperf_java.sh` roepen nu voor ELKE klasse COUNT keer los aan (één
+bericht per keer) in plaats van één batch-aanroep, dus een volledige
+default-run (10 voor stm, 20 voor SDKPerf, x 3 klassen) kan op het
+podium duidelijk langer duren dan de 60-90s-inschatting hierboven,
+vooral bij SDKPerf (JVM-opstarttijd per aanroep, x 60 aanroepen bij de
+default). Gebruik voor de live demo een laag `COUNT` over de hele run
+(bijv. `./publish-public.sh 5`) of `--class <klasse> 5` om één klasse
+gericht te tonen -- 5 berichten laat, dankzij de willekeurige keuze uit
+de betreffende lijst, meestal al meerdere verschillende combinaties
+zien.
 
 ## Fallback
 

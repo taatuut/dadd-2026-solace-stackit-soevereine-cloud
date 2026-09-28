@@ -58,8 +58,17 @@ from solace.messaging.resources.topic import Topic
 # run visibly cycles through more than one value of each.
 PRICE_TYPES = ["day-ahead-price", "intraday-price", "imbalance-price"]
 MARKETS = ["NL", "BE", "LU", "DE", "FR"]
-POSTCODE_AREAS = ["1000-NL", "3500-NL", "5600-NL", "9700-NL"]
-CUSTOMER_IDS = ["ENW-NL-000482", "ENW-NL-000917", "ENW-NL-002203"]
+POSTCODE_AREAS = [
+    "1000-NL", "2000-NL", "3500-NL", "4000-NL", "5600-NL",
+    "6500-NL", "7500-NL", "8000-NL", "9000-NL", "9700-NL",
+]
+CUSTOMER_IDS = [
+    "ENW-NL-000482", "ENW-NL-000917", "ENW-NL-001188", "ENW-NL-001654",
+    "ENW-NL-002203", "ENW-NL-002877", "ENW-NL-003340", "ENW-NL-003912",
+    "ENW-NL-004561", "ENW-NL-005098", "ENW-NL-005734", "ENW-NL-006220",
+    "ENW-NL-006803", "ENW-NL-007415", "ENW-NL-007960", "ENW-NL-008522",
+    "ENW-NL-009107", "ENW-NL-009684", "ENW-NL-010233", "ENW-NL-010799",
+]
 
 
 def load_config() -> dict:
