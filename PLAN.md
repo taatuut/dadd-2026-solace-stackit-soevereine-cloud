@@ -1477,6 +1477,36 @@ productieklaar systeem:
      bridge-user aanmaakt. `TODO.md`'s blokkerende sectie en
      `cloud-setup/terraform/README.md`'s STACKIT-GA-vraag kunnen hiermee
      als opgelost worden afgevinkt.
+
+  43. **Bug #4 gevonden en gefixt: RDP's bleven naar de OUDE cloud-hosts/
+     credentials wijzen na het opnieuw aanmaken van de services (Emil +
+     assistent, 02/10/2026).** Na punt 42 (nieuwe services + bijgewerkte
+     `.env`) `configure-remote-bridge-users.sh` en `configure-local-broker.sh`
+     zonder problemen opnieuw gedraaid, maar `configure-rdp-export.sh` gaf
+     voor alle 3 routes "(already exists, skipping)" op de restConsumer-stap
+     en een eerste publish-test (`stm-public/publish-public.sh`) liet
+     helemaal niets verschijnen op AWS/Azure/STACKIT "Try Me!", ondanks dat
+     de lokale publicatie zelf steeds slaagde. Root cause: in
+     `local-broker/semp/configure-rdp-export.sh` kreeg de restConsumer-stap
+     (in tegenstelling tot queueBindings/restDeliveryPoints/clientProfiles
+     hierboven, die allemaal al een onvoorwaardelijke PATCH na de POST
+     hadden) nooit die PATCH -- op een rerun bleef een AL BESTAANDE
+     restConsumer dus gewoon de OUDE `remoteHost`/`remotePort`/
+     credentials van vóór de verwijdering vasthouden, zonder enige
+     foutmelding (de POST retourneert gewoon "already exists" en het
+     script gaat door). De queue + message-promotion werkten dus prima
+     lokaal, maar de RDP kon nooit bij het (inmiddels niet meer bestaande
+     of niet meer kloppende) oude eindpunt afleveren. **Gefixt:** een
+     onvoorwaardelijke `PATCH` toegevoegd na de restConsumer-POST, exact
+     hetzelfde patroon als de 3 andere sub-objecten al hadden -- een
+     rerun past nu altijd de actuele host/poort/credentials toe, niet
+     alleen bij eerste aanmaak. Nog te doen: Emil moet
+     `configure-rdp-export.sh` opnieuw draaien en de publish-test
+     herhalen. Aparte, kleinere bijvangst tijdens dezelfde testrun:
+     `demo-apps/stm-public/publish-public.sh` faalde op de eu-ops/eu-pii-
+     klassen met `mktemp: mkstemp failed ... File exists` (macOS-lokaal,
+     stale tmp-bestand in `/var/folders/.../T/`) -- niet onderzocht als
+     onderdeel van deze bugfix, nog open.
 - **Geen automatische provisioning van alle 4 brokers in één commando.**
   Er is bewust voor losse, leesbare stappen gekozen (console + scripts per
   onderdeel) omdat dat beter uit te leggen en te debuggen is vóór een

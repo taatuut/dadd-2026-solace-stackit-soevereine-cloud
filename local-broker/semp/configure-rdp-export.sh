@@ -219,6 +219,22 @@ create_export_route() {
   semp POST "/msgVpns/${VPN}/restDeliveryPoints/${rdp}/restConsumers" \
     "{\"restConsumerName\":\"${consumer}\",\"remoteHost\":\"${remote_host}\",\"remotePort\":${remote_port},\"tlsEnabled\":true,\"authenticationScheme\":\"http-basic\",\"authenticationHttpBasicUsername\":\"${remote_user}\",\"authenticationHttpBasicPassword\":\"${remote_pass}\",\"enabled\":true}"
 
+  # CONFIRMED BUG #4 (02/10/2026, found when the 3 cloud services were
+  # recreated with new hostnames/passwords via Terraform): the POST above
+  # is a no-op on a rerun ("already exists, skipping") -- unlike the
+  # queueBindings/restDeliveryPoints/clientProfiles objects above, this
+  # restConsumer was never followed by an unconditional PATCH, so an
+  # EXISTING restConsumer kept pointing at the OLD remoteHost/remotePort/
+  # credentials from before the services were deleted and recreated,
+  # silently: the queue kept accepting messages (message promotion still
+  # works locally) but the RDP could never actually deliver them to the
+  # (now wrong/unreachable) remote endpoint. Fixed the same way as the
+  # other sub-objects: an unconditional PATCH after the POST so a rerun
+  # always re-applies the current host/port/credentials, not just on
+  # first creation.
+  semp PATCH "/msgVpns/${VPN}/restDeliveryPoints/${rdp}/restConsumers/${consumer}" \
+    "{\"remoteHost\":\"${remote_host}\",\"remotePort\":${remote_port},\"tlsEnabled\":true,\"authenticationScheme\":\"http-basic\",\"authenticationHttpBasicUsername\":\"${remote_user}\",\"authenticationHttpBasicPassword\":\"${remote_pass}\",\"enabled\":true}"
+
   echo "  OK: ${queue} --[promote]--> ${rdp}/${consumer} --[POST /\${topic()}]--> https://${remote_host}:${remote_port}"
 }
 
