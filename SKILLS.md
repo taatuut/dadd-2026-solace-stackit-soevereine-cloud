@@ -118,6 +118,23 @@ geschiedenis):
 4. Lever het bestand met `SendUserFile`, en zet het met
    `device_commit_files` in `docs/` in de repo.
 
+## Terraform CLI installeren op macOS (Homebrew)
+
+`brew install terraform` faalt sinds HashiCorp Terraform naar een
+BUSL-licentie overstapte: de formule is uit homebrew-core verwijderd
+(`Warning: No available formula with the name "terraform"`). Gebruik
+HashiCorp's eigen tap:
+
+```bash
+brew install hashicorp/tap/terraform
+# (tapt hashicorp/tap automatisch als die nog niet toegevoegd is)
+terraform version
+```
+
+`brew tap hashicorp/tap && brew install hashicorp/tap/terraform` werkt
+ook expliciet, maar is niet nodig -- de fully-qualified-naam hierboven
+volstaat in één commando.
+
 ## Vóór elke commit
 
 `grep -rlP "\xc2\xad" --include="*.md" --include="*.sh" --include="*.py" .`

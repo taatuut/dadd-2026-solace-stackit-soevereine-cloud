@@ -87,6 +87,30 @@ sleutel (met een placeholder) toe aan het bijbehorende `.env.example` EN
 vraag de gebruiker om de echte waarde in zijn eigen `.env` te zetten --
 schrijf zelf nooit een verzonnen waarde in een echt `.env`-bestand.
 
+## Stapsgewijze procedures (installaties, deploys, console-acties)
+
+Wanneer Emil door een procedure geleid wordt die hij zelf moet uitvoeren
+(een CLI installeren, `terraform apply` draaien, iets in een console
+aanklikken) -- geef **één instructie tegelijk**, niet de hele lijst
+vooruit. Wacht zijn terugkoppeling af (gelukt, of de foutmelding) en geef
+pas daarna de volgende stap. Reden: dit soort procedures loopt in de
+praktijk zelden in één keer goed (zie bijv. `SKILLS.md`, "Terraform CLI
+installeren op macOS" -- de eerste aanname bleek al fout), en een hele
+lijst vooruit geven betekent dat een foute vroege stap pas laat opvalt,
+met vervolgstappen die op een verkeerde aanname voortbouwen. Dit geldt
+ook als de assistent de volgende stappen al kan voorbereiden (bijv. een
+bestand alvast invullen) -- het voorbereiden mag vooruitlopen, de
+instructies AAN Emil niet.
+
+**Nooit een inline `#`-commentaar op dezelfde regel als een commando dat
+Emil moet kopiëren-plakken.** zsh (macOS-default) behandelt een `#` in een
+interactieve shell NIET automatisch als commentaar (zie README.md,
+"Problemen oplossen") -- `terraform version   # >= 1.5 verwacht` werd
+letterlijk uitgevoerd als `terraform version` met een output-redirect naar
+een bestand genaamd `=` (uit de `>=`), wat een leeg `=`-bestand in de
+repo-root opleverde. Zet toelichting op een eigen regel erboven, nooit
+achter het commando.
+
 ## Waar te beginnen
 
 - Nieuwe sessie, wil je weten wat er nog moet gebeuren? -> `TODO.md`.

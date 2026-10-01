@@ -1414,6 +1414,34 @@ productieklaar systeem:
      en `cloud-setup/README.md` een statusmelding die naar de nieuwe
      Terraform-route verwijst; de bestaande console-/REST-route blijft
      staan als handmatig alternatief/fallback (de provider is beta).
+  41. **`terraform.tfvars` deels ingevuld; Terraform-CLI-installatie liep
+     meteen vast; werkwijze aangepast naar één stap tegelijk (Emil,
+     01/10/2026).** AWS/Azure-org blijft ongewijzigd (bevestigd door
+     Emil), dus `aws_azure_org_api_token` in `terraform.tfvars` (nieuw
+     aangemaakt uit `terraform.tfvars.example`) rechtstreeks gevuld met de
+     inhoud van `token-dadd-2026.txt`, bestand-naar-bestand -- de waarde
+     is nergens in de chat getoond. Bevestigd dat `terraform.tfvars` door
+     `.gitignore` wordt genegeerd (`git check-ignore -v`). Opnieuw
+     bevestigd (curl vanuit de sessie): `api.solace.cloud` blijft 403
+     geblokkeerd, dus ook de losse datacenter-/serviceClasses-lookups en
+     `terraform init/plan/apply` moeten door Emil zelf.
+     **Eerste concrete stap faalde**: `brew install terraform` geeft
+     `Warning: No available formula with the name "terraform"` --
+     HashiCorp's Terraform-formule is uit homebrew-core verwijderd sinds
+     de overstap naar de BUSL-licentie; moet via HashiCorp's eigen tap
+     (`brew install hashicorp/tap/terraform`). Gedocumenteerd in
+     `SKILLS.md`, "Terraform CLI installeren op macOS (Homebrew)".
+     **Werkwijze aangepast, op verzoek**: bij dit soort stapsgewijze,
+     door Emil zelf uit te voeren procedures (installaties, `terraform
+     apply`, console-acties) geeft de assistent voortaan ÉÉN instructie
+     tegelijk en wacht terugkoppeling af vóór de volgende stap, i.p.v.
+     een hele stappenlijst vooruit -- precies omdat de eerste stap hier al
+     fout bleek. Vastgelegd in `AGENTS.md`, "Stapsgewijze procedures". Bijvangst: de
+     voorgestelde `terraform version   # >= 1.5 verwacht`-regel had zelf
+     een inline `#`-commentaar (dezelfde, al in `README.md` gedocumenteerde
+     zsh-valkuil) en liet daardoor een leeg `=`-bestand in de repo-root
+     achter (opgeruimd); vastgelegd als extra regel in `AGENTS.md`: nooit
+     een inline `#`-commentaar op een regel die Emil moet kopiëren-plakken.
 - **Geen automatische provisioning van alle 4 brokers in één commando.**
   Er is bewust voor losse, leesbare stappen gekozen (console + scripts per
   onderdeel) omdat dat beter uit te leggen en te debuggen is vóór een
