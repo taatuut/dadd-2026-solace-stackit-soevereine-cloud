@@ -29,14 +29,14 @@ Laatst bijgewerkt: 02/10/2026.
       `messaging.solace.cloud`), alle 3 `*_REMOTE_VPN` naar `enewable`,
       nieuwe `*_SEMP_ADMIN_PASSWORD`-waarden. (`PLAN.md` sectie 13,
       punt 42.)
-- [ ] **Resterende configuratiescripts opnieuw draaien** (de oude
-      `*_BRIDGE_PASSWORD`-waarden zijn ongeldig, nieuwe broker):
-      `cloud-setup/solace-cloud-api/configure-remote-bridge-users.sh`,
-      `local-broker/semp/configure-local-broker.sh` en
-      `configure-rdp-export.sh`. Zie `cloud-setup/terraform/README.md`,
-      "Na terraform apply", voor de volledige sequentie. Niets in de
-      lijst hieronder kan opnieuw bevestigd worden vóórdat dit is
-      gedaan.
+- [x] **Resterende configuratiescripts opnieuw gedraaid** en end-to-end
+      herbevestigd (02/10/2026): `configure-remote-bridge-users.sh`,
+      `configure-local-broker.sh` en `configure-rdp-export.sh`. Onderweg
+      een echte bug gevonden en gefixt in `configure-rdp-export.sh` (de
+      restConsumer kreeg nooit een PATCH, bleef op de oude cloud-hosts/
+      credentials staan -- zie `PLAN.md` sectie 13, punt 43). Na de fix:
+      `stm-public/publish-public.sh` bevestigd op alle 3 cloud-brokers,
+      elk op zijn eigen topic (`PLAN.md` sectie 13, punt 44).
 
 ## Moet vóór DADD
 

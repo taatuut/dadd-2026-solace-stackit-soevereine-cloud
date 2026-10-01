@@ -1507,6 +1507,25 @@ productieklaar systeem:
      klassen met `mktemp: mkstemp failed ... File exists` (macOS-lokaal,
      stale tmp-bestand in `/var/folders/.../T/`) -- niet onderzocht als
      onderdeel van deze bugfix, nog open.
+
+  44. **Bevestigd: volledige end-to-end-keten werkt weer tegen de nieuwe
+     services (Emil, 02/10/2026).** Na de PATCH-fix uit punt 43:
+     `configure-rdp-export.sh` opnieuw gedraaid, daarna
+     `stm-public/publish-public.sh` nogmaals. Resultaat in de 3 Solace
+     Cloud "Try Me!"-tabs: AWS toont de publieke markt-prijsberichten
+     (`enewable/public/market/price/...`), Azure toont de niet-persoonlijke
+     EU-operationele data (`enewable/eu/ops/grid/load/grid-load-aggregate/
+     ...`), en STACKIT toont de gevoelige PII-meterstanden
+     (`enewable/eu/pii/meter/reading/...`) -- elk uitsluitend op zijn eigen
+     broker, net als vóór de verwijdering. Hiermee is de volledige keten
+     (Terraform-services -> .env -> bridge-users -> lokale broker -> RDP-
+     export) end-to-end herbevestigd tegen de services die in punt 42 zijn
+     aangemaakt. De `mktemp`-WARN uit punt 43 bleek geen blokkade voor
+     deze test en blijft een klein, apart openstaand puntje. Openstaand:
+     Azure/STACKIT nog los testen met de andere 2 demo-apps
+     (python-eu-nonpersonal, sdkperf-pii) en de negative-ACL-test (TODO.md),
+     en een volledige testronde vlak vóór DADD zelf herhalen (TODO.md,
+     "Moet vóór DADD").
 - **Geen automatische provisioning van alle 4 brokers in één commando.**
   Er is bewust voor losse, leesbare stappen gekozen (console + scripts per
   onderdeel) omdat dat beter uit te leggen en te debuggen is vóór een
