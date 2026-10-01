@@ -227,3 +227,14 @@ token-*.txt
 
 # Diagnostic script output (can echo back hostnames/usernames from .env)
 output/
+
+# Terraform (cloud-setup/terraform/) -- state and local overrides contain
+# generated credentials in plaintext, and real tfvars contain API tokens
+cloud-setup/terraform/.terraform/
+cloud-setup/terraform/.terraform.lock.hcl
+cloud-setup/terraform/*.tfstate
+cloud-setup/terraform/*.tfstate.*
+cloud-setup/terraform/terraform.tfvars
+cloud-setup/terraform/*.auto.tfvars
+cloud-setup/terraform/crash.log
+cloud-setup/terraform/crash.*.log

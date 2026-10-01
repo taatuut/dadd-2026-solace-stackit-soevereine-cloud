@@ -1361,6 +1361,59 @@ productieklaar systeem:
      docx-herbouwrecept). `README.md` kreeg een nieuwe sectie "Sessie
      hervatten / werken met een AI-coding-agent aan deze repo" die uitlegt
      hoe deze 3 bestanden samen met `PLAN.md` te gebruiken zijn.
+  40. **De 3 cloud-broker services zijn verwijderd; opnieuw aangemaakt via
+     Terraform, in twee organisaties (Emil, 01/10/2026, op verzoek).** De
+     3 Solace Cloud event broker services (AWS, Azure, STACKIT/interim)
+     uit fase 3 bestaan niet meer. Nieuwe opzet, op verzoek: "Developer
+     100"-tier (i.p.v. de eerdere Enterprise-250-HA-klasse) en verdeeld
+     over TWEE Solace Cloud-organisaties -- AWS + Azure in de ene org,
+     STACKIT in de andere -- in plaats van één org voor alles zoals
+     voorheen. Op verzoek automatisch aangemaakt met Terraform i.p.v. de
+     console/`create-service.sh`-REST-route.
+     **Onderzoek**: Solace heeft een eigen, BETA Terraform-provider voor
+     Mission Control (`SolaceProducts/terraform-provider-solacecloud`,
+     resource `solacecloud_service`, zie de
+     [Solace Community-aankondiging](https://community.solace.com/t/new-beta-solace-cloud-terraform-provider-for-managing-event-broker-services/4502)
+     en de [Terraform Registry](https://registry.terraform.io/providers/SolaceProducts/solacecloud/latest)) --
+     dit beheert uitsluitend de SERVICE zelf (Mission Control-niveau), niet
+     de SEMP-objecten erbinnen (die blijven, net als voorheen,
+     `configure-remote-bridge-users.sh`'s taak). Provider-configuratie
+     vereist per org een eigen `api_token` EN een eigen `base_url`
+     (Home-Cloud-afhankelijk, niet per se hetzelfde voor beide org's) --
+     opgelost met 2 `provider "solacecloud"`-blokken met een `alias`.
+     **Onzekerheid, expliciet niet blindelings aangenomen** (zelfde
+     voorzichtigheid als bij `-mf` destijds, zie punt 35): bronnen
+     spreken elkaar tegen over de exacte schrijfwijze van de
+     "Developer 100"-`service_class_id` (REST-API-docs: `"developer"`
+     kleine letters; Terraform-provider-schema: default `"DEVELOPER"`
+     hoofdletters) -- `variables.tf` gebruikt voorlopig `"DEVELOPER"` met
+     een expliciete waarschuwing om dit via `terraform plan` of de
+     `missionControl/serviceClasses`-endpoint te bevestigen vóór apply.
+     Ook niet aangenomen: of STACKIT inmiddels echt als eigen
+     datacenter-optie beschikbaar is (zie de al bestaande "STACKIT
+     GA-check" in `TODO.md`) -- `datacenter_id_stackit` is een losse
+     variabele die naar de echte STACKIT-id of (net als voorheen) een
+     GCP-europe-west1-interim-id kan wijzen, Emil's keuze na het zelf
+     opzoeken.
+     **Nieuwe bestanden** (geen bestaande scripts overschreven, zoals
+     gevraagd): `cloud-setup/terraform/{provider,variables,main,outputs}.tf`,
+     `terraform.tfvars.example`, en een `README.md` met de volledige
+     stappen (incl. de netwerktoegang-beperking hieronder) en de
+     vervolgstappen na `apply` (uitlezen van de gegenereerde
+     SEMP-credentials uit de Terraform-output, `local-broker/.env`
+     bijwerken, de bestaande SEMP-configuratiescripts opnieuw draaien,
+     testplan sectie 12 herhalen).
+     **Netwerktoegang**: zoals al vastgesteld voor `create-service.sh`
+     (zie `docs/cloud-brokers.md`, "Netwerktoegang vanuit deze sessie"),
+     is `api.solace.cloud` niet bereikbaar vanuit deze sessie (noch de
+     cloud-container, noch de sandbox-VM) -- `terraform init`/`plan`/
+     `apply` moet dus door Emil zelf in zijn eigen terminal gedraaid
+     worden; de assistent kan de configuratie voorbereiden maar niet
+     uitvoeren of verifiëren tegen de echte API.
+     `TODO.md` kreeg een nieuwe, blokkerende sectie bovenaan ("eerst dit")
+     en `cloud-setup/README.md` een statusmelding die naar de nieuwe
+     Terraform-route verwijst; de bestaande console-/REST-route blijft
+     staan als handmatig alternatief/fallback (de provider is beta).
 - **Geen automatische provisioning van alle 4 brokers in één commando.**
   Er is bewust voor losse, leesbare stappen gekozen (console + scripts per
   onderdeel) omdat dat beter uit te leggen en te debuggen is vóór een

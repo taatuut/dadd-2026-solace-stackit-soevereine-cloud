@@ -1,0 +1,16 @@
+# Copy to terraform.tfvars (gitignored, never commit the real file -- see
+# ../../AGENTS.md, "Secrets") and fill in real values.
+
+aws_azure_org_api_token = "CHANGEME_bearer_token_for_the_aws_azure_org"
+aws_azure_org_base_url  = "https://api.solace.cloud/" # confirm Home Cloud base URL in the console
+
+stackit_org_api_token = "CHANGEME_bearer_token_for_the_stackit_org"
+stackit_org_base_url  = "https://api.solace.cloud/" # confirm Home Cloud base URL -- may differ from above, different org
+
+datacenter_id_aws     = "CHANGEME" # GET {aws_azure_org_base_url}api/v2/missionControl/datacenters (aws_azure_org token)
+datacenter_id_azure   = "CHANGEME" # idem
+datacenter_id_stackit = "CHANGEME" # GET {stackit_org_base_url}api/v2/missionControl/datacenters (stackit_org token) -- real STACKIT eu01 if GA, else the GCP europe-west1 interim id
+
+service_class_id = "DEVELOPER" # confirm exact string before apply, see variables.tf
+message_vpn_name = "enewable"
+name_prefix      = "ez-dadd-2026"

@@ -14,7 +14,33 @@ niet in `PLAN.md`.
   bouwen zijn ontdekt (testmethodes, tool-vlaggen, gotchas) -- check dit
   vóórdat je een probleem opnieuw uitzoekt dat hier al is opgelost.
 
-Laatst bijgewerkt: 28/09/2026, na commit `7794c5e`.
+Laatst bijgewerkt: 01/10/2026.
+
+## Blokkerend -- eerst dit (services verwijderd)
+
+- [ ] **De 3 Solace Cloud event broker services opnieuw aanmaken** (AWS,
+      Azure, STACKIT -- verwijderd, 01/10/2026). Nu als "Developer
+      100"-tier, in twee Solace Cloud-organisaties (AWS+Azure samen in de
+      ene, STACKIT in de andere) i.p.v. de eerdere Enterprise-250-HA-klasse
+      in één org. Nieuwe Terraform-opzet staat in
+      [`cloud-setup/terraform/`](cloud-setup/terraform/) (zie dat
+      README.md voor de volledige stappen -- moet door Emil zelf gedraaid
+      worden, netwerktoegang vanuit de sessie is geblokkeerd). Openstaande
+      aannames die Emil moet bevestigen vóór `terraform apply`: de 2
+      API-tokens + Home-Cloud base_urls, de 3 `datacenterId`-waarden, de
+      exacte schrijfwijze van `service_class_id` ("DEVELOPER" vs.
+      "developer"), en of STACKIT inmiddels echt GA is (zie de
+      STACKIT-GA-check hieronder -- zo niet, interim-GCP-datacenter
+      gebruiken zoals voorheen). (`PLAN.md` sectie 13, punt 40.)
+- [ ] **Na het aanmaken: `local-broker/.env` volledig bijwerken** (alle
+      `AWS_*`/`AZURE_*`/`STACKIT_*`-sleutels -- nieuwe hostnames, VPN-naam
+      `enewable`, nieuwe SEMP-admin-credentials) en daarna
+      `cloud-setup/solace-cloud-api/configure-remote-bridge-users.sh`,
+      `local-broker/semp/configure-local-broker.sh` en
+      `configure-rdp-export.sh` opnieuw draaien. Zie
+      `cloud-setup/terraform/README.md`, "Na terraform apply", voor de
+      volledige sequentie. Niets in deze lijst hieronder kan opnieuw
+      bevestigd worden vóórdat dit is gedaan.
 
 ## Moet vóór DADD
 
@@ -64,8 +90,11 @@ Laatst bijgewerkt: 28/09/2026, na commit `7794c5e`.
 ## Kan na DADD (bewuste scope-keuzes voor nu)
 
 - [ ] Automatische provisioning van alle 4 brokers in één commando
-      (Terraform/Ansible i.p.v. losse scripts). (`PLAN.md` sectie 13,
-      bullet "Geen automatische provisioning".)
+      (Terraform/Ansible i.p.v. losse scripts). **Deels in uitvoering:**
+      de 3 cloud-services gaan nu via Terraform (zie bovenaan dit
+      bestand, "Blokkerend") -- de lokale broker (Docker + SEMP-config)
+      zit daar nog niet in. (`PLAN.md` sectie 13, bullet "Geen
+      automatische provisioning".)
 - [ ] Monitoring/observability (Solace metrics/Prometheus i.p.v. alleen
       Broker Manager). (`PLAN.md` sectie 13, bullet "Geen
       monitoring/observability".)
