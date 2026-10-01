@@ -1442,6 +1442,41 @@ productieklaar systeem:
      zsh-valkuil) en liet daardoor een leeg `=`-bestand in de repo-root
      achter (opgeruimd); vastgelegd als extra regel in `AGENTS.md`: nooit
      een inline `#`-commentaar op een regel die Emil moet kopiëren-plakken.
+
+  42. **De 3 services succesvol aangemaakt met Terraform; `local-broker/.env`
+     volledig bijgewerkt (Emil + assistent, 02/10/2026).** Stapsgewijs (zie
+     punt 41) de resterende invoer verzameld: STACKIT-org blijkt een eigen
+     console/API-domein te hebben (`staging-console.maasgo.net` /
+     `staging-api.maasgo.net`, i.p.v. `*.solace.cloud`) -- ontdekt via de
+     DevTools Network-tab, want niet te raden. De 3 `datacenterId`'s
+     opgezocht via `missionControl/datacenters` (token-naar-bestand-script,
+     nooit in de chat getoond): `eks-us-east-1a` (AWS), `aks-westeurope`
+     (Azure), en een verrassing -- STACKIT heeft inmiddels een **eigen,
+     echte `SolaceDedicated`-datacenter** (`stackitdemo-stackit-eu01-production`,
+     "StackIT Production Region"), dus geen GCP-interim-stand-in meer nodig
+     (de aanname in punt 40/`TODO.md` was voorzichtigheidshalve nog
+     interim). Alle drie datacenters tonen `"DEVELOPER"` (hoofdletters) in
+     hun `supportedServiceClasses` -- bevestigt definitief de juiste
+     schrijfwijze van `service_class_id`, die bij `terraform plan` ook
+     zonder validatiefout bleek. `terraform init` + `plan` + `apply`
+     (door Emil, eigen terminal) zijn alle drie zonder fouten geslaagd:
+     3 services `Running` (AWS id `fagb5x8a2rd`, Azure id `56tdd0ahgcm`,
+     STACKIT id `t5ushg0cbk8`), elk met expliciete `message_vpn_name =
+     "enewable"` (dus dit keer geen auto-afgekapte VPN-naam-verwarring,
+     zie `cloud-setup/terraform/README.md`). `terraform output -json`
+     van alle 3 naar het (gitignored) `output/`-folder geschreven en door
+     de assistent zelf ingelezen (nooit in de chat geplakt). Daarmee
+     `local-broker/.env` bijgewerkt: nieuwe SMF/SEMP-hostnames (let op --
+     STACKIT's hostname-domein is `messaging.maasgo.net`, niet
+     `messaging.solace.cloud`), alle 3 `*_REMOTE_VPN` naar `enewable`, en
+     de 3 nieuwe `*_SEMP_ADMIN_PASSWORD`-waarden (SEMP-manager-credential
+     uit de Terraform-output, file-naar-file, nooit getoond). De oude
+     `*_BRIDGE_PASSWORD`-waarden horen bij de verwijderde services en zijn
+     dus ongeldig -- gezet op een expliciete `CHANGEME`-placeholder totdat
+     `configure-remote-bridge-users.sh` (volgende stap) een nieuwe
+     bridge-user aanmaakt. `TODO.md`'s blokkerende sectie en
+     `cloud-setup/terraform/README.md`'s STACKIT-GA-vraag kunnen hiermee
+     als opgelost worden afgevinkt.
 - **Geen automatische provisioning van alle 4 brokers in één commando.**
   Er is bewust voor losse, leesbare stappen gekozen (console + scripts per
   onderdeel) omdat dat beter uit te leggen en te debuggen is vóór een

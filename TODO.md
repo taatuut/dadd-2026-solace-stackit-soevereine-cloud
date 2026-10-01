@@ -14,33 +14,29 @@ niet in `PLAN.md`.
   bouwen zijn ontdekt (testmethodes, tool-vlaggen, gotchas) -- check dit
   vóórdat je een probleem opnieuw uitzoekt dat hier al is opgelost.
 
-Laatst bijgewerkt: 01/10/2026.
+Laatst bijgewerkt: 02/10/2026.
 
-## Blokkerend -- eerst dit (services verwijderd)
+## Blokkerend -- eerst dit (services verwijderd, nu opnieuw aangemaakt)
 
-- [ ] **De 3 Solace Cloud event broker services opnieuw aanmaken** (AWS,
-      Azure, STACKIT -- verwijderd, 01/10/2026). Nu als "Developer
-      100"-tier, in twee Solace Cloud-organisaties (AWS+Azure samen in de
-      ene, STACKIT in de andere) i.p.v. de eerdere Enterprise-250-HA-klasse
-      in één org. Nieuwe Terraform-opzet staat in
-      [`cloud-setup/terraform/`](cloud-setup/terraform/) (zie dat
-      README.md voor de volledige stappen -- moet door Emil zelf gedraaid
-      worden, netwerktoegang vanuit de sessie is geblokkeerd). Openstaande
-      aannames die Emil moet bevestigen vóór `terraform apply`: de 2
-      API-tokens + Home-Cloud base_urls, de 3 `datacenterId`-waarden, de
-      exacte schrijfwijze van `service_class_id` ("DEVELOPER" vs.
-      "developer"), en of STACKIT inmiddels echt GA is (zie de
-      STACKIT-GA-check hieronder -- zo niet, interim-GCP-datacenter
-      gebruiken zoals voorheen). (`PLAN.md` sectie 13, punt 40.)
-- [ ] **Na het aanmaken: `local-broker/.env` volledig bijwerken** (alle
-      `AWS_*`/`AZURE_*`/`STACKIT_*`-sleutels -- nieuwe hostnames, VPN-naam
-      `enewable`, nieuwe SEMP-admin-credentials) en daarna
+- [x] **De 3 Solace Cloud event broker services opnieuw aangemaakt**
+      (AWS, Azure, STACKIT) via `cloud-setup/terraform/` -- alle drie
+      `Running` (02/10/2026). STACKIT bleek inmiddels een eigen, echte
+      `SolaceDedicated`-datacenter te hebben (geen GCP-interim meer
+      nodig); `service_class_id = "DEVELOPER"` bevestigd juist.
+      (`PLAN.md` sectie 13, punt 42.)
+- [x] **`local-broker/.env` bijgewerkt**: nieuwe SMF/SEMP-hostnames
+      (let op -- STACKIT's domein is nu `messaging.maasgo.net`, niet
+      `messaging.solace.cloud`), alle 3 `*_REMOTE_VPN` naar `enewable`,
+      nieuwe `*_SEMP_ADMIN_PASSWORD`-waarden. (`PLAN.md` sectie 13,
+      punt 42.)
+- [ ] **Resterende configuratiescripts opnieuw draaien** (de oude
+      `*_BRIDGE_PASSWORD`-waarden zijn ongeldig, nieuwe broker):
       `cloud-setup/solace-cloud-api/configure-remote-bridge-users.sh`,
       `local-broker/semp/configure-local-broker.sh` en
-      `configure-rdp-export.sh` opnieuw draaien. Zie
-      `cloud-setup/terraform/README.md`, "Na terraform apply", voor de
-      volledige sequentie. Niets in deze lijst hieronder kan opnieuw
-      bevestigd worden vóórdat dit is gedaan.
+      `configure-rdp-export.sh`. Zie `cloud-setup/terraform/README.md`,
+      "Na terraform apply", voor de volledige sequentie. Niets in de
+      lijst hieronder kan opnieuw bevestigd worden vóórdat dit is
+      gedaan.
 
 ## Moet vóór DADD
 
@@ -57,12 +53,6 @@ Laatst bijgewerkt: 01/10/2026.
       nep-`sdkperf_java.sh`-binaries. Minstens één echte run per tool,
       controleren in de Solace Cloud "Try Me!"-tabs. (`PLAN.md` sectie 13,
       punten 35, 37, 38.)
-- [ ] **STACKIT GA-check.** Kort vóór de repetitie/DADD checken of STACKIT
-      inmiddels als eigen datacenter-optie in Solace Cloud staat (i.p.v.
-      de GCP europe-west1-interim-stand-in) en zo ja overstappen -- zelfde
-      topics/ACL's/RDP-naam, alleen het fysieke eindpunt wisselt.
-      (`PLAN.md` sectie 10, fase 1; sectie 13, bullet "STACKIT
-      GA-timing".)
 - [ ] **Volledige testronde (fase 5) herhalen vlak vóór DADD**, niet
       vertrouwen op de eerdere validatie -- sindsdien zijn er meerdere
       functionele wijzigingen bijgekomen (alle 3 klassen per run,
@@ -90,11 +80,11 @@ Laatst bijgewerkt: 01/10/2026.
 ## Kan na DADD (bewuste scope-keuzes voor nu)
 
 - [ ] Automatische provisioning van alle 4 brokers in één commando
-      (Terraform/Ansible i.p.v. losse scripts). **Deels in uitvoering:**
-      de 3 cloud-services gaan nu via Terraform (zie bovenaan dit
-      bestand, "Blokkerend") -- de lokale broker (Docker + SEMP-config)
-      zit daar nog niet in. (`PLAN.md` sectie 13, bullet "Geen
-      automatische provisioning".)
+      (Terraform/Ansible i.p.v. losse scripts). De 3 cloud-services gaan nu
+      via Terraform (zie bovenaan dit bestand) en zijn succesvol
+      aangetoond herhaalbaar (02/10/2026) -- de lokale broker (Docker +
+      SEMP-config) zit daar nog niet in. (`PLAN.md` sectie 13, bullet
+      "Geen automatische provisioning".)
 - [ ] Monitoring/observability (Solace metrics/Prometheus i.p.v. alleen
       Broker Manager). (`PLAN.md` sectie 13, bullet "Geen
       monitoring/observability".)

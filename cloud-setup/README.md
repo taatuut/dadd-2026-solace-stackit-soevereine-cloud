@@ -17,15 +17,16 @@ uit een primary/backup broker-paar plus monitoring node, beheerd door Solace
 Cloud (Mission Control). Zie `../docs/cloud-brokers.md` voor de volledige
 toelichting en het belangrijke openstaande punt rond STACKIT-beschikbaarheid.
 
-> **Status (01/10/2026): de 3 services zijn verwijderd en moeten opnieuw
-> aangemaakt worden**, nu als "Developer 100"-tier in twee Solace Cloud-
-> organisaties (AWS+Azure in de ene, STACKIT in de andere) i.p.v. de
-> eerdere Enterprise-250-HA-klasse in één org. Zie
-> [`terraform/README.md`](terraform/README.md) voor de nieuwe, voorkeurs-
-> route (Terraform, de `solacecloud`-provider) en `../PLAN.md` sectie 13,
-> punt 40 / `../TODO.md` voor de volledige achtergrond en openstaande
-> aannames. De hieronder beschreven console-/`create-service.sh`-route
-> blijft werken als handmatig alternatief of fallback.
+> **Status (02/10/2026): de 3 services zijn opnieuw aangemaakt via
+> Terraform** als "Developer 100"-tier in twee Solace Cloud-organisaties
+> (AWS+Azure in de ene, STACKIT in de andere) i.p.v. de eerdere
+> Enterprise-250-HA-klasse in één org. STACKIT bleek daarbij een eigen,
+> echte `SolaceDedicated`-datacenter te hebben (geen GCP-interim nodig).
+> Zie [`terraform/README.md`](terraform/README.md) voor de route die is
+> gevolgd, en `../PLAN.md` sectie 13, punt 42 / `../TODO.md` voor de
+> volledige achtergrond. De hieronder beschreven console-/
+> `create-service.sh`-route blijft staan als handmatig alternatief of
+> fallback.
 
 ## Volgorde van werken
 
