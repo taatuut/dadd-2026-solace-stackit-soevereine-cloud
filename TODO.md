@@ -43,42 +43,36 @@ Laatst bijgewerkt: 02/10/2026.
 - [ ] **Draaiboek oefenen + fallback-opname maken.** Live-timing op het
       podium oefenen en een schermopname van een geslaagde run maken als
       vangnet voor slechte conferentiewifi/hardware (de presentatie zelf
-      raadt dit expliciet aan). (`PLAN.md` sectie 10, fase 6; sectie 11;
-      sectie 13, bullet "Geen backup/fallback-materiaal"; sectie 14,
-      punt 9.)
-- [ ] **De nieuwste variatie-uitbreidingen echt bevestigen op een cloud-
-      broker**, niet alleen via dry-run: de type/market-variatie (punt 37),
-      de postcodeArea/customerId-variatie (punt 38) en de `-pal`-fix
-      (punt 35) zijn tot nu toe alleen getest met nep-`stm`/
-      nep-`sdkperf_java.sh`-binaries. Minstens één echte run per tool,
-      controleren in de Solace Cloud "Try Me!"-tabs. (`PLAN.md` sectie 13,
-      punten 35, 37, 38.)
-- [ ] **Volledige testronde (fase 5) herhalen vlak vóór DADD**, niet
-      vertrouwen op de eerdere validatie -- sindsdien zijn er meerdere
-      functionele wijzigingen bijgekomen (alle 3 klassen per run,
-      dynamische topics, variatie-uitbreidingen). (`PLAN.md` sectie 10,
-      fase 5.)
+      raadt dit expliciet aan). Video komt later, maar wel vóór DADD.
+      (`PLAN.md` sectie 10, fase 6; sectie 11; sectie 13, bullet "Geen
+      backup/fallback-materiaal"; sectie 14, punt 9.)
+- [x] **De nieuwste variatie-uitbreidingen bevestigd** (Emil, 02/10/2026):
+      brede spreiding in markten/types, postcodegebieden en klant-ID's
+      zichtbaar gemaakt via de Sunburst Topic Explorer
+      (explorer.solace.dev) op de lokale broker. (`PLAN.md` sectie 13,
+      punten 35, 37, 38, 47.)
+- [ ] **Volledige testronde (fase 5) herhalen, stap voor stap**, niet
+      vertrouwen op de eerdere (gebundelde) validatie via
+      `run-demo-loop.sh` -- sindsdien zijn er meerdere functionele
+      wijzigingen bijgekomen (alle 3 klassen per run, dynamische topics,
+      variatie-uitbreidingen). Negative ACL-test (testplan-punt 5) en
+      koude-starttijd meten (testplan-punt 7) horen hier NIET meer bij --
+      zie "Kan na DADD" resp. hieronder waarom. (`PLAN.md` sectie 10,
+      fase 5; sectie 12.)
 
-## Zou goed zijn vóór DADD
-
-- [ ] **Negative ACL-test uitvoeren** (testplan-punt 5, nog niet gedaan):
-      bewust een "verkeerde" client-username op een andere klasse se topic
-      laten publiceren en bevestigen dat de broker dit weigert -- laat de
-      governance-garantie zien, niet alleen de happy path. (`PLAN.md`
-      sectie 12, punt 5.)
-- [ ] **Koude-starttijd meten**: tijd van `docker run` tot alle 3 RDP's
-      "Up", om te checken of dat ruim binnen de gewenste ~5 minuten voor
-      het podium past; anders de cloud-brokers vooraf al "warm" laten
-      draaien. (`PLAN.md` sectie 12, punt 7.)
-- [ ] **Twee punten expliciet benoemen in de talk zelf** (geen code-werk):
-      dat Azure hier fysiek in de EU staat maar organisatorisch een
-      Amerikaanse hyperscaler is (relevant gezien slide 2's CLOUD
-      Act-punt), en dat de cloud-broker-services bewust in public clusters
-      staan i.p.v. private/VPC-gepeerd. (`PLAN.md` sectie 13, bullets
-      "Azure = Amerikaanse hyperscaler" en "Public clusters".)
+Zie [`docs/demo-notes.md`](docs/demo-notes.md) voor de twee punten die
+expliciet in de talk zelf benoemd moeten worden (Azure = Amerikaanse
+hyperscaler ondanks EU-locatie; cloud-brokers bewust in public clusters)
+-- geen code-werk, wel onthouden tijdens het praatje.
 
 ## Kan na DADD (bewuste scope-keuzes voor nu)
 
+- [ ] **Negative ACL-test uitvoeren** (testplan-punt 5): bewust een
+      "verkeerde" client-username op een andere klasse se topic laten
+      publiceren en bevestigen dat de broker dit weigert -- laat de
+      governance-garantie zien, niet alleen de happy path. Verplaatst
+      hierheen op Emils verzoek (02/10/2026) -- geen blocker voor DADD
+      zelf. (`PLAN.md` sectie 12, punt 5.)
 - [ ] Automatische provisioning van alle 4 brokers in één commando
       (Terraform/Ansible i.p.v. losse scripts). De 3 cloud-services gaan nu
       via Terraform (zie bovenaan dit bestand) en zijn succesvol

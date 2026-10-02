@@ -262,13 +262,17 @@ ACL-configuratie, en sowieso nog een keer vlak voor DADD:
    een topic (bijv. `pub-public` proberen te laten publiceren op
    `enewable/eu/pii/...`) → dit moet door de ACL geweigerd worden (negative
    test, laat de governance-garantie zien, niet alleen de happy path).
+   **Verplaatst naar "Kan na DADD" (Emil, 02/10/2026, zie punt 47) -- geen
+   blocker voor DADD zelf.**
 6. Herstart de lokale broker-container en herhaal `configure-local-broker.sh`
    + `configure-rdp-export.sh` → opnieuw idempotent te draaien zonder
    handmatige opschoning.
 7. Meet de tijd van "koude start" (docker run tot alle 3 RDP's Up) -- moet
    ruim binnen de gewenste ~5 minuten passen; zo niet, overweeg de
    cloud-brokers al vooraf "warm" te laten draaien en alleen de lokale
-   broker + RDP's als het live-onderdeel te zien.
+   broker + RDP's als het live-onderdeel te zien. **Niet meer relevant
+   (Emil, 02/10/2026, zie punt 47): op de dag zelf start Emil met een al
+   "warme" omgeving (cloud-brokers al deployed/running).**
 
 ## 13. Wat ontbreekt of beter kan
 
@@ -1568,6 +1572,25 @@ productieklaar systeem:
      staan voor vlak vóór DADD zelf: de volledige testronde nog een keer
      herhalen (TODO.md, "Moet vóór DADD") en de negative-ACL-test
      (testplan-punt 5, nog niet gedaan).
+
+  47. **TODO.md-herprioritering en nieuw `docs/demo-notes.md` (Emil,
+     02/10/2026).** Op basis van de Sunburst Topic Explorer-screenshot
+     (brede spreiding in markten/types, postcodegebieden en klant-ID's,
+     lokale broker) bevestigt Emil dat "variatie-uitbreidingen op een
+     echte broker bevestigen" afgevinkt kan worden. De negative-ACL-test
+     (testplan-punt 5) verplaatst van "Zou goed zijn vóór DADD" naar "Kan
+     na DADD" -- geen blocker. Koude-starttijd meten (testplan-punt 7)
+     helemaal van de lijst af: Emil start op de dag zelf met een al
+     "warme" omgeving (cloud-brokers al deployed/running), dus niet
+     relevant. De twee presentatiepunten (Azure = Amerikaanse hyperscaler
+     ondanks EU-locatie; cloud-brokers bewust in public clusters) zijn
+     overgezet naar een nieuw bestand `docs/demo-notes.md` (spreektekst-
+     klaar, geen code-werk) in plaats van een TODO-bullet. De
+     fallback-video blijft gepland vóór DADD, maar komt pas later (geen
+     wijziging in prioriteit, alleen in timing t.o.v. vandaag). Vervolg:
+     de volledige testronde (fase 5, sectie 12 punten 1-4 en 6 -- NIET 5
+     en 7) stap voor stap herhalen, met bevestiging na elke stap (zie
+     verderop in deze sectie voor de losse punten).
 - **Geen automatische provisioning van alle 4 brokers in één commando.**
   Er is bewust voor losse, leesbare stappen gekozen (console + scripts per
   onderdeel) omdat dat beter uit te leggen en te debuggen is vóór een
