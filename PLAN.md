@@ -1865,6 +1865,35 @@ productieklaar systeem:
      opnieuw te maken. Geverifieerd met `git diff --stat` over alle
      gewijzigde bestanden en de soft-hyphen-sweep vóór commit.
 
+  55. **Documentatiestijl verder aangescherpt: README-sectieheader en
+     "--" naar "-" in alle documentatie (Emil + assistent, 02/10/2026).**
+     Emil formuleerde de achterliggende regel expliciet: een repository is
+     iets levends met een tijdloze, actuele status -- Git (commits, tags)
+     is het mechanisme om bij een eerdere versie uit te komen, dus
+     documentatie is geen tijdregistratie. Deze repo kent nog geen
+     releases; mocht dat ooit komen, dan is een apart release-bestand
+     (release notes/changelog) de juiste plek voor tijdgebonden info, niet
+     README.md/docs/*.md. Vastgelegd in `SKILLS.md`, "Documentatie bevat
+     alleen de huidige stand van zaken, geen geschiedenis" (uitgebreid met
+     deze framing). Concreet toegepast: 1) README.md's sectieheader "Aan
+     de cloud-kant -- dit README automatiseert dit NIET:" (nog een relict
+     van vóór punt 54) vervangen door "Aan de cloud-kant:", en de sectie
+     zelf herschreven om te LEIDEN met de huidige situatie (de 3 services
+     worden aangemaakt met Terraform) in plaats van met wat het README
+     niet doet, met behoud van de lijst met per-service benodigde
+     gegevens; 2) alle dubbele koppeltekens ("--") die als gedachtestreepje
+     in doorlopende tekst werden gebruikt, in README.md en alle overige
+     documentatie (behalve `PLAN.md`/`TODO.md`, die hun eigen, bestaande
+     stijl behouden) vervangen door een enkel koppelteken ("-") -- via een
+     script dat eerst fenced codeblokken (bash-voorbeelden, Mermaid-
+     diagrammen, ASCII-art) buiten schot houdt, zodat CLI-vlaggen als
+     `--class`/`--delivery-mode` en Mermaid-pijlsyntax (`-->`) onveranderd
+     bleven; nieuwe stijlregel toegevoegd aan `SKILLS.md`. Geverifieerd:
+     een grep op whitespace-omsloten "--" buiten codeblokken geeft nul
+     treffers meer in de doorgelopen documentatie, en de bestaande
+     CLI-vlaggen/ASCII-art/Mermaid-syntax zijn steekproefsgewijs
+     gecontroleerd als ongewijzigd.
+
 - **Geen automatische provisioning van alle 4 brokers in één commando.**
   Er is bewust voor losse, leesbare stappen gekozen (console + scripts per
   onderdeel) omdat dat beter uit te leggen en te debuggen is vóór een

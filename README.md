@@ -10,7 +10,7 @@ zien hoe data op basis van classificatie (publiek / niet-persoonlijk EU /
 gevoelige PII) automatisch naar precies de juiste, en alleen de juiste,
 bestemming stroomt. Drie losse publicatie-tools (stm, een Python-script,
 SDKPerf) publiceren allemaal naar dezelfde lokale broker, en publiceren
-daarbij elk **alle drie de dataklassen** -- welke tool je gebruikt maakt
+daarbij elk **alle drie de dataklassen** - welke tool je gebruikt maakt
 voor de bestemming geen enkel verschil, alleen de topic (en de
 bijbehorende, per-klasse gescoped identiteit) bepaalt volledig (en
 uitsluitend) op welke cloud-broker een bericht landt.
@@ -33,7 +33,7 @@ sdkperf        --/     (elke tool publiceert alle 3 klassen)      \--> STACKIT  
 Elke demo-app publiceert **DIRECT** naar de lokale broker, op **alle drie**
 topic-subtrees, elk met zijn eigen ACL-gescoped client-username
 (`pub-public`/`pub-eu-ops`/`pub-eu-pii`) die (via een ACL-profiel) alleen op
-die ene subtree mag publiceren -- welke tool de afzender is, doet voor de
+die ene subtree mag publiceren - welke tool de afzender is, doet voor de
 bestemming niet ter zake. Op de lokale broker vangt een **queue per
 subtree** dat bericht automatisch op ("message promotion"), en een **REST
 Delivery Point (RDP)** stuurt die queue één-op-één door naar het
@@ -50,24 +50,32 @@ detail.
   toegewezen.
 - `curl` en `python3` (meestal al aanwezig).
 - Node.js + npm (voor de Solace Try-Me CLI, `stm`).
-- Java (voor SDKPerf) -- zie
+- Java (voor SDKPerf) - zie
   [`demo-apps/sdkperf-pii/README.md`](demo-apps/sdkperf-pii/README.md) voor
   de downloadlink.
 - `jq` is optioneel maar aanbevolen (leesbaardere scriptoutput); alles werkt
   ook zonder.
 
-**Aan de cloud-kant -- dit README automatiseert dit NIET:**
+**Aan de cloud-kant:**
 
-Dit README gaat ervan uit dat de 3 Solace Cloud broker-services **al
-bestaan**: AWS (US East), Azure (West Europe) en STACKIT (eu01, een
-eigen, echte `SolaceDedicated`-datacenter in Solace Cloud). Je hebt de
-volgende gegevens per service nodig (te vinden op de Connect-tab van elke
-service in de Solace Cloud console, of in de Terraform-output, zie
-hieronder):
+De 3 Solace Cloud broker-services (AWS US East, Azure West Europe, STACKIT
+eu01 met een eigen, echte `SolaceDedicated`-datacenter) worden aangemaakt
+met **Terraform**
+([`cloud-setup/terraform/README.md`](cloud-setup/terraform/README.md)):
+dat maakt alle 3 services in één `terraform apply` aan (AWS en Azure in de
+ene Solace Cloud-organisatie, STACKIT in een andere, elk als
+"Developer 100"-tier). De handmatige console-wizard en
+`cloud-setup/solace-cloud-api/create-service.sh` zijn een alternatief (zie
+[`cloud-setup/README.md`](cloud-setup/README.md) voor de submap per
+provider).
+
+Dit README gaat er verder van uit dat de 3 services **al bestaan**. Je
+hebt de volgende gegevens per service nodig (te vinden op de Connect-tab
+van elke service in de Solace Cloud console, of in de Terraform-output):
 
 - SMF-hostname (bijv. `mr-connection-xxxxxxxxxxx.messaging.solace.cloud`,
   poort 55443/TLS).
-- REST-hostname:poort (meestal dezelfde hostname als SMF, poort 9443/TLS --
+- REST-hostname:poort (meestal dezelfde hostname als SMF, poort 9443/TLS -
   bevestig dit op de Connect-tab, en zet REST-messaging aan voor die
   service als het nog uit staat).
 - Message VPN-naam.
@@ -76,20 +84,11 @@ hieronder):
   (`enewable/public/>` voor AWS, `enewable/eu/ops/>` voor Azure,
   `enewable/eu/pii/>` voor STACKIT).
 
-Als je deze services of credentials nog niet hebt: de aanbevolen,
-herhaalbare route is **Terraform**
-([`cloud-setup/terraform/README.md`](cloud-setup/terraform/README.md)) --
-dat maakt alle 3 services in één `terraform apply` aan (AWS en Azure in de
-ene Solace Cloud-organisatie, STACKIT in een andere, elk als
-"Developer 100"-tier). De handmatige console-wizard en
-`cloud-setup/solace-cloud-api/create-service.sh` blijven staan als
-alternatief/fallback (zie [`cloud-setup/README.md`](cloud-setup/README.md)
-voor de submap per provider). In beide gevallen geldt: Terraform (en de
-console/API-route) maakt alleen de services zelf aan -- de publish-only
-client-username + ACL-profiel per broker is SEMP-niveau-configuratie op de
-broker zelf en moet je daarna altijd nog zelf draaien met
-`cloud-setup/solace-cloud-api/configure-remote-bridge-users.sh`. Dat, en de
-stappen hieronder, vallen buiten de scope van dit README.
+Terraform (en de console/API-route) maakt alleen de services zelf aan - de
+publish-only client-username + ACL-profiel per broker is SEMP-niveau-
+configuratie op de broker zelf en moet je daarna altijd nog zelf draaien
+met `cloud-setup/solace-cloud-api/configure-remote-bridge-users.sh`. Dat,
+en de stappen hieronder, vallen buiten de scope van dit README.
 
 ## Stap voor stap: van nul naar draaiende demo
 
@@ -123,7 +122,7 @@ client-usernames (`pub-public`/`pub-eu-ops`/`pub-eu-pii`) die elk alleen op
 hun eigen topic-subtree mogen publiceren, en een read-only `monitor`
 client-username die op heel `enewable/>` mag *subscriben* maar nergens op
 mag publiceren (bedoeld voor visualisatietools, zie "Verkeer visualiseren"
-hieronder). Idempotent -- veilig om opnieuw te draaien (bijv. na een
+hieronder). Idempotent - veilig om opnieuw te draaien (bijv. na een
 container-restart, zie "Geen persistente opslag" in `docs/lokale-broker.md`).
 
 ### RDP-export naar de 3 cloud-brokers configureren
@@ -148,7 +147,7 @@ Open `http://localhost:8080` > VPN `enewable` en controleer:
   "Up".
 
 Als een RDP "Down" blijft of de queue-binding een fout geeft, geeft Broker
-Manager zelf geen reden -- draai `./semp/diagnose-rdp.sh` (schrijft naar
+Manager zelf geen reden - draai `./semp/diagnose-rdp.sh` (schrijft naar
 `../output/diagnose-rdp.txt`) voor de SEMP v2 MONITOR-details, en zie
 "Bekende risico's" in `docs/lokale-broker.md` voor de meest voorkomende
 oorzaken die deze demo eerder heeft blootgelegd.
@@ -157,7 +156,7 @@ oorzaken die deze demo eerder heeft blootgelegd.
 
 Elke demo-app publiceert naar de lokale broker met de 3 al aangemaakte,
 per-klasse gescoped client-usernames (zie "Lokale broker configureren"
-hierboven) -- er is geen extra
+hierboven) - er is geen extra
 configuratie per app nodig, alleen de tool zelf installeren. Elke tool
 publiceert standaard alle 3 dataklassen (publiek -> AWS, niet-persoonlijk
 EU -> Azure, PII -> STACKIT); zie
@@ -193,13 +192,13 @@ SDKPERF_BIN=/pad/naar/sdkperf-jcsmp-x.y.z/sdkperf_java.sh
 ```
 
 `demo-apps/sdkperf-pii/publish-pii.sh` leest dit automatisch (samen met de
-rest van `.env`) -- je hoeft `.env` zelf nergens handmatig te `source`'n.
+rest van `.env`) - je hoeft `.env` zelf nergens handmatig te `source`'n.
 
 ### Eén demo-app draaien en op alle 3 brokers verifiëren
 
 Open in de Solace Cloud console de "Try Me!"-tab van elke van de 3
 cloud-services (AWS/Azure/STACKIT), en laat ze het liefst naast elkaar open
-staan. Draai dan **één** van de drie tools -- bijvoorbeeld:
+staan. Draai dan **één** van de drie tools - bijvoorbeeld:
 
 ```bash
 ./demo-apps/stm-public/publish-public.sh
@@ -214,7 +213,7 @@ aankomen, elk op de juiste topic en nergens anders:
 - **STACKIT**: `enewable/eu/pii/>`
 
 Herhaal dit gerust met de andere twee tools (Python-script, SDKPerf) om te
-laten zien dat het geen toevalstreffer van één specifieke tool is -- alle
+laten zien dat het geen toevalstreffer van één specifieke tool is - alle
 drie doen precies hetzelfde:
 
 ```bash
@@ -275,7 +274,7 @@ Opties (zie ook `./local-broker/scripts/run-demo-loop.sh --help`):
 ### Optioneel: verkeer visualiseren met Sunburst Topic Explorer
 
 [Sunburst Topic Explorer](https://explorer.solace.dev/) laat de topic-boom
-van een broker live zien terwijl er berichten doorheen stromen -- handig om
+van een broker live zien terwijl er berichten doorheen stromen - handig om
 tijdens de demo te laten zien hoe `enewable/public/>`,
 `enewable/eu/ops/>` en `enewable/eu/pii/>` zich als 3 losse takken
 gedragen. Connect met:
@@ -287,7 +286,7 @@ gedragen. Connect met:
 
 Dit is *niet* dezelfde combinatie als `default`/`default` waarmee je
 waarschijnlijk al tegen de broker se ingebouwde `default`-VPN hebt getest
--- die combinatie bestaat alleen op de VPN die letterlijk `default` heet.
+- die combinatie bestaat alleen op de VPN die letterlijk `default` heet.
 `enewable` heeft zijn eigen client-usernames (zie "Lokale broker
 configureren" hierboven): de 3
 publish-only-accounts (`pub-*`) mogen expliciet niet subscriben, dus
@@ -296,7 +295,7 @@ heel `enewable/>` mag subscriben maar zelf niets kan publiceren.
 
 **Let op het "Topic(s)"-veld in Sunburst zelf**: dat staat standaard op
 `#noexport/>, #noexport/#P2P/>` (een intern Solace-topicprefix, niet onze
-demo-data) -- verander dit naar `enewable/>` vóór je op "Start/Subscribe"
+demo-data) - verander dit naar `enewable/>` vóór je op "Start/Subscribe"
 klikt, anders krijg je een "Subscription ACL Denied"-foutmelding. Dit is
 geen ACL-probleem (`acl-monitor` staat al goed, zie hierboven) maar puur
 de topic die Sunburst zelf standaard invult.
@@ -307,17 +306,17 @@ de topic die Sunburst zelf standaard invult.
   in Broker Manager" hierboven en `docs/lokale-broker.md`, sectie "Bekende
   risico's".
 - **`command not found` voor `stm`/`sdkperf_java.sh`/python-modules**: zie
-  "De 3 demo-apps installeren" hierboven -- dit zijn eenmalige
+  "De 3 demo-apps installeren" hierboven - dit zijn eenmalige
   installatiestappen per demo-app, geen repo-bug.
 - **Je gebruikt zsh (macOS-default) en een commando uit dit README lijkt
   raar te falen** (bijv. een `ModuleNotFoundError` na een geslaagd
   ogende `pip install`): controleer of je zelf een `#`-toelichting achter
-  een commando hebt geplakt op dezelfde regel -- zsh negeert een inline
+  een commando hebt geplakt op dezelfde regel - zsh negeert een inline
   `#`-commentaar, in tegenstelling tot bash, niet automatisch.
 - **Overig**: `local-broker/semp/diagnose-local-auth.sh`,
   `diagnose-rdp.sh` en `watch-rdp-live.sh` zijn read-only diagnostiekscripts
   (SEMP v2 MONITOR-API) die tijdens de ontwikkeling van deze demo elk
-  concreet probleem hebben blootgelegd -- zie hun eigen header-commentaar en
+  concreet probleem hebben blootgelegd - zie hun eigen header-commentaar en
   `docs/lokale-broker.md` voor de volledige geschiedenis.
 
 ## Sessie hervatten / werken met een AI-coding-agent aan deze repo
@@ -326,19 +325,19 @@ Deze repo is interactief opgebouwd met een AI-coding-agent en is zo
 gedocumenteerd dat je (of een agent) een sessie kan sluiten en later
 zonder verlies van context weer kan oppakken:
 
-- **[`TODO.md`](TODO.md)** -- start hier. De actuele, geprioriteerde
+- **[`TODO.md`](TODO.md)** - start hier. De actuele, geprioriteerde
   actielijst (moet vóór DADD / zou goed zijn / kan na DADD), elk item met
   een verwijzing naar het bijbehorende punt in `PLAN.md`.
-- **[`PLAN.md`](PLAN.md)** -- het volledige, chronologische logboek: elke
+- **[`PLAN.md`](PLAN.md)** - het volledige, chronologische logboek: elke
   stap, beslissing, bug en fix, met sectie- en puntnummers. Bij twijfel is
   dit bestand altijd de meest actuele en volledige bron, ook t.o.v. de
   Woord-samenvatting.
-- **[`AGENTS.md`](AGENTS.md)** -- architectuurfeiten en werkconventies die
+- **[`AGENTS.md`](AGENTS.md)** - architectuurfeiten en werkconventies die
   je moet kennen vóór je code/config wijzigt (bijv. het
   wildcard-topic-subtree-patroon dat broker-herconfiguratie overbodig
   maakt, en de documentatie-/commit-conventie die deze repo consequent
   volgt).
-- **[`SKILLS.md`](SKILLS.md)** -- concrete, herbruikbare recepten die
+- **[`SKILLS.md`](SKILLS.md)** - concrete, herbruikbare recepten die
   tijdens het bouwen zijn ontdekt (dry-run-testmethode zonder live broker,
   correcte SDKPerf-vlaggen, Sunburst-gotcha's, ...). Check dit vóórdat je
   een probleem opnieuw uitzoekt dat hier al is opgelost.

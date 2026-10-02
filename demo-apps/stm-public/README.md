@@ -1,8 +1,8 @@
-# stm -- alle 3 dataklassen (via één tool)
+# stm - alle 3 dataklassen (via één tool)
 
 Gebruikt [Solace Try-Me CLI](https://github.com/SolaceLabs/solace-tryme-cli)
 (`stm`) om Enewable-data te publiceren. Publiceert standaard **alle drie**
-de dataklassen -- publiek, niet-persoonlijk EU, en gevoelige PII -- elk met
+de dataklassen - publiek, niet-persoonlijk EU, en gevoelige PII - elk met
 zijn eigen topic en zijn eigen scoped client-username, om te laten zien dat
 de bestemming door de topic wordt bepaald, niet door de tool (zie
 `../README.md`).
@@ -37,7 +37,7 @@ uit 10 `postcodeArea`-waarden (`1000-NL` .. `9700-NL`); **eu-pii** uit 20
 fictieve `customerId`-waarden (`ENW-NL-000482` .. `ENW-NL-010799`). Dit
 betekent dat `stm send` nu voor ELKE klasse COUNT keer los wordt
 aangeroepen (één bericht per keer, telkens met een eigen topic + payload),
-i.p.v. één `--count N`-batch -- zichtbaar langzamer per bericht
+i.p.v. één `--count N`-batch - zichtbaar langzamer per bericht
 (Node-opstarttijd elke keer), maar nodig voor echte variatie. Verlaag
 `COUNT` (bijv. `5`) voor een snellere pas als de demotijd beperkt is.
 Beperk tot één klasse met `--class`:
@@ -63,7 +63,7 @@ Let op `--delivery-mode DIRECT`: `stm send` publiceert standaard
 PERSISTENT (guaranteed), wat de lokale broker afwijst ("Sending
 guaranteed message is not allowed by router for this client") omdat het
 `default` client-profile bewust `allowGuaranteedMsgSendEnabled: false`
-heeft -- deze demo is expliciet op DIRECT-publiceren + automatische
+heeft - deze demo is expliciet op DIRECT-publiceren + automatische
 queue-promotion gebouwd (zie `PLAN.md` sectie 13, punt 22).
 
 Verifieer op de AWS-, Azure- en STACKIT-broker (Solace Cloud console, tab

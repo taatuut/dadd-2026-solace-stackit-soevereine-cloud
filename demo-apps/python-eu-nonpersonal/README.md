@@ -1,9 +1,9 @@
-# Python-script -- alle 3 dataklassen (via één tool)
+# Python-script - alle 3 dataklassen (via één tool)
 
 Publiceert Enewable-data naar de lokale broker met de
 [Solace PubSub+ Python API](https://docs.solace.com/API/API-Developer-Guide-Python/).
-Publiceert standaard **alle drie** de dataklassen -- publiek,
-niet-persoonlijk EU, en gevoelige PII -- elk met zijn eigen topic en zijn
+Publiceert standaard **alle drie** de dataklassen - publiek,
+niet-persoonlijk EU, en gevoelige PII - elk met zijn eigen topic en zijn
 eigen scoped client-username (elke klasse opent zijn eigen verbinding, een
 Solace-identiteit hoort bij precies één client-username), om te laten zien
 dat de bestemming door de topic wordt bepaald, niet door de tool (zie

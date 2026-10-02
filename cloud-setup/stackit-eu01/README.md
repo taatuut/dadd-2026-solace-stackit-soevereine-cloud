@@ -1,4 +1,4 @@
-# STACKIT eu01 (Duitsland) -- sovereign broker (gevoelige PII)
+# STACKIT eu01 (Duitsland) - sovereign broker (gevoelige PII)
 
 Rol: eindpunt voor **gevoelige persoonsgegevens** (bijv. individuele
 slimme-meterstanden gekoppeld aan klant-ID, facturatiegebeurtenissen). Dit is
@@ -10,7 +10,7 @@ naar de soevereine, Europese, niet-hyperscaler-omgeving.
 STACKIT heeft een eigen, echte `SolaceDedicated`-datacenter
 (`stackitdemo-stackit-eu01-production`, "StackIT Production Region") in
 Solace Cloud, met dezelfde self-service deployment-ervaring als AWS en
-Azure -- gewoon te kiezen als datacenter bij het aanmaken van de service,
+Azure - gewoon te kiezen als datacenter bij het aanmaken van de service,
 geen aparte Controlled-Availability/BYOK-procedure.
 
 ## Aanmaken
@@ -53,6 +53,6 @@ en worden gebruikt door de REST Delivery Point's REST-consumer
 
 ## Waarom deze klasse sowieso op een soevereine (niet-hyperscaler) omgeving moet
 
-Behandel het wachtwoord van de publish-client-username als een geheim --
+Behandel het wachtwoord van de publish-client-username als een geheim -
 dit is de gevoeligste route in de demo. Voor deze dataklasse zit geen
 enkele hyperscaler-eigenaar (Amerikaans of anderszins) in de keten.

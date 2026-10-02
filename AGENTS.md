@@ -10,8 +10,8 @@ logboek) en `SKILLS.md` (herbruikbare recepten/oplossingen).
 Een demo-opzet voor een DADD 2026-presentatie over soevereine,
 event-driven infrastructuur: één lokale Solace-broker ontvangt drie
 dataklassen (publiek, niet-persoonlijk EU, gevoelige PII) van drie
-demo-apps, en levert elke klasse -- puur op basis van de topic waarop
-gepubliceerd wordt -- automatisch aan de juiste (en alleen de juiste)
+demo-apps, en levert elke klasse - puur op basis van de topic waarop
+gepubliceerd wordt - automatisch aan de juiste (en alleen de juiste)
 cloud-broker (AWS, Azure, STACKIT). Zie `PLAN.md` sectie 1-3 voor de
 volledige context en `README.md` voor de stap-voor-stap-handleiding.
 
@@ -21,7 +21,7 @@ volledige context en `README.md` voor de stap-voor-stap-handleiding.
   gebruiken het `enewable/<klasse>/>`-multi-level-wildcard-patroon**
   (`configure-local-broker.sh` resp. `configure-rdp-export.sh`), niet een
   exacte topic-string. Extra topic-niveaus toevoegen (bijv. een nieuw
-  dynamisch veld) vereist dus GEEN broker-herconfiguratie -- verifieer dit
+  dynamisch veld) vereist dus GEEN broker-herconfiguratie - verifieer dit
   altijd met `grep` in die twee scripts vóórdat je een topic-wijziging
   aanneemt dat wel te vereisen.
 - De 3 publish-only client-usernames (`pub-public`/`pub-eu-ops`/
@@ -36,12 +36,12 @@ volledige context en `README.md` voor de stap-voor-stap-handleiding.
 - **macOS bash 3.2-compatibiliteit**: gebruik nooit `declare -A` in de
   bash-scripts (`stm-public/publish-public.sh`,
   `sdkperf-pii/publish-pii.sh`, `local-broker/scripts/run-demo-loop.sh`,
-  de `semp/*.sh`-scripts) -- plain indexed arrays (`ARR=(a b c)`) wel.
+  de `semp/*.sh`-scripts) - plain indexed arrays (`ARR=(a b c)`) wel.
   Emil test op macOS met de systeem-bash (3.2), niet een nieuwere via
   Homebrew.
 - `stm`/`sdkperf`-scripts lezen basisvelden uit
   `demo-apps/sample-payloads/*.json` met `jq` als dat beschikbaar is,
-  anders een grep/sed-fallback -- **iedere wijziging aan hoe een veld
+  anders een grep/sed-fallback - **iedere wijziging aan hoe een veld
   wordt gelezen/overschreven moet BEIDE paden blijven ondersteunen** en
   beide moeten getest worden (zie `SKILLS.md`, "No-jq-fallback testen").
 
@@ -51,10 +51,10 @@ Deze repo heeft een strikte gewoonte, zichtbaar in `git log`: na elke
 functionele wijziging worden in dezelfde commit meegenomen:
 
 1. De relevante code/config.
-2. `PLAN.md` -- een nieuw genummerd punt in sectie 13 ("Wat ontbreekt of
+2. `PLAN.md` - een nieuw genummerd punt in sectie 13 ("Wat ontbreekt of
    beter kan") met: wat er is gewijzigd, waarom, welke bestanden, en hoe
    het is geverifieerd (dry-run-details, testresultaten). Dit is het
-   primaire, meest volledige logboek -- bij twijfel is `PLAN.md` de
+   primaire, meest volledige logboek - bij twijfel is `PLAN.md` de
    waarheid, niet een samenvatting elders.
 3. De betrokken `README.md`-bestanden (root + per demo-app) en
    `docs/*.md`, zodat er geen verouderde claims blijven staan (bijv. "klasse
@@ -67,7 +67,7 @@ functionele wijziging worden in dezelfde commit meegenomen:
    commit-message (wat + waarom, niet alleen wat).
 
 Volg dit patroon ook als jij de wijziging doet. Sla geen van deze stappen
-over "om tijd te besparen" -- inconsistente documentatie is in deze repo
+over "om tijd te besparen" - inconsistente documentatie is in deze repo
 al meermaals een reële bron van verwarring geweest.
 
 ## Taal
@@ -81,31 +81,31 @@ gebruikt.
 
 `local-broker/.env` (en de losse `.env`-bestanden onder `demo-apps/*` en
 `cloud-setup/solace-cloud-api/`) staan in `.gitignore` en bevatten echte
-wachtwoorden/tokens -- commit deze NOOIT en zet geen echte waarden in een
+wachtwoorden/tokens - commit deze NOOIT en zet geen echte waarden in een
 `.env.example`. Als je een nieuwe configuratiewaarde toevoegt, voeg de
 sleutel (met een placeholder) toe aan het bijbehorende `.env.example` EN
-vraag de gebruiker om de echte waarde in zijn eigen `.env` te zetten --
+vraag de gebruiker om de echte waarde in zijn eigen `.env` te zetten -
 schrijf zelf nooit een verzonnen waarde in een echt `.env`-bestand.
 
 ## Stapsgewijze procedures (installaties, deploys, console-acties)
 
 Wanneer Emil door een procedure geleid wordt die hij zelf moet uitvoeren
 (een CLI installeren, `terraform apply` draaien, iets in een console
-aanklikken) -- geef **één instructie tegelijk**, niet de hele lijst
+aanklikken) - geef **één instructie tegelijk**, niet de hele lijst
 vooruit. Wacht zijn terugkoppeling af (gelukt, of de foutmelding) en geef
 pas daarna de volgende stap. Reden: dit soort procedures loopt in de
 praktijk zelden in één keer goed (zie bijv. `SKILLS.md`, "Terraform CLI
-installeren op macOS" -- de eerste aanname bleek al fout), en een hele
+installeren op macOS" - de eerste aanname bleek al fout), en een hele
 lijst vooruit geven betekent dat een foute vroege stap pas laat opvalt,
 met vervolgstappen die op een verkeerde aanname voortbouwen. Dit geldt
 ook als de assistent de volgende stappen al kan voorbereiden (bijv. een
-bestand alvast invullen) -- het voorbereiden mag vooruitlopen, de
+bestand alvast invullen) - het voorbereiden mag vooruitlopen, de
 instructies AAN Emil niet.
 
 **Nooit een inline `#`-commentaar op dezelfde regel als een commando dat
 Emil moet kopiëren-plakken.** zsh (macOS-default) behandelt een `#` in een
 interactieve shell NIET automatisch als commentaar (zie README.md,
-"Problemen oplossen") -- `terraform version   # >= 1.5 verwacht` werd
+"Problemen oplossen") - `terraform version   # >= 1.5 verwacht` werd
 letterlijk uitgevoerd als `terraform version` met een output-redirect naar
 een bestand genaamd `=` (uit de `>=`), wat een leeg `=`-bestand in de
 repo-root opleverde. Zet toelichting op een eigen regel erboven, nooit

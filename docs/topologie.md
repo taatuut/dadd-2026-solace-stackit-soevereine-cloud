@@ -2,10 +2,10 @@
 
 ## Overzicht
 
-Vier Solace-brokers, drie dataklassen, drie REST Delivery Points (RDP) --
+Vier Solace-brokers, drie dataklassen, drie REST Delivery Points (RDP) -
 elke dataklasse mag naar precies één bestemming. (Niet gebruikt: Message
 VPN Bridges kunnen alleen *importeren* van een remote broker, niet
-exporteren -- zie "Waarom RDP's" hieronder.)
+exporteren - zie "Waarom RDP's" hieronder.)
 
 ```mermaid
 flowchart LR
@@ -45,11 +45,11 @@ flowchart LR
     class ST,STVPN pii
 ```
 
-(Bron: `topology/topologie.mmd` -- zelfde diagram, los renderbaar met elke
+(Bron: `topology/topologie.mmd` - zelfde diagram, los renderbaar met elke
 Mermaid-viewer of `mmdc`.)
 
 **Alle 3 tools publiceren op alle 3 topic-subtrees** (elk met zijn eigen,
-ACL-gescoped client-username per klasse -- `pub-public`/`pub-eu-ops`/
+ACL-gescoped client-username per klasse - `pub-public`/`pub-eu-ops`/
 `pub-eu-pii`), niet één klasse per tool. Het diagram laat de 3 tools daarom
 bewust zonder klasse-specifiek label zien: welke tool je draait maakt voor
 de routering geen verschil, alleen de topic (en de bijbehorende identiteit)
@@ -74,20 +74,20 @@ doet dat. Zie `../demo-apps/README.md`.
 
 Elke queue/RDP-paar moet uitsluitend zijn eigen subtree exporteren, en elke
 publicerende client-username mag (via een ACL-profiel) uitsluitend op zijn
-eigen subtree publiceren -- de dubbele "governed export": eenmaal aan de bron
+eigen subtree publiceren - de dubbele "governed export": eenmaal aan de bron
 (publish-ACL) en eenmaal aan de grens (queue-subscriptie/RDP).
 
 **✅ Opgelost via REST Delivery Points (zie `PLAN.md` sectie 13, punt 11, en
 `../docs/lokale-broker.md`, "Definitieve keuze"):** een Message VPN Bridge's
 `remoteSubscription` trekt berichten van de remote broker naar binnen
-(import), niet naar buiten -- dat bleek de kern van waarom bridges niet
+(import), niet naar buiten - dat bleek de kern van waarom bridges niet
 werkten voor export zonder een publiek bereikbare lokale broker. In plaats
 daarvan gebruikt deze demo nu een **queue per topic-subtree** (vangt de
 lokaal DIRECT gepubliceerde berichten automatisch op via Solace's "message
 promotion") + een **REST Delivery Point** die elke queue naar het REST-
 endpoint van de bijbehorende cloud-broker post, op exact dezelfde topic
 (`postRequestTarget: "/${topic()}"`). Geen publieke bereikbaarheid van de
-lokale broker nodig -- de RDP dialt net als een bridge zelf uit.
+lokale broker nodig - de RDP dialt net als een bridge zelf uit.
 
 ## Waarom REST Delivery Points en niet "echte" `#noexport`/DMR?
 

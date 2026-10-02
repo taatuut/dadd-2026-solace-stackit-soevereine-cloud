@@ -1,9 +1,9 @@
-# SDKPerf -- alle 3 dataklassen (via één tool)
+# SDKPerf - alle 3 dataklassen (via één tool)
 
 Gebruikt [SDKPerf](https://docs.solace.com/API/SDKPerf/SDKPerf.htm)
 (`sdkperf_java`) om Enewable-data te publiceren. Publiceert standaard **alle
-drie** de dataklassen -- publiek, niet-persoonlijk EU, en gevoelige PII
-(individuele slimme-meterstanden gekoppeld aan een klant-ID) -- elk met zijn
+drie** de dataklassen - publiek, niet-persoonlijk EU, en gevoelige PII
+(individuele slimme-meterstanden gekoppeld aan een klant-ID) - elk met zijn
 eigen topic en zijn eigen scoped client-username, om te laten zien dat de
 bestemming door de topic wordt bepaald, niet door de tool (zie
 `../README.md`). Verifieer expliciet dat de PII-berichten niet op de AWS-
@@ -37,7 +37,7 @@ bericht overschreven): **public** uit 3 types
 (`1000-NL` .. `9700-NL`); **eu-pii** uit 20 fictieve `customerId`-waarden
 (`ENW-NL-000482` .. `ENW-NL-010799`). Dit betekent dat `sdkperf_java.sh`
 nu voor ELKE klasse COUNT keer los wordt aangeroepen (één bericht per
-keer), i.p.v. één `-mn=N`-batch -- zichtbaar langzamer per bericht
+keer), i.p.v. één `-mn=N`-batch - zichtbaar langzamer per bericht
 (JVM-opstarttijd elke keer), maar nodig voor echte variatie. Verlaag
 `COUNT` (bijv. `5`) voor een snellere pas als de demotijd beperkt is.
 Beperk tot één klasse met `--class`:
@@ -56,18 +56,18 @@ sdkperf_java.sh -cip=localhost:55554 -cu=pub-eu-pii@enewable -cp="$PUB_EU_PII_PA
 ```
 
 (Het laatste topicniveau, `ENW-NL-000482`, is één van de 20
-`customerId`-waarden waaruit het script per bericht willekeurig kiest --
+`customerId`-waarden waaruit het script per bericht willekeurig kiest -
 het overschrijft daarmee het `customerId`-veld uit
 `../sample-payloads/eu-pii.json` in plaats van dat vaste veld te
 hergebruiken.)
 
 (`-pal` = payload-attachment-list: stuurt de ruwe inhoud van het bestand
-als binary attachment. Niet `-mf` -- die optie bestaat niet en geeft
+als binary attachment. Niet `-mf` - die optie bestaat niet en geeft
 "Unrecognized option: -mf", bevestigd door Emil op een echte SDKPerf
 8.4.17.5-installatie.)
 
 > Let op: dit is met opzet **fictieve, gesynthetiseerde** klantdata (zie
-> `../sample-payloads/eu-pii.json`) -- gebruik nooit echte persoonsgegevens
+> `../sample-payloads/eu-pii.json`) - gebruik nooit echte persoonsgegevens
 > in een demo.
 
 Verifieer op de AWS-, Azure- en STACKIT-broker (Solace Cloud console, tab

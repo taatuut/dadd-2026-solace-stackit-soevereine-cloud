@@ -23,20 +23,20 @@ Cloud-organisaties (AWS+Azure in de ene, STACKIT in de andere), elk als
 
 1. Maak (of hergebruik) een Solace Cloud account en een API-token met de
    scope `services:post`/`services:get` (Mission Control > API Tokens).
-2. Maak de 3 services aan -- via de console (aanbevolen voor de eerste keer)
+2. Maak de 3 services aan - via de console (aanbevolen voor de eerste keer)
    of via `solace-cloud-api/create-service.sh` (REST API, herhaalbaar).
 3. Noteer per service: SMF-host:port (55443, TLS), REST-host:port (9443,
-   aanname -- bevestig op de Connect-tab) en Message VPN-naam (zie per
+   aanname - bevestig op de Connect-tab) en Message VPN-naam (zie per
    submap; deze zijn al ingevuld in `../local-broker/.env.example`).
-4. Maak per service een publish-client-username (`enewable-local-bridge` --
+4. Maak per service een publish-client-username (`enewable-local-bridge` -
    deze naam dekt niet de huidige functie: wordt gebruikt door de REST
    Delivery Point's REST-consumer, niet door een bridge; wachtwoord al
-   gegenereerd in `../local-broker/.env`) met een publish-only ACL-profiel -- handmatig via
+   gegenereerd in `../local-broker/.env`) met een publish-only ACL-profiel - handmatig via
    Manage > Client Usernames (zie per submap), of automatisch met
    `solace-cloud-api/configure-remote-bridge-users.sh` zodra je de
    SEMP-admin-username/password per broker (Connect-tab) in `.env` hebt
    ingevuld. **Let op**: dit script gebruikt de SEMP v2 Config API van elke
-   broker zelf, niet de Mission Control API/het token -- en moet, net als
+   broker zelf, niet de Mission Control API/het token - en moet, net als
    `create-service.sh`, door jou zelf gedraaid worden (zie
    `../docs/cloud-brokers.md`, "Provisioning: console vs. API" voor waarom).
 5. Run `../local-broker/semp/configure-local-broker.sh` (VPN, ACL's,
