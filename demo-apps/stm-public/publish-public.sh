@@ -157,7 +157,7 @@ publish_class() {
 run_public() {
   local base="${PAYLOAD_DIR}/public.json"
   local tmp_file type market i
-  tmp_file="$(mktemp "${TMPDIR:-/tmp}/enewable-public.XXXXXX.json")" || return 1
+  tmp_file="$(mktemp "${TMPDIR:-/tmp}/enewable-public.json.XXXXXX")" || return 1
   for (( i=0; i<COUNT; i++ )); do
     type="${TYPES_PUBLIC[$(( RANDOM % ${#TYPES_PUBLIC[@]} ))]}"
     market="${MARKETS_PUBLIC[$(( RANDOM % ${#MARKETS_PUBLIC[@]} ))]}"
@@ -173,7 +173,7 @@ run_eu_ops() {
   local base="${PAYLOAD_DIR}/eu-ops.json" type
   type="$(json_field "${base}" type)"; : "${type:=unknown}"
   local tmp_file postcode_area i
-  tmp_file="$(mktemp "${TMPDIR:-/tmp}/enewable-eu-ops.XXXXXX.json")" || return 1
+  tmp_file="$(mktemp "${TMPDIR:-/tmp}/enewable-eu-ops.json.XXXXXX")" || return 1
   for (( i=0; i<COUNT; i++ )); do
     postcode_area="${POSTCODE_AREAS_EU_OPS[$(( RANDOM % ${#POSTCODE_AREAS_EU_OPS[@]} ))]}"
     render_payload "${base}" "${tmp_file}" postcodeArea "${postcode_area}"
@@ -187,7 +187,7 @@ run_eu_ops() {
 run_eu_pii() {
   local base="${PAYLOAD_DIR}/eu-pii.json"
   local tmp_file customer_id i
-  tmp_file="$(mktemp "${TMPDIR:-/tmp}/enewable-eu-pii.XXXXXX.json")" || return 1
+  tmp_file="$(mktemp "${TMPDIR:-/tmp}/enewable-eu-pii.json.XXXXXX")" || return 1
   for (( i=0; i<COUNT; i++ )); do
     customer_id="${CUSTOMER_IDS_EU_PII[$(( RANDOM % ${#CUSTOMER_IDS_EU_PII[@]} ))]}"
     render_payload "${base}" "${tmp_file}" customerId "${customer_id}"

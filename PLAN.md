@@ -1526,6 +1526,34 @@ productieklaar systeem:
      (python-eu-nonpersonal, sdkperf-pii) en de negative-ACL-test (TODO.md),
      en een volledige testronde vlak vóór DADD zelf herhalen (TODO.md,
      "Moet vóór DADD").
+
+  45. **Bug #5 gevonden en gefixt: `mktemp`-template met een `.json`-staart
+     na de `X`'s werd door macOS/BSD's `mktemp` niet gerandomiseerd (Emil +
+     assistent, 02/10/2026).** Gevonden via `./run-demo-loop.sh --once`
+     (vervolg op punt 44, op Emils verzoek i.p.v. de 2 overige demo-apps
+     los testen): `stm-public` faalde op `run_eu_ops`/`run_eu_pii` met
+     `mktemp: mkstemp failed on .../enewable-eu-ops.XXXXXX.json: File
+     exists`, en `sdkperf-pii` faalde ook. `ls -la` op de TMPDIR bevestigde
+     de root cause: er stonden daadwerkelijk bestanden met de LETTERLIJKE
+     naam `enewable-eu-ops.XXXXXX.json` (ongesubstitueerde `X`'s) -- macOS'
+     `mktemp` randomiseert de `X`'s alleen als ze aan het EINDE van de
+     bestandsnaam staan, niet wanneer er nog een `.json`-staart achter
+     volgt. Het sjabloon "werkte" dus tot nu toe alleen bij toeval: zolang
+     niemand het script halverwege onderbrak (vóór de eigen `rm -f`-
+     opruiming), bestond het letterlijke pad nog niet en "slaagde"
+     `mktemp` door dat exacte pad gewoon aan te maken -- zonder enige
+     echte randomisatie. Bijkomend ontdekt: `stm-public/publish-public.sh`
+     EN `sdkperf-pii/publish-pii.sh` gebruikten exact dezelfde letterlijke
+     bestandsnamen, dus de twee scripts konden elkaars tijdelijke bestand
+     ook nog eens overschrijven/blokkeren. **Gefixt** in beide scripts (6
+     plekken): het sjabloon omgedraaid naar `enewable-<klasse>.json.XXXXXX`
+     (de `X`'s nu echt aan het eind), wat op zowel BSD- als GNU-`mktemp`
+     gegarandeerd wél randomiseert -- niets anders in de code leunt op de
+     exacte bestandsnaam of -extensie (alleen als ondoorzichtig pad
+     doorgegeven aan `stm --file`/`sdkperf -pal`). Nog te doen: Emil moet
+     de 3 bestaande, letterlijke stale bestanden handmatig verwijderen (ze
+     staan buiten de gekoppelde map, dus de assistent kan er niet bij) en
+     `run-demo-loop.sh --once` opnieuw draaien.
 - **Geen automatische provisioning van alle 4 brokers in één commando.**
   Er is bewust voor losse, leesbare stappen gekozen (console + scripts per
   onderdeel) omdat dat beter uit te leggen en te debuggen is vóór een

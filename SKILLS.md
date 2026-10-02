@@ -135,6 +135,25 @@ terraform version
 ook expliciet, maar is niet nodig -- de fully-qualified-naam hierboven
 volstaat in één commando.
 
+## `mktemp`-sjabloon op macOS: zet de `X`'s echt aan het eind
+
+`mktemp "${TMPDIR:-/tmp}/naam.XXXXXX.json"` lijkt een normaal, portable
+sjabloon (werkt zo op Linux/GNU), maar macOS' BSD-`mktemp` randomiseert
+alleen een aaneengesloten reeks `X`'s aan het EINDE van de bestandsnaam --
+met een `.json`-staart erachter substitueert het niets en maakt het
+gewoon het letterlijke pad aan (inclusief de letterlijke `X`'s). De
+eerste keer dat dat pad nog niet bestaat "werkt" dit toevallig (geen
+botsing, geen foutmelding), maar zodra dat letterlijke bestand ergens
+achterblijft (bijv. een onderbroken script vóór zijn eigen opruim-`rm -f`)
+faalt elke volgende aanroep met `mktemp: mkstemp failed on
+.../naam.XXXXXX.json: File exists` -- voor altijd, want er wordt nooit
+iets gerandomiseerd. Fix: zet de `X`'s echt aan het eind,
+`mktemp ".../naam.json.XXXXXX"` -- dat randomiseert op zowel BSD- als
+GNU-`mktemp` betrouwbaar, en niets hoeft te leunen op de bestandsnaam of
+-extensie zolang het pad alleen wordt doorgegeven aan iets dat het
+bestand puur op inhoud leest (`--file`, `-pal`, etc.). Zie `PLAN.md`
+sectie 13, punt 45.
+
 ## Vóór elke commit
 
 `grep -rlP "\xc2\xad" --include="*.md" --include="*.sh" --include="*.py" .`
