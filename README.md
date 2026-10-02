@@ -226,7 +226,10 @@ opties.
 Als alle drie de brokers berichten ontvangen op precies hun eigen topic,
 werkt de volledige governed-routing-keten end-to-end. Zie
 [`docs/demo-apps.md`](docs/demo-apps.md) voor het voorgestelde draaiboek
-voor de live presentatie zelf.
+voor de live presentatie zelf, en
+[`docs/DADD2026-Enewable-Soevereine-Cloud.pptx`](docs/DADD2026-Enewable-Soevereine-Cloud.pptx)
+voor de presentatie zelf (Solace-huisstijl, van scratch tot draaiende
+omgeving, met architectuurdiagrammen en workflow-voorbeelden).
 
 ### 7. Doorlopend draaien (optioneel, bijv. voor een stand/booth)
 

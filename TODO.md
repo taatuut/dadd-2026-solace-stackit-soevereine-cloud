@@ -59,6 +59,12 @@ Laatst bijgewerkt: 02/10/2026.
       duplicaten). Negative ACL-test (testplan-punt 5) en koude-starttijd
       meten (testplan-punt 7) bewust overgeslagen -- zie "Kan na DADD"
       resp. hierboven waarom. (`PLAN.md` sectie 13, punt 48.)
+- [x] **Presentatie in Solace-huisstijl gebouwd**: 14-dia PowerPoint
+      (`docs/DADD2026-Enewable-Soevereine-Cloud.pptx`) die het hele proces
+      van scratch tot draaiende omgeving beeldend beschrijft, met een
+      architectuurdiagram, een 5-staps bouwproces-workflow, 3 "live
+      bewijs"-dia's uit de eigen Try-Me!-screenshots van vandaag en de
+      Sunburst-taxonomie als visual. (`PLAN.md` sectie 13, punt 49.)
 
 Zie [`docs/demo-notes.md`](docs/demo-notes.md) voor de twee punten die
 expliciet in de talk zelf benoemd moeten worden (Azure = Amerikaanse

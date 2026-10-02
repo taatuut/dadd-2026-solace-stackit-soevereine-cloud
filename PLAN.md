@@ -1646,6 +1646,35 @@ productieklaar systeem:
      presentatie in Solace-huisstijl die het hele proces van scratch tot
      draaiende omgeving beeldend beschrijft, met architectuurdiagrammen
      en workflow-voorbeelden.
+
+  49. **Presentatie in Solace-huisstijl gebouwd: `docs/DADD2026-Enewable-
+     Soevereine-Cloud.pptx` (assistent + Emil, 02/10/2026).** Na succesvolle
+     afronding van punt 48 (volledige testronde), op Emils expliciete
+     instructie: een 14-dia PowerPoint-presentatie die het hele proces van
+     scratch tot draaiende omgeving beeldend beschrijft, met
+     architectuurdiagrammen en workflow-voorbeelden, in Solace 2025
+     huisstijl (`anthropic-skills:solace-branding`-skill: kleurenpalet
+     Classic Green/Deep Blue/Orange, Calibri als veilige fallback voor
+     New Spirit/Figtree). Gebouwd met `pptxgenjs` als structured deck
+     (eigen thema + 3 slide-layouts: Cover/Dark/Light), native
+     vector-architectuurdiagram (lokale broker -> 3 gekleurde pijlen ->
+     AWS/Azure/STACKIT, overeenkomstig `docs/topologie.md`), een 5-staps
+     bouwproces-workflow (Terraform -> lokale broker -> ACL's -> queues/RDP
+     -> demo-apps), en 3 "live bewijs"-dia's gebouwd uit de eigen, net die
+     dag gemaakte Try-Me!-screenshots (bijgesneden met Pillow tot alleen de
+     JSON met het `classification`-veld) plus de Sunburst-Topic-Explorer-
+     opname als taxonomie-visual -- dus eigen, actuele projectdata, geen
+     verzonnen voorbeelden. De twee punten uit `docs/demo-notes.md` (Azure
+     = Amerikaanse hyperscaler ondanks EU-locatie; public clusters) kregen
+     een eigen, uitgelichte dia. Geverifieerd: `validate.py` (schema/
+     relaties/content-types) en `markitdown` (geen placeholder-tekst)
+     beide zonder fouten, plus een volledige visuele QA-ronde op alle 14
+     dia's via LibreOffice-rendering (2 correctieslagen: overlappende tekst
+     in het architectuurdiagram en een afgekapte REST Delivery Point-pijl
+     opgelost door de toelichting onder het diagram te zetten i.p.v. erop;
+     de 3 bewijs-screenshots opnieuw bijgesneden zodat ze consistent direct
+     bij de "Messages"-header beginnen). Geleverd via `SendUserFile` en
+     gecommit in `docs/`.
 - **Geen automatische provisioning van alle 4 brokers in één commando.**
   Er is bewust voor losse, leesbare stappen gekozen (console + scripts per
   onderdeel) omdat dat beter uit te leggen en te debuggen is vóór een
