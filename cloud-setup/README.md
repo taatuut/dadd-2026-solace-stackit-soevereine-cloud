@@ -34,11 +34,13 @@ Cloud-organisaties (AWS+Azure in de ene, STACKIT in de andere), elk als
    gegenereerd in `../local-broker/.env`) met een publish-only ACL-profiel - handmatig via
    Manage > Client Usernames (zie per submap), of automatisch met
    `solace-cloud-api/configure-remote-bridge-users.sh` zodra je de
-   SEMP-admin-username/password per broker (Connect-tab) in `.env` hebt
-   ingevuld. **Let op**: dit script gebruikt de SEMP v2 Config API van elke
-   broker zelf, niet de Mission Control API/het token - en moet, net als
-   `create-service.sh`, door jou zelf gedraaid worden (zie
-   `../docs/cloud-brokers.md`, "Provisioning: console vs. API" voor waarom).
+   SEMP-admin-username/password per broker (Connect-tab, of via
+   `solace-cloud-api/get-broker-manager-credentials.sh` met een
+   Mission-Control-token) in `.env` hebt ingevuld. **Let op**: dit script
+   gebruikt de SEMP v2 Config API van elke broker zelf, niet de Mission
+   Control API/het token - en moet, net als `create-service.sh`, door jou
+   zelf gedraaid worden (zie `../docs/cloud-brokers.md`, "Provisioning:
+   console vs. API" voor waarom).
 5. Run `../local-broker/semp/configure-local-broker.sh` (VPN, ACL's,
    publishers) en daarna `../local-broker/semp/configure-rdp-export.sh` (de
    3 export-queues + REST Delivery Points) om de lokale broker en de export

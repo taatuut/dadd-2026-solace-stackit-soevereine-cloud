@@ -1894,6 +1894,40 @@ productieklaar systeem:
      CLI-vlaggen/ASCII-art/Mermaid-syntax zijn steekproefsgewijs
      gecontroleerd als ongewijzigd.
 
+  56. **Nieuw script: Broker Manager-admin-credentials via de Mission
+     Control API ophalen (Emil + assistent, 02/10/2026).**
+     `cloud-setup/solace-cloud-api/get-broker-manager-credentials.sh`
+     toegevoegd: haalt per cloud-broker (AWS, Azure, STACKIT) de
+     SEMP-admin (manager-rol) username/password op via
+     `GET .../missionControl/eventBrokerServices/{id}` en schrijft
+     `{aws,azure,stackit}.{adminUsername,adminPassword}` naar
+     `output/broker-admin-credentials.json` (gitignored), plus het
+     volledige rauwe antwoord per service naar
+     `output/broker-manager-credentials-raw/` voor verificatie. Twee
+     dingen konden niet live getest worden (netwerktoegang naar
+     api.solace.cloud/het STACKIT-orgdomein is geblokkeerd vanuit deze
+     sessie): 1) het pad
+     `data.messageVpn.managerManagementCredential.{username,password}` is
+     afgeleid van het schema van de `solacecloud`-Terraform-provider
+     (bevestigd via de providerdocumentatie en via de structuur van de
+     al aanwezige `output/service-{aws,azure,stackit}.json`-bestanden in
+     deze repo, beide met velden `message_vpn.manager_management_credential.
+     {username,password}`), niet rechtstreeks tegen een live GET-respons;
+     2) of de respons deze credentials toont hangt af van een
+     tokenscope ("Get My Services with Management Credentials" of
+     org-breed "Get Services with Management Credentials", gevonden in
+     de Solace-documentatie over API-tokens) die het bestaande
+     `SOLACE_CLOUD_API_TOKEN` mogelijk niet heeft. Het script schrijft
+     daarom altijd ook de rauwe respons weg zodat dit verifieerbaar/
+     corrigeerbaar is. Nieuwe env-variabelen toegevoegd aan
+     `cloud-setup/solace-cloud-api/.env.example`:
+     `AWS_AZURE_ORG_API_TOKEN`/`_API_BASE`, `STACKIT_ORG_API_TOKEN`/
+     `_API_BASE` (STACKIT zit in een andere Solace Cloud-organisatie met
+     een eigen API-domein, zie punt 42) en `{AWS,AZURE,STACKIT}_SERVICE_ID`.
+     `cloud-setup/README.md` stap 4 uitgebreid met een verwijzing naar dit
+     script als alternatief voor het handmatig overtypen van de
+     SEMP-admin-credentials vanaf de Connect-tab.
+
 - **Geen automatische provisioning van alle 4 brokers in één commando.**
   Er is bewust voor losse, leesbare stappen gekozen (console + scripts per
   onderdeel) omdat dat beter uit te leggen en te debuggen is vóór een
