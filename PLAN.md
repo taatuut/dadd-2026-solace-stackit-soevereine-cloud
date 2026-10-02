@@ -1591,6 +1591,61 @@ productieklaar systeem:
      de volledige testronde (fase 5, sectie 12 punten 1-4 en 6 -- NIET 5
      en 7) stap voor stap herhalen, met bevestiging na elke stap (zie
      verderop in deze sectie voor de losse punten).
+
+  48. **Volledige testronde (fase 5, sectie 12 punten 1-4 en 6) stap voor
+     stap herhaald en bevestigd (Emil, 02/10/2026).** Uitgevoerd exact
+     volgens punt 47's besluit: een instructie per stap, pas door na
+     Emils expliciete bevestiging.
+     - **Stap 1** (Broker Manager-check): alle 3 export-queues
+       (`q-export-public`/`q-export-eu-ops`/`q-export-eu-pii`) bestaan,
+       leeg, geen opgehoopte berichten; alle 3 RDP's
+       (`rdp-aws`/`rdp-azure`/`rdp-stackit`) staan op "Up", 0% blocked,
+       0 discards op de REST-clients. ✅
+     - **Stap 2** (`stm-public/publish-public.sh` -> AWS): bericht komt
+       aan op AWS "Try Me!" (`classification: "public"`, topic
+       `enewable/public/market/price/...`), niets op Azure/STACKIT. ✅
+     - **Stap 3** (`python-eu-nonpersonal/publisher.py` -> Azure):
+       berichten komen aan op Azure "Try Me!" (`classification:
+       "non-personal-eu"`, topic `enewable/eu/ops/grid/load/...`), niets
+       op AWS/STACKIT. ✅
+     - **Stap 4** (`sdkperf-pii/publish-pii.sh` -> STACKIT): berichten
+       komen aan op STACKIT "Try Me!" (`classification: "PII"`, topic
+       `enewable/eu/pii/meter/reading/...`), niets op AWS/Azure. ✅ --
+       opvallend: de eerste berichten deden er ruim een minuut over om
+       aan te komen, terwijl de lokale queue de hele tijd leeg bleef
+       (dus geen lokale stuwing). Diagnose: past bij een eenmalige
+       "cold start" van de REST-verbinding naar de zojuist (via
+       Terraform) aangemaakte STACKIT-service -- de eerste POST-poging
+       kan stuiten op nog niet volledig gepropageerde DNS of een nog
+       opstartende remote REST-ingress, waarna de RDP-restConsumer se
+       ingebouwde exponential-backoff-retry het na een paar pogingen
+       alsnog laat slagen; eenmaal verbonden werden de daaropvolgende
+       berichten weer met normale, seconden-tussenpozen afgeleverd. Geen
+       configuratiefout (stap 1 toonde al 0% blocked/discards) en geen
+       blocker -- louter een observatie, in lijn met waarom
+       koude-starttijd meten (testplan-punt 7) toch al bewust van de
+       lijst is gehaald (punt 47).
+     - **Stap 5** (negative-ACL-test, testplan-punt 5): bewust
+       overgeslagen, conform punt 47 ("Kan na DADD").
+     - **Stap 6** (herstart + idempotentie): lokale broker-container
+       regulier herstart (`docker restart`) -- VPN `enewable`, queues en
+       RDP's blijven daarbij (terecht) bestaan; dat is precies het
+       scenario dat dit testplan-punt wil dekken ("opnieuw idempotent te
+       draaien zonder handmatige opschoning"), niet een
+       from-scratch-bootstraptest. Daarna `configure-local-broker.sh` en
+       `configure-rdp-export.sh` beide opnieuw gedraaid: foutloos, elk
+       sub-object meldt "(already exists, skipping)", geen duplicaten,
+       inclusief de restConsumer-PATCH uit punt 43 (ook na een
+       container-restart, niet alleen na een service-vervanging). ✅
+
+     **Hiermee is de volledige testronde van sectie 12 (punten 1-4 en 6)
+     opnieuw, stap voor stap, end-to-end bevestigd tegen de in punt 42
+     aangemaakte services.** `TODO.md`'s bullet "Volledige testronde
+     (fase 5) herhalen, stap voor stap" kan hiermee worden afgevinkt.
+     Volgende taak (per Emils instructie): een visueel aantrekkelijke
+     presentatie in Solace-huisstijl die het hele proces van scratch tot
+     draaiende omgeving beeldend beschrijft, met architectuurdiagrammen
+     en workflow-voorbeelden.
 - **Geen automatische provisioning van alle 4 brokers in één commando.**
   Er is bewust voor losse, leesbare stappen gekozen (console + scripts per
   onderdeel) omdat dat beter uit te leggen en te debuggen is vóór een

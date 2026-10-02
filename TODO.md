@@ -51,14 +51,14 @@ Laatst bijgewerkt: 02/10/2026.
       zichtbaar gemaakt via de Sunburst Topic Explorer
       (explorer.solace.dev) op de lokale broker. (`PLAN.md` sectie 13,
       punten 35, 37, 38, 47.)
-- [ ] **Volledige testronde (fase 5) herhalen, stap voor stap**, niet
-      vertrouwen op de eerdere (gebundelde) validatie via
-      `run-demo-loop.sh` -- sindsdien zijn er meerdere functionele
-      wijzigingen bijgekomen (alle 3 klassen per run, dynamische topics,
-      variatie-uitbreidingen). Negative ACL-test (testplan-punt 5) en
-      koude-starttijd meten (testplan-punt 7) horen hier NIET meer bij --
-      zie "Kan na DADD" resp. hieronder waarom. (`PLAN.md` sectie 10,
-      fase 5; sectie 12.)
+- [x] **Volledige testronde (fase 5) herhaald, stap voor stap**
+      (02/10/2026): Broker Manager-check, alle 3 demo-apps elk uitsluitend
+      op hun eigen doelbroker (AWS/Azure/STACKIT), en een reguliere
+      container-restart + opnieuw draaien van `configure-local-broker.sh`
+      + `configure-rdp-export.sh` bevestigd idempotent (geen fouten, geen
+      duplicaten). Negative ACL-test (testplan-punt 5) en koude-starttijd
+      meten (testplan-punt 7) bewust overgeslagen -- zie "Kan na DADD"
+      resp. hierboven waarom. (`PLAN.md` sectie 13, punt 48.)
 
 Zie [`docs/demo-notes.md`](docs/demo-notes.md) voor de twee punten die
 expliciet in de talk zelf benoemd moeten worden (Azure = Amerikaanse
