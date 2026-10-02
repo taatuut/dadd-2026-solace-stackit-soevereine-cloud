@@ -259,6 +259,29 @@ gedachtestreepje, geen dubbel koppelteken ("--"). Een dubbel koppelteken
 blijft uitsluitend voor code: CLI-vlaggen (`--class`), ASCII-art of
 Mermaid-syntax (`-->`) in een codeblok.
 
+## Mission Control API geeft geen broker-management-credentials terug via GET
+
+`GET .../missionControl/eventBrokerServices/{id}` (ook met
+`expand=broker`/`serviceConnectionEndpoints`/`allowedActions`/
+`messageSpoolDetails`) geeft GEEN `messageVpn`-object of
+management-credential-velden terug -- bevestigd met een echte respons
+(alleen basisvelden: id/name/datacenterId/serviceClassId/... -- geen
+credentials, ongeacht tokenscope) en met de publieke OpenAPI-spec van deze
+API (`https://api.solace.dev/cloud/openapi/mission-control.json`): de
+substring "ManagementCredential" komt daar nergens in voor. Dit is dus
+geen scope-probleem (een token met "Get My/Get Services with Management
+Credentials" lost dit niet op) -- de publiek gedocumenteerde GET bevat dit
+veld simpelweg niet.
+
+De `solacecloud` Terraform-provider heeft deze credentials wel
+(`message_vpn.manager_management_credential.{username,password}`,
+bevestigd in deze repo's eigen `output/service-{aws,azure,stackit}.json`)
+via een andere/interne route dan de publiek gedocumenteerde REST-API. Voor
+een script dat de Broker Manager-admin-credentials nodig heeft: lees ze
+uit `terraform output -json <service>` (state moet actueel zijn, dus na
+een recente `apply`/`refresh`), niet via een curl naar de Mission Control
+API. Zie `cloud-setup/solace-cloud-api/get-broker-manager-credentials.sh`.
+
 ## Vóór elke commit
 
 `grep -rlP "\xc2\xad" --include="*.md" --include="*.sh" --include="*.py" .`

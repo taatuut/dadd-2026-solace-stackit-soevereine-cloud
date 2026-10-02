@@ -1928,6 +1928,35 @@ productieklaar systeem:
      script als alternatief voor het handmatig overtypen van de
      SEMP-admin-credentials vanaf de Connect-tab.
 
+  57. **Bugfix punt 56: Mission Control API geeft geen management-
+     credentials terug, script omgezet naar Terraform-state (Emil +
+     assistent, 02/10/2026).** Emil draaide
+     `get-broker-manager-credentials.sh` (punt 56) na het invullen van
+     echte org-tokens: alle drie `adminUsername`/`adminPassword` kwamen
+     `null` terug. De rauwe STACKIT-respons die Emil terugplakte bevatte
+     geen `messageVpn`-object, alleen basisvelden (id/name/datacenterId/
+     serviceClassId/...). Opgezocht tegen de publieke OpenAPI-spec van de
+     Mission Control API
+     (`https://api.solace.dev/cloud/openapi/mission-control.json`): de
+     substring "ManagementCredential" komt daar nergens in voor -- dit is
+     dus geen ontbrekende tokenscope, de publiek gedocumenteerde GET
+     bevat dit veld simpelweg niet. Omdat deze credentials al wel
+     aanwezig bleken in deze repo's eigen
+     `output/service-{aws,azure,stackit}.json` (gevuld via
+     `terraform output -json` ten tijde van het aanmaken van de services,
+     punt 42), is het script herschreven om `terraform output -json
+     {aws,azure,stackit}_service` als bron te gebruiken in plaats van een
+     curl naar de Mission Control API. De AWS_AZURE_ORG_*/STACKIT_ORG_*-
+     env-variabelen en de aanname rond `expand=`-parameters uit punt 56
+     zijn daarmee overbodig en weer uit `.env.example` verwijderd.
+     Vastgelegd in `SKILLS.md`, "Mission Control API geeft geen
+     broker-management-credentials terug via GET", zodat dit niet opnieuw
+     wordt uitgezocht. Zijlijn: de twee per-org API-tokens die Emil per
+     ongeluk in het script zelf plakte (i.p.v. in `.env`) stonden alleen
+     in de ongecommitte werkmap, nooit in git-historie; direct hersteld
+     naar de placeholder-versie en de echte waarden alsnog in het
+     (gitignored) `.env`-bestand gezet.
+
 - **Geen automatische provisioning van alle 4 brokers in één commando.**
   Er is bewust voor losse, leesbare stappen gekozen (console + scripts per
   onderdeel) omdat dat beter uit te leggen en te debuggen is vóór een
