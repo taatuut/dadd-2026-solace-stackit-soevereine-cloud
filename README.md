@@ -1,4 +1,4 @@
-# DADD 2026 -- Solace / STACKIT: soevereine cloud-demo (Enewable)
+# DADD 2026 - Solace / STACKIT soevereine cloud demo Enewable Energy
 
 Demo-project bij de presentatie **"Ontwerpen voor soevereiniteit: de
 verborgen kosten van het verlaten van de hyperscalers"** van Emil Zegers,
@@ -58,12 +58,16 @@ detail.
 
 **Aan de cloud-kant -- dit README automatiseert dit NIET:**
 
-Dit README gaat ervan uit dat de 3 Solace Cloud broker-services (AWS,
-Azure, STACKIT -- of, zolang STACKIT nog niet algemeen beschikbaar is, de
-tijdelijke GCP-interim-stand-in, zie
-[`cloud-setup/gcp-europe-west1-interim/README.md`](cloud-setup/gcp-europe-west1-interim/README.md))
-**al bestaan**, en dat je de volgende gegevens per service bij de hand hebt
-(te vinden op de Connect-tab van elke service in de Solace Cloud console):
+Dit README gaat ervan uit dat de 3 Solace Cloud broker-services **al
+bestaan**: AWS (US East), Azure (West Europe) en **STACKIT (eu01, een
+eigen, echte `SolaceDedicated`-datacenter in Solace Cloud)** -- de
+tijdelijke GCP-interim-stand-in uit een eerdere fase van dit project is
+niet meer nodig en wordt niet meer gebruikt (zie
+[`cloud-setup/README.md`](cloud-setup/README.md) voor de achtergrond; de
+map [`cloud-setup/gcp-europe-west1-interim/`](cloud-setup/gcp-europe-west1-interim/README.md)
+blijft alleen staan als historische referentie). Je hebt de volgende
+gegevens per service nodig (te vinden op de Connect-tab van elke service
+in de Solace Cloud console, of in de Terraform-output, zie hieronder):
 
 - SMF-hostname (bijv. `mr-connection-xxxxxxxxxxx.messaging.solace.cloud`,
   poort 55443/TLS).
@@ -76,16 +80,24 @@ tijdelijke GCP-interim-stand-in, zie
   (`enewable/public/>` voor AWS, `enewable/eu/ops/>` voor Azure,
   `enewable/eu/pii/>` voor STACKIT).
 
-Als je deze services of credentials nog niet hebt: zie
-[`cloud-setup/README.md`](cloud-setup/README.md) en de submap per provider
-voor hoe je ze zelf aanmaakt (via de Solace Cloud console, of via
-`cloud-setup/solace-cloud-api/create-service.sh` +
-`configure-remote-bridge-users.sh`) -- dat valt buiten de scope van dit
-README.
+Als je deze services of credentials nog niet hebt: de aanbevolen,
+herhaalbare route is inmiddels **Terraform**
+([`cloud-setup/terraform/README.md`](cloud-setup/terraform/README.md)) --
+dat maakt alle 3 services in één `terraform apply` aan (AWS en Azure in de
+ene Solace Cloud-organisatie, STACKIT in een andere, elk als
+"Developer 100"-tier). De handmatige console-wizard en
+`cloud-setup/solace-cloud-api/create-service.sh` blijven staan als
+alternatief/fallback (zie [`cloud-setup/README.md`](cloud-setup/README.md)
+voor de submap per provider). In beide gevallen geldt: Terraform (en de
+console/API-route) maakt alleen de services zelf aan -- de publish-only
+client-username + ACL-profiel per broker is SEMP-niveau-configuratie op de
+broker zelf en moet je daarna altijd nog zelf draaien met
+`cloud-setup/solace-cloud-api/configure-remote-bridge-users.sh`. Dat, en de
+stappen hieronder, vallen buiten de scope van dit README.
 
 ## Stap voor stap: van nul naar draaiende demo
 
-### 1. Lokale broker starten
+### Lokale broker starten
 
 ```bash
 cd local-broker
@@ -104,7 +116,7 @@ Start de lokale, self-managed Solace PubSub+ broker in Docker en wacht tot
 de SEMP-management-API bereikbaar is. Bevestig daarna in Broker Manager
 (`http://localhost:8080`, admin/admin) dat de broker draait.
 
-### 2. Lokale broker configureren (Message VPN, ACL's, publishers)
+### Lokale broker configureren (Message VPN, ACL's, publishers)
 
 ```bash
 ./semp/configure-local-broker.sh
@@ -118,7 +130,7 @@ mag publiceren (bedoeld voor visualisatietools, zie "Verkeer visualiseren"
 hieronder). Idempotent -- veilig om opnieuw te draaien (bijv. na een
 container-restart, zie "Geen persistente opslag" in `docs/lokale-broker.md`).
 
-### 3. RDP-export naar de 3 cloud-brokers configureren
+### RDP-export naar de 3 cloud-brokers configureren
 
 ```bash
 ./semp/configure-rdp-export.sh
@@ -127,9 +139,9 @@ container-restart, zie "Geen persistente opslag" in `docs/lokale-broker.md`).
 Maakt per topic-subtree een durable queue + een REST Delivery Point dat die
 queue naar de bijbehorende cloud-broker exporteert (zie "Architectuur"
 hierboven). Vereist dat de `*_REMOTE_REST_HOST`/`*_REMOTE_REST_PORT`-velden
-in `.env` correct zijn (stap 1).
+in `.env` correct zijn (zie "Lokale broker starten" hierboven).
 
-### 4. Verifiëren in Broker Manager
+### Verifiëren in Broker Manager
 
 Open `http://localhost:8080` > VPN `enewable` en controleer:
 
@@ -145,10 +157,11 @@ Manager zelf geen reden -- draai `./semp/diagnose-rdp.sh` (schrijft naar
 "Bekende risico's" in `docs/lokale-broker.md` voor de meest voorkomende
 oorzaken die deze demo eerder heeft blootgelegd.
 
-### 5. De 3 demo-apps installeren (eenmalig)
+### De 3 demo-apps installeren (eenmalig)
 
 Elke demo-app publiceert naar de lokale broker met de 3 al aangemaakte,
-per-klasse gescoped client-usernames (stap 2) -- er is geen extra
+per-klasse gescoped client-usernames (zie "Lokale broker configureren"
+hierboven) -- er is geen extra
 configuratie per app nodig, alleen de tool zelf installeren. Elke tool
 publiceert standaard alle 3 dataklassen (publiek -> AWS, niet-persoonlijk
 EU -> Azure, PII -> STACKIT); zie
@@ -186,7 +199,7 @@ SDKPERF_BIN=/pad/naar/sdkperf-jcsmp-x.y.z/sdkperf_java.sh
 `demo-apps/sdkperf-pii/publish-pii.sh` leest dit automatisch (samen met de
 rest van `.env`) -- je hoeft `.env` zelf nergens handmatig te `source`'n.
 
-### 6. Eén demo-app draaien en op alle 3 brokers verifiëren
+### Eén demo-app draaien en op alle 3 brokers verifiëren
 
 Open in de Solace Cloud console de "Try Me!"-tab van elke van de 3
 cloud-services (AWS/Azure/STACKIT), en laat ze het liefst naast elkaar open
@@ -202,7 +215,7 @@ aankomen, elk op de juiste topic en nergens anders:
 
 - **AWS**: `enewable/public/>`
 - **Azure**: `enewable/eu/ops/>`
-- **STACKIT** (of de GCP-interim-stand-in): `enewable/eu/pii/>`
+- **STACKIT**: `enewable/eu/pii/>`
 
 Herhaal dit gerust met de andere twee tools (Python-script, SDKPerf) om te
 laten zien dat het geen toevalstreffer van één specifieke tool is -- alle
@@ -231,7 +244,7 @@ voor de live presentatie zelf, en
 voor de presentatie zelf (Solace-huisstijl, van scratch tot draaiende
 omgeving, met architectuurdiagrammen en workflow-voorbeelden).
 
-### 7. Doorlopend draaien (optioneel, bijv. voor een stand/booth)
+### Doorlopend draaien
 
 Voor een situatie waarin de 3 "Try Me!"-tabs continu verse data moeten
 tonen zonder dat iemand steeds handmatig een script opnieuw start:
@@ -263,7 +276,7 @@ Opties (zie ook `./local-broker/scripts/run-demo-loop.sh --help`):
 ./local-broker/scripts/run-demo-loop.sh --once --count 1
 ```
 
-### 8. Verkeer visualiseren met Sunburst Topic Explorer (optioneel)
+### Optioneel: verkeer visualiseren met Sunburst Topic Explorer
 
 [Sunburst Topic Explorer](https://explorer.solace.dev/) laat de topic-boom
 van een broker live zien terwijl er berichten doorheen stromen -- handig om
@@ -279,7 +292,8 @@ gedragen. Connect met:
 Dit is *niet* dezelfde combinatie als `default`/`default` waarmee je
 waarschijnlijk al tegen de broker se ingebouwde `default`-VPN hebt getest
 -- die combinatie bestaat alleen op de VPN die letterlijk `default` heet.
-`enewable` heeft zijn eigen client-usernames (stap 2): de 3
+`enewable` heeft zijn eigen client-usernames (zie "Lokale broker
+configureren" hierboven): de 3
 publish-only-accounts (`pub-*`) mogen expliciet niet subscriben, dus
 hiervoor is een apart, read-only `monitor`-account aangemaakt dat wél op
 heel `enewable/>` mag subscriben maar zelf niets kan publiceren.
@@ -293,11 +307,12 @@ de topic die Sunburst zelf standaard invult.
 
 ## Problemen oplossen
 
-- **RDP staat op "Down" / queue-binding geeft een fout**: zie stap 4
-  hierboven en `docs/lokale-broker.md`, sectie "Bekende risico's".
+- **RDP staat op "Down" / queue-binding geeft een fout**: zie "Verifiëren
+  in Broker Manager" hierboven en `docs/lokale-broker.md`, sectie "Bekende
+  risico's".
 - **`command not found` voor `stm`/`sdkperf_java.sh`/python-modules**: zie
-  stap 5 -- dit zijn eenmalige installatiestappen per demo-app, geen
-  repo-bug.
+  "De 3 demo-apps installeren" hierboven -- dit zijn eenmalige
+  installatiestappen per demo-app, geen repo-bug.
 - **Je gebruikt zsh (macOS-default) en een commando uit dit README lijkt
   raar te falen** (bijv. een `ModuleNotFoundError` na een geslaagd
   ogende `pip install`): controleer of je zelf een `#`-toelichting achter

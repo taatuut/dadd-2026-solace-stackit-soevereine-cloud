@@ -1776,6 +1776,38 @@ productieklaar systeem:
      visuele re-render van alle 14 dia's (dia 2, 4 en 14 individueel
      gecontroleerd op de gevraagde wijzigingen, de overige 11 op afwezigheid
      van regressie). Herleverd via `SendUserFile` en gecommit in `docs/`.
+
+  53. **README.md geactualiseerd en in lijn gebracht met de inmiddels
+     verouderde cloud-provisioningstekst elders (Emil + assistent,
+     02/10/2026).** Emil wees erop dat README.md's "Aan de cloud-kant"-
+     sectie niet meer actueel was: die ging nog uit van handmatige
+     provisioning en een mogelijke GCP-interim-stand-in voor STACKIT,
+     terwijl er inmiddels (punt 42) een werkende Terraform-opzet
+     (`cloud-setup/terraform/`) bestaat en STACKIT een eigen, echte
+     `SolaceDedicated`-datacenter blijkt te hebben. Aangepast:
+     1) README-titel naar "DADD 2026 - Solace / STACKIT soevereine cloud
+     demo Enewable Energy"; 2) de cloud-kant-sectie herschreven: noemt nu
+     Terraform als de aanbevolen, herhaalbare route (console/
+     `create-service.sh` als fallback), STACKIT expliciet als GA/eigen
+     datacenter, en de GCP-interim-map als niet meer gebruikt/historisch;
+     3) "7. Doorlopend draaien (optioneel, bijv. voor een stand/booth)"
+     ingekort naar "Doorlopend draaien"; 4) "8. Verkeer visualiseren met
+     Sunburst Topic Explorer (optioneel)" naar "Optioneel: verkeer
+     visualiseren met Sunburst Topic Explorer"; 5) de nummering (1 t/m 8)
+     uit alle kopjes van "Stap voor stap: van nul naar draaiende demo"
+     gehaald, met de bijbehorende inline `(stap N)`-verwijzingen elders in
+     het bestand omgezet naar verwijzingen op sectienaam zodat ze blijven
+     kloppen zonder nummers. Op Emils bredere instructie om documentatie
+     consistent te houden ook **direct de twee andere plekken met
+     dezelfde stale STACKIT/GCP-interim-tekst meegenomen**, zodat README.md
+     niet een eenzame uitzondering wordt: `docs/cloud-brokers.md` (de hele
+     sectie "STACKIT: uitgangspunt en interim-opzet" herschreven naar
+     "STACKIT: inmiddels een echte, eigen datacenter") en
+     `cloud-setup/README.md` (de providertabel en de inleidende alinea,
+     die nog "verwacht GA komende week" zeiden terwijl de status-callout
+     verderop in hetzelfde bestand al de juiste informatie gaf).
+     Geverifieerd met een volledige `git diff` van alle drie bestanden
+     vóór commit.
 - **Geen automatische provisioning van alle 4 brokers in één commando.**
   Er is bewust voor losse, leesbare stappen gekozen (console + scripts per
   onderdeel) omdat dat beter uit te leggen en te debuggen is vóór een

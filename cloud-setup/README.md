@@ -7,15 +7,15 @@ samen met de lokale broker de soevereine, gedistribueerde topologie vormen:
 |-----------------------------|--------------------------------------|-----------------------------------------------------|
 | `aws-us-east/`               | AWS, US East                         | Ontvangt PUBLIEKE data                              |
 | `azure-west-europe/`         | Azure, West Europe (Nederland)       | Ontvangt niet-persoonlijke EU-data                  |
-| `stackit-eu01/`               | STACKIT, Duitsland (regio `eu01`)    | Ontvangt gevoelige PII (sovereign) -- **verwacht GA komende week** |
-| `gcp-europe-west1-interim/`   | GCP, België (`europe-west1`)         | **Tijdelijke stand-in** voor STACKIT, tot GA        |
+| `stackit-eu01/`               | STACKIT, Duitsland (regio `eu01`)    | Ontvangt gevoelige PII (sovereign) -- **GA, eigen `SolaceDedicated`-datacenter** |
+| `gcp-europe-west1-interim/`   | GCP, België (`europe-west1`)         | Historische **tijdelijke stand-in** voor STACKIT; niet meer gebruikt |
 
-De eerste drie (AWS/Azure/STACKIT) zijn de definitieve topologie; de
-vierde map (`gcp-europe-west1-interim/`) is alleen nodig zolang STACKIT nog
-niet algemeen beschikbaar is. Alle zijn **HA (high-availability)** Solace Cloud services: elk bestaat
-uit een primary/backup broker-paar plus monitoring node, beheerd door Solace
-Cloud (Mission Control). Zie `../docs/cloud-brokers.md` voor de volledige
-toelichting en het belangrijke openstaande punt rond STACKIT-beschikbaarheid.
+De eerste drie (AWS/Azure/STACKIT) zijn de definitieve, actuele topologie;
+de vierde map (`gcp-europe-west1-interim/`) was alleen nodig zolang STACKIT
+nog niet algemeen beschikbaar was en blijft enkel staan als historische
+referentie. Alle drie zijn Solace Cloud services, sinds de Terraform-opzet
+(zie hieronder) op "Developer 100"-tier, beheerd door Solace Cloud (Mission
+Control). Zie `../docs/cloud-brokers.md` voor de volledige toelichting.
 
 > **Status (02/10/2026): de 3 services zijn opnieuw aangemaakt via
 > Terraform** als "Developer 100"-tier in twee Solace Cloud-organisaties

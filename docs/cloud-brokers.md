@@ -23,35 +23,24 @@ opdracht:
 3. **STACKIT eu01 (Duitsland)** -- gevoelige PII, op een soeverein, Europees
    platform zonder Amerikaanse moederonderneming.
 
-## STACKIT: uitgangspunt en interim-opzet
+## STACKIT: inmiddels een echte, eigen datacenter (geen interim meer)
 
-Uitgangspunt voor dit plan: STACKIT wordt **komende week algemeen
-beschikbaar (GA)** in Solace Cloud, met dezelfde self-service
-deployment-ervaring als AWS, Azure en GCP -- gewoon te kiezen als
-datacenter, geen aparte Controlled-Availability/BYOK-procedure meer. Zie
-`../cloud-setup/stackit-eu01/README.md` voor de (eenvoudige) aanmaakstappen
-zodra dat zo is.
+**Status (02/10/2026): STACKIT is algemeen beschikbaar (GA) in Solace
+Cloud gebleken bij het opnieuw aanmaken van de services via Terraform** --
+zie `../cloud-setup/terraform/README.md` en `PLAN.md` sectie 13, punt 42.
+STACKIT heeft een eigen, echte `SolaceDedicated`-datacenter
+(`stackitdemo-stackit-eu01-production`, "StackIT Production Region"), met
+dezelfde self-service deployment-ervaring als AWS en Azure -- gewoon te
+kiezen als datacenter bij het aanmaken van de service, geen aparte
+Controlled-Availability/BYOK-procedure meer. Zie
+`../cloud-setup/stackit-eu01/README.md` voor de aanmaakstappen.
 
-**Tot het zover is**, gebruikt de demo een tijdelijke stand-in: een Solace
-Cloud HA-service op **GCP, regio europe-west1 (België)** -- inmiddels
-aangemaakt als `ez-dadd-2026-STACKIT-gke-gcp-europe-west1-b` (status:
-Running), zie `../cloud-setup/gcp-europe-west1-interim/README.md` voor de
-details. Functioneel identiek voor de demo (zelfde topics, ACL-profiel en
-RDP-naam `rdp-stackit`); alleen de fysieke locatie/provider wijkt
-tijdelijk af van het uiteindelijke soevereine doel. Zodra STACKIT GA is, is
-de overstap een kwestie van de echte service aanmaken, de `STACKIT_*`-
-variabelen in `local-broker/.env` bij te werken en
-`configure-local-broker.sh` en `configure-rdp-export.sh` opnieuw te draaien --
-geen wijziging aan topics, ACL's of RDP-configuratie nodig.
-
-**Restrisico**: GA-planningen kunnen schuiven. Zolang STACKIT niet
-daadwerkelijk beschikbaar is op het moment van de repetitie/DADD zelf, blijft
-de GCP-interim-opzet de facto de sovereign-node in de demo -- benoem dat in
-dat geval eerlijk (GCP is zelf een Amerikaanse hyperscaler, dus dan toon je
-de routeringslogica correct, maar niet de volledige soevereiniteitsclaim).
-Plan daarom een korte check vlak voór de repetitieweek (zie fasering in
-`PLAN.md`) om te bevestigen of STACKIT inderdaad al zichtbaar is als
-datacenter-optie.
+De eerdere tijdelijke stand-in op **GCP, regio europe-west1 (België)**
+(`../cloud-setup/gcp-europe-west1-interim/README.md`) was functioneel
+identiek (zelfde topics, ACL-profiel en RDP-naam `rdp-stackit`), maar is
+niet meer nodig en wordt in de huidige opzet niet meer gebruikt -- die map
+blijft alleen staan als historische referentie voor hoe de interim-opzet
+werkte, mocht een toekomstige provider-GA zich weer laten wachten.
 
 ## Provisioning: console vs. API
 
