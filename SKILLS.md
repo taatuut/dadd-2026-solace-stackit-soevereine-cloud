@@ -154,7 +154,7 @@ GNU-`mktemp` betrouwbaar, en niets hoeft te leunen op de bestandsnaam of
 bestand puur op inhoud leest (`--file`, `-pal`, etc.). Zie `PLAN.md`
 sectie 13, punt 45.
 
-## PowerPoint-reparatiemelding na een pptxgenjs-build (slideMaster-phantoms)
+## PowerPoint-reparatiemelding na een pptxgenjs-build, oorzaak 1/2: slideMaster-phantoms
 
 Een met `pptxgenjs` gebouwde `.pptx` kan `validate.py` en de
 LibreOffice-rendering (`soffice.py --convert-to pdf`) foutloos doorstaan en
@@ -177,7 +177,38 @@ en verwijder in `[Content_Types].xml` elke `Override`-regel voor een
 `slideMasterN.xml` die niet in die lijst voorkomt. Daarna opnieuw
 `validate.py` + een volledige visuele re-render draaien om te bevestigen dat
 er inhoudelijk niets is veranderd. Zie `PLAN.md` sectie 13, punt 50 voor de
-volledige reproductiestappen en het fix-script.
+
+**Let op: dit is niet per se de enige oorzaak.** Als het reparatiescherm na
+deze fix blijft terugkomen, zie de volgende sectie -- controleer sowieso
+altijd ALLEBEI de oorzaken, niet alleen de eerste die je tegenkomt.
+
+## PowerPoint-reparatiemelding na een pptxgenjs-build, oorzaak 2/2: negatieve shape-afmetingen
+
+`validate.py` en de LibreOffice-rendering accepteren ook een `<a:ext
+cx="..." cy="...">` met een **negatieve** `cx` of `cy` -- OOXML staat dit
+niet toe, maar LibreOffice rendert de vorm toch (meestal correct), terwijl
+PowerPoint een deel van het bestand laat vallen (in de praktijk: de dia's
+ná de eerste beschadigde dia tonen leeg in het dia-paneel, ook ná klikken op
+"Cancel" i.p.v. "Repair"). Dit treedt op bij een eigen `line`/pijl-vorm
+waarvan de breedte of hoogte rechtstreeks als `x2 - x1` / `y2 - y1` wordt
+berekend: zodra het eindpunt links van of boven het beginpunt ligt, wordt
+dat verschil negatief, ook al staat `flipV`/`flipH` al correct op `true`.
+
+**Controle na elke build die eigen pijl/lijn-vormen tekent (vóór je `pres.
+writeFile()` als foutloos aanmerkt):**
+
+```bash
+python3 -c "import zipfile; zipfile.ZipFile('deck.pptx').extractall('/tmp/x')"
+grep -oP '<a:ext cx="-?\d+" cy="-?\d+"/>' /tmp/x/ppt/slides/slide*.xml | grep -- '-' \
+  && echo "NEGATIEVE EXTENT GEVONDEN -- fix de w/h-berekening" || echo "schoon"
+```
+
+**Fix in de generator, niet in de uitvoer:** in elke eigen `arrow()`/
+lijn-helper altijd `w: Math.abs(x2 - x1), h: Math.abs(y2 - y1)` gebruiken
+(nooit het kale verschil), met `flipV`/`flipH` puur voor de richting. Zie
+`PLAN.md` sectie 13, punt 51 voor de volledige diagnose (inclusief waarom
+punt 50's Content_Types-fix alléén niet genoeg was) en de exacte
+code-wijziging.
 
 ## Vóór elke commit
 

@@ -65,10 +65,17 @@ Laatst bijgewerkt: 02/10/2026.
       architectuurdiagram, een 5-staps bouwproces-workflow, 3 "live
       bewijs"-dia's uit de eigen Try-Me!-screenshots van vandaag en de
       Sunburst-taxonomie als visual. (`PLAN.md` sectie 13, punt 49.)
-- [x] **Bugfix: PowerPoint-reparatiemelding verholpen**: bekend
+- [x] **Bugfix (deel 1 van 2) -- Content_Types.xml opgeschoond**: bekend
       `pptxgenjs`-pakketdefect (overbodige `Content_Types.xml`-verwijzingen
       naar niet-bestaande `slideMasterN.xml`-onderdelen) opgeschoond na de
       build; opnieuw gevalideerd en herleverd. (`PLAN.md` sectie 13, punt 50.)
+- [x] **Bugfix (deel 2 van 2, de echte oorzaak) -- negatieve pijl-hoogte
+      in het architectuurdiagram**: `arrow()`-functie in `build-deck.js`
+      berekende voor opwaartse pijlen (AWS/Azure) een negatieve shape-hoogte
+      (ongeldig OOXML, door LibreOffice stil genegeerd maar door PowerPoint
+      geweigerd -- vandaar dat dia's 4+ leeg bleven na "Cancel" op het
+      reparatiescherm). Gefixt met `Math.abs()`, deck volledig herbouwd,
+      geverifieerd en herleverd. (`PLAN.md` sectie 13, punt 51.)
 
 Zie [`docs/demo-notes.md`](docs/demo-notes.md) voor de twee punten die
 expliciet in de talk zelf benoemd moeten worden (Azure = Amerikaanse

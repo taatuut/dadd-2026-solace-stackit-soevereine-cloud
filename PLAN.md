@@ -1704,6 +1704,40 @@ productieklaar systeem:
      (Content_Types opschonen na elke `pptxgenjs`-build) is het vermelden
      waard voor een volgende presentatie in deze repo of elders met
      dezelfde skill-pijplijn.
+
+  51. **Punt 50 was niet de (enige) oorzaak -- echte root cause gevonden en
+     gefixt: negatieve pijl-hoogte in het architectuurdiagram (assistent,
+     02/10/2026).** Na de Content_Types-fix van punt 50 bleef het
+     reparatiescherm in echte PowerPoint verschijnen; Emil klikte op
+     "Cancel" (niet repareren) en zag dat dia's 4 en verder leeg bleven in
+     het dia-paneel, terwijl dia's 1-3 wel toonden. Diepere XML-inspectie
+     van `ppt/slides/slide4.xml` (het architectuurdiagram) toonde de echte
+     fout: twee pijl-vormen (`prstGeom prst="line"`) met een **negatieve**
+     `cy`-waarde in hun `<a:ext>` (bv. `cy="-1325880"`) -- de AWS- en
+     Azure-pijlen, die beide van de lokale broker schuin omhoog lopen.
+     OOXML staat geen negatieve shape-afmetingen toe; LibreOffice rendert
+     dit toch correct (vandaar dat punt 49's visuele QA niets opmerkte),
+     maar PowerPoint's eigen striktere parser accepteert dit niet en laat
+     (een deel van) het bestand vallen. Root cause: de eigen `arrow()`-
+     hulpfunctie in `build-deck.js` berekende `h: y2 - y1` rechtstreeks in
+     plaats van `Math.abs(y2 - y1)` -- voor een naar beneden lopende pijl
+     (y2 > y1) prima, maar voor een omhoog lopende pijl (y2 < y1, zoals de
+     AWS/Azure-pijlen) resulteerde dit in een negatieve hoogte, ondanks dat
+     `flipV` al correct op `true` stond. **Fix:** `arrow()` aangepast naar
+     `w: Math.abs(x2 - x1), h: Math.abs(y2 - y1)` plus een symmetrische
+     `flipH: x2 < x1` voor toekomstige naar-links lopende pijlen. Het hele
+     bestand opnieuw gebouwd vanuit `build-deck.js` (inclusief de
+     Content_Types-fix van punt 50, die blijft nodig), geverifieerd: geen
+     negatieve `cx`/`cy`-waarden meer in enige dia-XML, `validate.py`
+     ("All validations PASSED"), en een volledige visuele re-render van
+     alle 14 dia's die pixel-voor-pixel identiek oogt aan punt 49/50 (de
+     fix verandert alleen de interne XML-representatie, niet het
+     zichtbare resultaat). Herleverd via `SendUserFile` en opnieuw gecommit
+     in `docs/`. **Les:** de visuele QA-pijplijn van deze skill (LibreOffice
+     + `validate.py`) kan een ongeldige-maar-renderbare XML-waarde niet
+     detecteren; bij een pijl/lijn-vorm die richting kan omkeren altijd
+     expliciet op negatieve `w`/`h` controleren, niet alleen op het
+     eindresultaat vertrouwen.
 - **Geen automatische provisioning van alle 4 brokers in één commando.**
   Er is bewust voor losse, leesbare stappen gekozen (console + scripts per
   onderdeel) omdat dat beter uit te leggen en te debuggen is vóór een
