@@ -65,6 +65,10 @@ Laatst bijgewerkt: 02/10/2026.
       architectuurdiagram, een 5-staps bouwproces-workflow, 3 "live
       bewijs"-dia's uit de eigen Try-Me!-screenshots van vandaag en de
       Sunburst-taxonomie als visual. (`PLAN.md` sectie 13, punt 49.)
+- [x] **Bugfix: PowerPoint-reparatiemelding verholpen**: bekend
+      `pptxgenjs`-pakketdefect (overbodige `Content_Types.xml`-verwijzingen
+      naar niet-bestaande `slideMasterN.xml`-onderdelen) opgeschoond na de
+      build; opnieuw gevalideerd en herleverd. (`PLAN.md` sectie 13, punt 50.)
 
 Zie [`docs/demo-notes.md`](docs/demo-notes.md) voor de twee punten die
 expliciet in de talk zelf benoemd moeten worden (Azure = Amerikaanse

@@ -1675,6 +1675,35 @@ productieklaar systeem:
      de 3 bewijs-screenshots opnieuw bijgesneden zodat ze consistent direct
      bij de "Messages"-header beginnen). Geleverd via `SendUserFile` en
      gecommit in `docs/`.
+
+  50. **Bugfix: PowerPoint-reparatiemelding bij het openen van de
+     presentatie (assistent, 02/10/2026).** Emil kreeg bij het openen van
+     `docs/DADD2026-Enewable-Soevereine-Cloud.pptx` in echte PowerPoint een
+     "PowerPoint found a problem with content"-reparatiedialoog, terwijl
+     zowel `validate.py` als de LibreOffice-rendering (punt 49) geen fout
+     toonden. Root cause: een bekend `pptxgenjs`-pakketdefect, losstaand van
+     deze presentatie-inhoud -- bevestigd via een losse, minimale 5-dia
+     reproductie met `defineSlideMaster()`. `pptxgenjs` schrijft in
+     `[Content_Types].xml` per gedefinieerd slide-layout een
+     `<Override PartName="/ppt/slideMasters/slideMasterN.xml">`-regel (hier:
+     N=1..14), terwijl er maar één echt `slideMaster1.xml`-bestand in het
+     pakket bestaat (alle 3 layouts -- Cover/Dark/Light -- delen één
+     master). Dat zijn 13 verwijzingen naar niet-bestaande onderdelen:
+     ongeldig volgens de OPC-pakketspecificatie, maar iets wat noch de
+     schema-validator noch LibreOffice controleert -- alleen echte
+     PowerPoint doet deze consistentiecheck strikt genoeg om te weigeren.
+     **Fix:** na het schrijven van het bestand de 13 overbodige
+     `Override`-regels voor niet-bestaande `slideMasterN.xml`-onderdelen uit
+     `[Content_Types].xml` verwijderd met een klein, op maat geschreven
+     Python-script (zip openen, regex op de daadwerkelijk aanwezige
+     `ppt/slideMasters/*.xml`-bestanden, regel schrijven). Opnieuw
+     geverifieerd: `validate.py` ("All validations PASSED"), een volledige
+     LibreOffice re-render naar PDF/JPEG en visuele inspectie van alle 14
+     dia's (geen inhoudelijke wijziging t.o.v. punt 49). Herleverd via
+     `SendUserFile` en opnieuw gecommit in `docs/`. Deze fix-stap
+     (Content_Types opschonen na elke `pptxgenjs`-build) is het vermelden
+     waard voor een volgende presentatie in deze repo of elders met
+     dezelfde skill-pijplijn.
 - **Geen automatische provisioning van alle 4 brokers in één commando.**
   Er is bewust voor losse, leesbare stappen gekozen (console + scripts per
   onderdeel) omdat dat beter uit te leggen en te debuggen is vóór een
