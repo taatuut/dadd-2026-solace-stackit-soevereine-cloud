@@ -1554,6 +1554,20 @@ productieklaar systeem:
      de 3 bestaande, letterlijke stale bestanden handmatig verwijderen (ze
      staan buiten de gekoppelde map, dus de assistent kan er niet bij) en
      `run-demo-loop.sh --once` opnieuw draaien.
+
+  46. **`run-demo-loop.sh --once` volledig geslaagd: alle 3 demo-apps, alle
+     3 dataklassen, tegen de nieuwe services (Emil, 02/10/2026).** Na het
+     opruimen van de 3 stale bestanden en de mktemp-fix uit punt 45:
+     `stm-public: 1 ok, 0 mislukt`, `python-eu-nonpersonal: 1 ok, 0
+     mislukt`, `sdkperf-pii: 1 ok, 0 mislukt`. Hiermee is fase 5
+     (demo-apps valideren) opnieuw volledig bevestigd tegen de in punt 42
+     aangemaakte services, met alle 3 tools in één doorlopende cyclus via
+     het stand/booth-script -- niet alleen los per app zoals in punt 44.
+     Samen met punt 44 (stm-public los, direct na de nieuwe services) is
+     de volledige testketen nu twee keer onafhankelijk bevestigd. Blijft
+     staan voor vlak vóór DADD zelf: de volledige testronde nog een keer
+     herhalen (TODO.md, "Moet vóór DADD") en de negative-ACL-test
+     (testplan-punt 5, nog niet gedaan).
 - **Geen automatische provisioning van alle 4 brokers in één commando.**
   Er is bewust voor losse, leesbare stappen gekozen (console + scripts per
   onderdeel) omdat dat beter uit te leggen en te debuggen is vóór een
