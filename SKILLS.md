@@ -154,6 +154,31 @@ GNU-`mktemp` betrouwbaar, en niets hoeft te leunen op de bestandsnaam of
 bestand puur op inhoud leest (`--file`, `-pal`, etc.). Zie `PLAN.md`
 sectie 13, punt 45.
 
+## PowerPoint-reparatiemelding na een pptxgenjs-build (slideMaster-phantoms)
+
+Een met `pptxgenjs` gebouwde `.pptx` kan `validate.py` en de
+LibreOffice-rendering (`soffice.py --convert-to pdf`) foutloos doorstaan en
+toch bij Emil in echte PowerPoint een "PowerPoint found a problem with
+content"-reparatiedialoog geven. Root cause (bevestigd met een losse,
+minimale reproductie): `pptxgenjs` schrijft in `[Content_Types].xml` per
+gedefinieerd slide-layout (`defineSlideMaster()`) een eigen
+`<Override PartName="/ppt/slideMasters/slideMasterN.xml">`-regel, ook als
+alle layouts in werkelijkheid één gedeelde `ppt/slideMasters/slideMaster1.xml`
+gebruiken -- dus met N layouts staan er N-1 verwijzingen naar
+niet-bestaande onderdelen in het pakket. Dat is ongeldig volgens de
+OPC-pakketspecificatie, maar wordt noch door de schema-validator noch door
+LibreOffice gecontroleerd; alleen PowerPoint's eigen striktere
+consistentiecheck grijpt hierop in.
+
+**Fix, direct na `pres.writeFile()` (en ná `applyTheme`, die dit zelf niet
+oplost):** open het `.pptx`-bestand als zip, bepaal welke
+`ppt/slideMasters/slideMasterN.xml`-bestanden daadwerkelijk aanwezig zijn,
+en verwijder in `[Content_Types].xml` elke `Override`-regel voor een
+`slideMasterN.xml` die niet in die lijst voorkomt. Daarna opnieuw
+`validate.py` + een volledige visuele re-render draaien om te bevestigen dat
+er inhoudelijk niets is veranderd. Zie `PLAN.md` sectie 13, punt 50 voor de
+volledige reproductiestappen en het fix-script.
+
 ## Vóór elke commit
 
 `grep -rlP "\xc2\xad" --include="*.md" --include="*.sh" --include="*.py" .`
