@@ -210,6 +210,42 @@ lijn-helper altijd `w: Math.abs(x2 - x1), h: Math.abs(y2 - y1)` gebruiken
 punt 50's Content_Types-fix alléén niet genoeg was) en de exacte
 code-wijziging.
 
+## Documentatie bevat alleen de huidige stand van zaken, geen geschiedenis
+
+Net als bij code/scripts geldt voor README.md, `docs/*.md`,
+`cloud-setup/*`, `AGENTS.md` en dit bestand: **geen historische
+informatie bewaren over hoe iets vroeger was of wat er veranderd is.**
+Zinnen als "is inmiddels...", "niet meer nodig", "was eerder...",
+"historische referentie", of een gedateerde "Status (datum): ..."-melding
+die uitlegt wat er veranderd is, horen hier NIET thuis. Die geschiedenis
+hoort uitsluitend in:
+
+- de git-commitboodschap van de wijziging zelf, en
+- `PLAN.md` sectie 13 (het genummerde logboek) -- dat blijft wel de juiste
+  plek voor "wat is wanneer veranderd en waarom".
+
+Documentatie zelf beschrijft alleen **wat nu waar is**, net zoals code
+alleen het huidige gedrag implementeert. Check bij elke documentatie-
+wijziging niet alleen of de nieuwe informatie klopt, maar ook of er geen
+oude informatie als "achtergrond" is blijven staan.
+
+**Concreet geval dat tot deze regel leidde** (zie `PLAN.md` sectie 13,
+punt 54): na de overstap van een tijdelijke GCP-interim-broker naar een
+echte STACKIT-datacenter (punt 42) werd README.md/`docs/cloud-brokers.md`/
+`cloud-setup/README.md` eerst bijgewerkt met zinnen als "de GCP-interim-
+stand-in is niet meer nodig" en een gedateerde "Status (02/10/2026):..."-
+blok die het verschil met de oude situatie uitlegde (punt 53). Dat is
+fout: de juiste fix is simpelweg te beschrijven dat de 3 services bestaan
+en hoe ze worden aangemaakt (Terraform), zonder de GCP-interim-episode
+te noemen -- die blijft volledig in punt 42/53/54 van dit logboek staan,
+niet in de documentatie zelf.
+
+Uitzondering: een document dat expliciet een **verificatie-/testlog** is
+(bijv. `docs/lokale-broker.md`'s chronologische testrondes met datums) is
+geen "huidige stand van zaken"-beschrijving maar een verslag van wat is
+getest -- dat mag wel chronologisch/gedateerd blijven, zolang het zichzelf
+niet voordoet als de huidige architectuurbeschrijving.
+
 ## Vóór elke commit
 
 `grep -rlP "\xc2\xad" --include="*.md" --include="*.sh" --include="*.py" .`

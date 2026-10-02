@@ -6,8 +6,9 @@ Een enkele, self-managed Solace PubSub+ software broker (standard edition),
 **single-availability** (geen HA-trio) omdat dit een wegwerpbare demo-omgeving
 is die binnen enkele minuten opnieuw opgezet moet kunnen worden -- HA voegt
 hier alleen complexiteit toe zonder de kernboodschap (soevereine routering)
-te versterken. De drie cloud-brokers zijn wel HA, omdat dat past bij een
-"echt" productiesysteem en bij de eis uit de opdracht.
+te versterken. De drie cloud-brokers draaien in Solace Cloud
+("Developer 100"-tier), wat past bij een "echt" productiesysteem en bij
+de eis uit de opdracht.
 
 ## Status: draait
 
@@ -379,8 +380,8 @@ drie** demo-apps/dataklassen, elk uitsluitend op zijn eigen doelbroker:
   shell, macOS-default -- anders dan bash niet negeert; zie
   `demo-apps/python-eu-nonpersonal/README.md` als je zelf commando's met
   `#`-commentaar samenstelt.)
-- **STACKIT/GCP-interim** (`sdkperf-pii/publish-pii.sh`,
-  `enewable/eu/pii/>`): 20 Direct-berichten aangekomen op STACKIT/GCP-interim
+- **STACKIT** (`sdkperf-pii/publish-pii.sh`,
+  `enewable/eu/pii/>`): 20 Direct-berichten aangekomen op STACKIT
   "Try Me!" op `enewable/eu/pii/meter/reading`, niets op AWS/Azure. (Eerste
   poging liep vast op `sdkperf_java.sh: command not found` -- SDKPerf stond
   niet op Emils PATH, geen repo-bug; opgelost met de `SDKPERF_BIN`-variabele
@@ -422,9 +423,9 @@ curl) doet, in volgorde:
 2. Drie client-usernames aanmaken (`pub-public`, `pub-eu-ops`, `pub-eu-pii`),
    elk met een eigen ACL-profiel dat publiceren beperkt tot precies één
    topic-subtree (zie `../docs/topologie.md`).
-(De 3 bridges die dit script eerder ook aanmaakte zijn verwijderd -- dat
-bleek architecturaal niet te kunnen exporteren zonder reciprocal bridge +
-publieke bereikbaarheid, zie hieronder.)
+(Dit script maakt bewust geen Message VPN Bridges aan -- bridges kunnen
+zonder reciprocal bridge + publieke bereikbaarheid niet exporteren, zie
+hieronder.)
 
 Het **daadwerkelijke** exportpad loopt via
 `../local-broker/semp/configure-rdp-export.sh` (los script, ná
@@ -437,8 +438,8 @@ systeem-`/bin/bash` is bash 3.2 (Apple heeft dit bevroren sinds El Capitan om
 licentieredenen) en bash 4 is nodig voor `-A`. Bevestigd op Emils machine:
 zonder `-A` faalt zoiets als `[pub-public]=...` hard onder `set -u`
 ("pub: unbound variable"), omdat het als een indexed-array-subscript
-arithmetisch wordt geëvalueerd. Het script is inmiddels herschreven zonder
-associative arrays.
+arithmetisch wordt geëvalueerd. Het script gebruikt daarom alleen plain
+indexed arrays, geen associative arrays.
 
 ## Bekende risico's / dingen om te verifiëren voor de live demo
 
@@ -453,19 +454,15 @@ associative arrays.
   (Solace Cloud's standaard secure-REST-poort) -- **bevestigd correct voor
   alle 3 cloud-brokers** (Connect-tab van elke service, en onafhankelijk
   bevestigd doordat de RDP-export nu daadwerkelijk end-to-end werkt op alle
-  3, zie "Eindresultaat" hierboven). Bij een NIEUWE cloud-service (bijv. de
-  definitieve STACKIT eu01 zodra die GA is) toch even controleren op de
-  Connect-tab voordat je `configure-rdp-export.sh` draait -- dit is een
-  Solace Cloud-default, geen garantie.
+  3, zie "Eindresultaat" hierboven). Bij een nieuwe cloud-service toch even
+  controleren op de Connect-tab voordat je `configure-rdp-export.sh` draait
+  -- dit is een Solace Cloud-default, geen garantie.
 - **TLS-vertrouwen richting Solace Cloud**: de RDP's REST-consumer
   verbindt met TLS op poort 9443 met een publiek CA-certificaat. De
   standaard-broker-image heeft de meest gebruikelijke publieke CA's al
   vertrouwd -- bevestigd werkend in de praktijk (alle 3 REST-consumers
   zijn nu daadwerkelijk `up: true` en leveren berichten af, zie
-  "Eindresultaat" hierboven), dus geen open punt meer. (Dit was eerder een
-  open risico op de -- inmiddels afgeschafte -- bridge-verbindingen op
-  poort 55443; die tekst is achterhaald sinds bridges zijn vervangen door
-  RDP's.)
+  "Eindresultaat" hierboven), dus geen open punt meer.
 - **Geen persistente opslag**: de container gebruikt geen bind-mount voor
   `/var/lib/solace`. Elke herstart van de container = opnieuw
   `configure-local-broker.sh` draaien. Voor herhaalde oefensessies in de

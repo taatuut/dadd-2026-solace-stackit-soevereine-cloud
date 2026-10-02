@@ -1,4 +1,4 @@
-# Azure West Europe (Nederland) -- Solace Cloud HA broker (niet-persoonlijke EU-data)
+# Azure West Europe (Nederland) -- Solace Cloud broker (niet-persoonlijke EU-data)
 
 Rol: eindpunt voor **niet-persoonlijke, EU-gebonden** operationele data (bijv.
 geaggregeerde netbelasting per postcodegebied, geanonimiseerde
@@ -16,53 +16,42 @@ data mag oversteken).
 > verplaatsen -- zie `../../docs/cloud-brokers.md`, sectie "Wat ontbreekt of
 > kan beter".
 
-## Status: aangemaakt
+## Service
 
-Service **`ez-dadd-2026-aks-westeurope`** is aangemaakt (28/09/2026).
-Screenshots van elke stap staan in
-[`../../screenshots/Azure/`](../../screenshots/Azure/).
+Datacenter `aks-westeurope`, "Developer 100"-tier, Message VPN `enewable`.
+SMF-poort 55443/TLS, REST-poort 9443/TLS (zelfde hostname als SMF) --
+exacte hostnames staan in `../../local-broker/.env` en in de
+Terraform-output (`terraform output -json azure_service`). Screenshots van
+de aanmaak staan in [`../../screenshots/Azure/`](../../screenshots/Azure/).
 
-| Veld | Waarde |
-|---|---|
-| Cloud / regio | Azure, `aks-westeurope` (regio-code is AKS-gebaseerd, net als AWS' `eks-us-east-1a`) |
-| Service class | Enterprise, 250 connecties, 50 GB message spool |
-| High Availability | HA Group (active/standby/monitoring, 3 brokers) |
-| Broker release | 10.26.0.8894-14 |
-| Cluster | **Public** (zie `../../docs/cloud-brokers.md`, "Netwerktoegang") |
-| Message VPN | `ez-dadd-2026-aks-westeurop` (auto-gegenereerd, afgekapt op 26 tekens -- zie hieronder) |
-| SMF-hostname | `mr-connection-1uv2i5bgjkm.messaging.solace.cloud` (poort nog te bevestigen op de Connect-tab, standaard 55443/TLS) |
-| Service ID | `9vxfvj278k6` |
+## Publish-toegang
 
-**Geleerd van AWS + Azure samen**: een auto-gegenereerde Message VPN-naam
-wordt afgekapt op **26 tekens** als de servicenaam langer is (AWS:
-`ez-dadd-2026-eks-us-east-1a` -> VPN `ez-dadd-2026-eks-us-east-1`; Azure:
-`ez-dadd-2026-aks-westeurope` -> VPN `ez-dadd-2026-aks-westeurop`). Puur
-cosmetisch (een RDP werkt prima met deze naam), maar goed om te weten als
-je een VPN-naam wilt die exact de servicenaam volgt: houd 'm dan onder de
-26 tekens, of zet de VPN-naam handmatig onder "Advanced Connection Options".
-
-## Status: publish-toegang ingericht (gebruikt door de RDP)
-
-✅ `enewable-local-bridge` + ACL-profiel `acl-enewable-local-bridge`
-(publish-only op `enewable/eu/ops/>`) zijn aangemaakt via
+`enewable-local-bridge` + ACL-profiel `acl-enewable-local-bridge`
+(publish-only op `enewable/eu/ops/>`) worden aangemaakt via
 `../solace-cloud-api/configure-remote-bridge-users.sh` (SEMP-admin-username
-`mission-control-manager`). Credentials staan in `../../local-broker/.env` --
-deze worden nu gebruikt door de REST Delivery Point's REST-consumer
-(`../../local-broker/semp/configure-rdp-export.sh`), niet meer door een
-bridge.
+`mission-control-manager`). Credentials staan in `../../local-broker/.env`
+en worden gebruikt door de REST Delivery Point's REST-consumer
+(`../../local-broker/semp/configure-rdp-export.sh`).
 
-## Nog te doen voor deze service
+## Aanmaken
 
-1. ~~**Connect-tab**: exacte SMF-poort en REST-poort bevestigen; REST-
-   messaging aanzetten.~~ ✅ Bevestigd: REST-poort is 9443/TLS (zelfde
-   hostname als SMF), REST-messaging stond al aan. Onafhankelijk bewezen
-   door een geslaagde end-to-end test: 20 Direct-berichten aangekomen op
-   Azure "Try Me!" op `enewable/eu/ops/grid/load`, niets op AWS (zie
-   `../../docs/lokale-broker.md`, "Eindresultaat").
-2. ~~Client-username + ACL-profiel aanmaken~~ ✅ gedaan, zie "Status:
-   publish-toegang ingericht" hierboven.
-3. ~~Host, VPN-naam en credentials in `../../local-broker/.env` invullen~~ ✅
-   gedaan (VPN-naam `ez-dadd-2026-aks-westeurop` en credentials staan er al
-   in onder de `AZURE_*`-variabelen).
+De aanbevolen route is **Terraform**
+([`../terraform/README.md`](../terraform/README.md)).
 
-**Deze service is klaar en volledig getest -- geen verdere actie nodig.**
+Alternatief, handmatig via de console:
+
+1. Solace Cloud > Cluster Manager > **+ Create Service**.
+2. Cloud provider + regio kiezen (regio-codes zijn provider-specifiek,
+   bijv. `aks-westeurope` voor deze Azure-service).
+3. Service class: **Developer 100**.
+4. Servicenaam: volg dezelfde stijl, `ez-dadd-2026-<provider>-<regio>`.
+5. Message VPN: `enewable`.
+6. Wacht tot de service status "Running" is (doorgaans enkele minuten) en
+   maak screenshots van elke stap.
+
+Alternatief via API: `../solace-cloud-api/create-service.sh
+ez-dadd-2026-<naam> <datacenterId> DEVELOPER enewable`
+(zoek de exacte `datacenterId` op via `GET .../missionControl/datacenters`).
+
+Zie ook `../../docs/cloud-brokers.md` voor de bredere toelichting en
+`../../docs/topologie.md` voor het plaatje.

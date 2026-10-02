@@ -7,26 +7,17 @@ samen met de lokale broker de soevereine, gedistribueerde topologie vormen:
 |-----------------------------|--------------------------------------|-----------------------------------------------------|
 | `aws-us-east/`               | AWS, US East                         | Ontvangt PUBLIEKE data                              |
 | `azure-west-europe/`         | Azure, West Europe (Nederland)       | Ontvangt niet-persoonlijke EU-data                  |
-| `stackit-eu01/`               | STACKIT, Duitsland (regio `eu01`)    | Ontvangt gevoelige PII (sovereign) -- **GA, eigen `SolaceDedicated`-datacenter** |
-| `gcp-europe-west1-interim/`   | GCP, België (`europe-west1`)         | Historische **tijdelijke stand-in** voor STACKIT; niet meer gebruikt |
+| `stackit-eu01/`               | STACKIT, Duitsland (regio `eu01`)    | Ontvangt gevoelige PII (sovereign); eigen `SolaceDedicated`-datacenter |
 
-De eerste drie (AWS/Azure/STACKIT) zijn de definitieve, actuele topologie;
-de vierde map (`gcp-europe-west1-interim/`) was alleen nodig zolang STACKIT
-nog niet algemeen beschikbaar was en blijft enkel staan als historische
-referentie. Alle drie zijn Solace Cloud services, sinds de Terraform-opzet
-(zie hieronder) op "Developer 100"-tier, beheerd door Solace Cloud (Mission
-Control). Zie `../docs/cloud-brokers.md` voor de volledige toelichting.
+Dit zijn de drie Solace Cloud services die samen de topologie vormen, elk
+op "Developer 100"-tier, beheerd door Solace Cloud (Mission Control). Zie
+`../docs/cloud-brokers.md` voor de volledige toelichting.
 
-> **Status (02/10/2026): de 3 services zijn opnieuw aangemaakt via
-> Terraform** als "Developer 100"-tier in twee Solace Cloud-organisaties
-> (AWS+Azure in de ene, STACKIT in de andere) i.p.v. de eerdere
-> Enterprise-250-HA-klasse in één org. STACKIT bleek daarbij een eigen,
-> echte `SolaceDedicated`-datacenter te hebben (geen GCP-interim nodig).
-> Zie [`terraform/README.md`](terraform/README.md) voor de route die is
-> gevolgd, en `../PLAN.md` sectie 13, punt 42 / `../TODO.md` voor de
-> volledige achtergrond. De hieronder beschreven console-/
-> `create-service.sh`-route blijft staan als handmatig alternatief of
-> fallback.
+De aanbevolen, herhaalbare manier om deze 3 services aan te maken is
+**Terraform** ([`terraform/README.md`](terraform/README.md)): twee Solace
+Cloud-organisaties (AWS+Azure in de ene, STACKIT in de andere), elk als
+"Developer 100"-tier. De hieronder beschreven console-/
+`create-service.sh`-route is een handmatig alternatief of fallback.
 
 ## Volgorde van werken
 
@@ -38,9 +29,9 @@ Control). Zie `../docs/cloud-brokers.md` voor de volledige toelichting.
    aanname -- bevestig op de Connect-tab) en Message VPN-naam (zie per
    submap; deze zijn al ingevuld in `../local-broker/.env.example`).
 4. Maak per service een publish-client-username (`enewable-local-bridge` --
-   de naam is historisch, dit wordt nu gebruikt door de REST Delivery
-   Point's REST-consumer, niet door een bridge; wachtwoord al gegenereerd in
-   `../local-broker/.env`) met een publish-only ACL-profiel -- handmatig via
+   deze naam dekt niet de huidige functie: wordt gebruikt door de REST
+   Delivery Point's REST-consumer, niet door een bridge; wachtwoord al
+   gegenereerd in `../local-broker/.env`) met een publish-only ACL-profiel -- handmatig via
    Manage > Client Usernames (zie per submap), of automatisch met
    `solace-cloud-api/configure-remote-bridge-users.sh` zodra je de
    SEMP-admin-username/password per broker (Connect-tab) in `.env` hebt

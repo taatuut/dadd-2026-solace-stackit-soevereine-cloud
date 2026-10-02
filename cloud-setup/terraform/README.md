@@ -1,19 +1,17 @@
 # Terraform: de 3 cloud-broker services aanmaken
 
-De 3 Solace Cloud event broker services (AWS, Azure, STACKIT) zijn
-verwijderd en moeten opnieuw aangemaakt worden. Dit is de
-Terraform-opzet daarvoor -- een alternatief voor de console-wizard en
+Terraform-opzet om de 3 Solace Cloud event broker services (AWS, Azure,
+STACKIT) aan te maken -- een alternatief voor de console-wizard en
 `../solace-cloud-api/create-service.sh` (die blijven staan als
-handmatige/REST-referentie, zie `../README.md`). Achtergrond en open
-aannames: `../../PLAN.md` sectie 13, punt 40; actuele status: `../../TODO.md`.
+handmatige/REST-referentie, zie `../README.md`).
 
 ## Wat dit wel en niet doet
 
 - **Wel**: de 3 services zelf aanmaken (Mission Control-niveau) --
   `name`, `datacenter_id`, `service_class_id` ("Developer 100"-tier, zie
-  `variables.tf`), en een EXPLICIETE `message_vpn_name` (`enewable`, i.p.v.
-  de auto-gegenereerde/afgekapte naam die vorige keer voor verwarring
-  zorgde -- zie `../../docs/cloud-brokers.md`).
+  `variables.tf`), en een EXPLICIETE `message_vpn_name` (`enewable`, om een
+  auto-gegenereerde/afgekapte naam te voorkomen -- zie
+  `../../docs/cloud-brokers.md`).
 - **Niet**: de publish-only `enewable-local-bridge`-client-username + ACL
   -profiel op elke nieuwe broker. Dat is SEMP-niveau-configuratie op de
   broker zelf, geen Mission-Control-resource, en blijft voor nu de taak
@@ -35,8 +33,8 @@ org in de console, "My Account"/org-instellingen).
 Netwerktoegang naar `api.solace.cloud` en de broker-hostnames is vanuit de
 Cowork-sessie (zowel de cloud-container als de sandbox op je Mac) geblokkeerd
 -- zie `../../docs/cloud-brokers.md`, "Netwerktoegang vanuit deze sessie".
-`terraform init`/`plan`/`apply` moet dus, net als `create-service.sh`
-voorheen, door jezelf in je eigen, gewone terminal gedraaid worden.
+`terraform init`/`plan`/`apply` moet dus, net als `create-service.sh`,
+door jezelf in je eigen, gewone terminal gedraaid worden.
 
 1. **Terraform CLI installeren** (`brew install terraform` of `tfenv`),
    versie >= 1.5.
@@ -51,11 +49,10 @@ voorheen, door jezelf in je eigen, gewone terminal gedraaid worden.
    NIET blindelings hergebruiken uit een oude screenshot (zelfde
    waarschuwing als altijd al in `../solace-cloud-api/create-service.sh`
    stond).
-5. **STACKIT: echt of nog interim?** Check of STACKIT inmiddels als eigen
-   datacenter-optie verschijnt in die lijst (zie `../../TODO.md`,
-   "STACKIT GA-check"). Zo ja: gebruik die echte STACKIT eu01-id voor
-   `datacenter_id_stackit`. Zo nee: gebruik (net als vorige keer) een GCP
-   europe-west1-datacenter-id als tijdelijke stand-in.
+5. **STACKIT-datacenter-id.** STACKIT heeft een eigen, echte
+   `SolaceDedicated`-datacenter (`stackitdemo-stackit-eu01-production`,
+   "StackIT Production Region") -- gebruik die id voor
+   `datacenter_id_stackit`.
 6. **`service_class_id` bevestigen.** Bronnen spreken elkaar tegen over de
    exacte schrijfwijze van de "Developer 100"-klasse: de REST-API-docs
    noemen `"developer"` (kleine letters), het Terraform-provider-schema
@@ -94,13 +91,12 @@ dit wilt afstellen) -- dit kan enkele minuten per service duren.
    terraform output -json azure_service | jq .
    terraform output -json stackit_service | jq .
    ```
-2. Vul `../../local-broker/.env` opnieuw in (`AWS_*`/`AZURE_*`/
+2. Vul `../../local-broker/.env` in (`AWS_*`/`AZURE_*`/
    `STACKIT_*`-secties) met wat daar uitkomt: SMF-hostname:poort,
-   REST-hostname:poort, VPN-naam (moet overal gewoon `enewable` zijn nu),
-   en de gegenereerde SEMP-admin-credentials (waarschijnlijk de
-   `message_vpn`-credential met de "manager"-rol -- vergelijkbaar met de
-   vorige keer handmatig gevonden `mission-control-manager`-user op de
-   Connect-tab, maar bevestig dit zelf tegen de echte output).
+   REST-hostname:poort, VPN-naam (moet overal `enewable` zijn), en de
+   gegenereerde SEMP-admin-credentials (de `message_vpn`-credential met de
+   "manager"-rol, zichtbaar als `mission-control-manager`-user op de
+   Connect-tab -- bevestig dit zelf tegen de echte output).
 3. Draai `../solace-cloud-api/configure-remote-bridge-users.sh` om op elke
    nieuwe broker opnieuw de publish-only `enewable-local-bridge` +
    ACL-profiel aan te maken (gebruikt de SEMP-admin-credentials uit stap 2,

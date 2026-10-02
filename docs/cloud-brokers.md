@@ -4,7 +4,7 @@ Zie ook de drie submappen in `../cloud-setup/` voor de concrete,
 provider-specifieke stappen. Dit document geeft de bredere toelichting en
 het STACKIT-afwegingspunt.
 
-## Waarom drie aparte HA-services, en waarom deze indeling?
+## Waarom drie aparte cloud-services, en waarom deze indeling?
 
 De drie cloud-brokers corresponderen 1-op-1 met de drie dataklassen uit de
 opdracht:
@@ -23,29 +23,21 @@ opdracht:
 3. **STACKIT eu01 (Duitsland)** -- gevoelige PII, op een soeverein, Europees
    platform zonder Amerikaanse moederonderneming.
 
-## STACKIT: inmiddels een echte, eigen datacenter (geen interim meer)
+## STACKIT: eigen, echte datacenter in Solace Cloud
 
-**Status (02/10/2026): STACKIT is algemeen beschikbaar (GA) in Solace
-Cloud gebleken bij het opnieuw aanmaken van de services via Terraform** --
-zie `../cloud-setup/terraform/README.md` en `PLAN.md` sectie 13, punt 42.
 STACKIT heeft een eigen, echte `SolaceDedicated`-datacenter
 (`stackitdemo-stackit-eu01-production`, "StackIT Production Region"), met
 dezelfde self-service deployment-ervaring als AWS en Azure -- gewoon te
 kiezen als datacenter bij het aanmaken van de service, geen aparte
-Controlled-Availability/BYOK-procedure meer. Zie
-`../cloud-setup/stackit-eu01/README.md` voor de aanmaakstappen.
-
-De eerdere tijdelijke stand-in op **GCP, regio europe-west1 (België)**
-(`../cloud-setup/gcp-europe-west1-interim/README.md`) was functioneel
-identiek (zelfde topics, ACL-profiel en RDP-naam `rdp-stackit`), maar is
-niet meer nodig en wordt in de huidige opzet niet meer gebruikt -- die map
-blijft alleen staan als historische referentie voor hoe de interim-opzet
-werkte, mocht een toekomstige provider-GA zich weer laten wachten.
+Controlled-Availability/BYOK-procedure. Zie
+`../cloud-setup/terraform/README.md` voor de Terraform-opzet die de 3
+services aanmaakt, en `../cloud-setup/stackit-eu01/README.md` voor de
+STACKIT-specifieke details.
 
 ## Provisioning: console vs. API
 
 Voor een eenmalige, goed te plannen demo-opzet is de **Solace Cloud console**
-de eenvoudigste weg (minder foutgevoelig, visuele bevestiging van HA-status).
+de eenvoudigste weg (minder foutgevoelig, visuele bevestiging van de servicestatus).
 `../cloud-setup/solace-cloud-api/create-service.sh` is een optioneel
 alternatief voor wie de opzet wil kunnen herhalen/scripten (bijv. na een
 oefensessie de services afbreken en later opnieuw exact zo aanmaken).
@@ -64,9 +56,9 @@ verwarren punt:
    `../local-broker/semp/configure-local-broker.sh` en
    `../local-broker/semp/configure-rdp-export.sh` (lokaal) en
    `../cloud-setup/solace-cloud-api/configure-remote-bridge-users.sh`
-   (op afstand, voor de 3 cloud-brokers -- de naam is historisch: dit
-   script maakt de publish-client-username die nu door de RDP's
-   REST-consumer wordt gebruikt, niet meer door een bridge). **Bevestigd (28/09/2026)**: de
+   (op afstand, voor de 3 cloud-brokers -- deze naam dekt niet de huidige
+   functie: het script maakt de publish-client-username die door de RDP's
+   REST-consumer wordt gebruikt, niet door een bridge). De
    SEMP-admin-username op de Connect-tab van elke Solace Cloud-service heet
    `mission-control-manager` (per service een eigen wachtwoord), op
    `https://<smf-hostnaam>:943`.
@@ -82,70 +74,31 @@ aanroept, **door jou zelf gedraaid moet worden** in je eigen, gewone
 terminal (dezelfde waarin `git push` en `docker-run.sh` al werkten) -- niet
 door de assistent.
 
-## Wat de AWS-, Azure- en GCP-interim-opzet ons hebben geleerd (fase 3 compleet)
+## Lessen voor handmatige aanmaak via de console
 
-Alle drie de cloud-broker services zijn nu aangemaakt: AWS US East
-(`ez-dadd-2026-eks-us-east-1a`), Azure West Europe
-(`ez-dadd-2026-aks-westeurope`) en de STACKIT/GCP-interim-stand-in
-(`ez-dadd-2026-STACKIT-gke-gcp-europe-west1-b`, service-ID `0kc8gh43pg3`,
-regio-code `gke-gcp-europe-west1-b`). Screenshots van elke stap staan in
-[`../screenshots/AWS/`](../screenshots/AWS/),
-[`../screenshots/Azure/`](../screenshots/Azure/) en
-[`../screenshots/STACKIT-of-GCP-interim/`](../screenshots/STACKIT-of-GCP-interim/).
+Relevant als je een service handmatig via de Solace Cloud console aanmaakt
+(i.p.v. via Terraform, zie `../cloud-setup/terraform/README.md`):
 
-Concrete correcties/aanvullingen op basis daarvan:
+- **Region-codes in Solace Cloud zijn geen kale AWS/Azure-regio's.** De
+  console toont regio's als `eks-us-east-1a` (niet `us-east-1`) of
+  `aks-westeurope` -- zoek de exacte waarde altijd op in de
+  Region-dropdown of via `GET .../missionControl/datacenters`, neem 'm
+  niet zomaar over uit dit document.
+- **Message VPN-naam wordt, tenzij je 'm handmatig zet, auto-gegenereerd
+  uit de servicenaam en afgekapt op 26 tekens** (en altijd lowercased, ook
+  als de servicenaam hoofdletters bevat). Zet de VPN-naam daarom handmatig
+  onder "Advanced Connection Options" als je een voorspelbare naam wilt --
+  de Terraform-opzet doet dit al expliciet (`enewable` voor alle drie
+  services). Een REST Delivery Point post naar een gewoon REST-endpoint
+  (host:poort), dus VPN's met verschillende namen verbinden probleemloos.
+- **Connect-tab geeft het exacte REST host:poort voor de RDP** (naast de
+  SMF-hostnaam) -- standaard dezelfde hostname als SMF op poort 9443
+  (Solace Cloud's standaard secure-REST-poort), bevestig dit per service.
 
-- **Region-codes in Solace Cloud zijn geen kale AWS-regio's.** De console
-  toont regio's als `eks-us-east-1a` (niet `us-east-1`) -- Solace Cloud
-  draait blijkbaar op EKS-onderliggende infrastructuur. Zoek de exacte
-  waarde altijd op in de Region-dropdown of via
-  `GET .../missionControl/datacenters`, neem 'm niet zomaar over uit dit
-  document.
-- **Message VPN-naam wordt auto-gegenereerd uit de servicenaam**, afgekapt op
-  **26 tekens** als die langer is (AWS: `ez-dadd-2026-eks-us-east-1a` ->
-  VPN `ez-dadd-2026-eks-us-east-1`; Azure: `ez-dadd-2026-aks-westeurope` ->
-  VPN `ez-dadd-2026-aks-westeurop`), tenzij je die handmatig overschrijft
-  onder "Advanced Connection Options". Dit hoeft dus **niet** voor elke
-  broker "enewable" te heten -- de lokale broker heeft zijn eigen VPN-naam
-  (`enewable`, door onszelf gekozen) en elke cloud-service heeft zijn eigen
-  (auto-gegenereerde of handmatig gekozen) naam. Een REST Delivery Point post
-  naar een gewoon REST-endpoint (host:poort), dus VPN's met verschillende
-  namen verbinden probleemloos, net als eerder met bridges het geval was.
-- **Naamgevingsconventie**: AWS en Azure volgen `ez-dadd-2026-<provider>-
-  <regio>`. Voor de STACKIT/GCP-interim-service is bewust afgeweken naar
-  `ez-dadd-2026-STACKIT-gke-gcp-europe-west1-b` -- de expliciete `STACKIT`
-  in de naam maakt in de Cluster Manager-lijst en op screenshots direct
-  duidelijk dat dít knooppunt de (tijdelijke) sovereign-bestemming is, wat
-  waardevoller bleek dan strikte naamconsistentie tussen de drie services.
-- **Message VPN-namen worden ook naar kleine letters omgezet.** De
-  servicenaam `ez-dadd-2026-STACKIT-gke-gcp-europe-west1-b` (met
-  hoofdletters `STACKIT`) leverde VPN-naam `ez-dadd-2026-stackit-gke-g` op
-  -- exact 26 tekens, en volledig lowercase. Dit was bij AWS/Azure niet
-  zichtbaar omdat die servicenamen al lowercase waren; ga er dus van uit dat
-  Solace Cloud VPN-namen altijd lowercased, ook als de servicenaam
-  hoofdletters bevat.
-- **Service class**: Enterprise, 250 connecties, 50 GB message spool,
-  High Availability (HA) Group (3 brokers: active/standby/monitoring),
-  broker-release 10.26 -- gebruik dezelfde class voor Azure en
-  STACKIT/GCP-interim voor consistentie, tenzij er een reden is om af te
-  wijken.
-- **Connect-tab (exacte REST host:poort voor de RDP, naast de al bekende
-  SMF-hostnaam) is nog niet bevestigd voor AWS, Azure of GCP-interim** --
-  aangenomen is dezelfde hostname als SMF op poort 9443 (Solace Cloud's
-  standaard secure-REST-poort); dit is de eerstvolgende sub-stap voor alle
-  drie services, zie `../local-broker/.env.example`.
-
-## Concrete gegevens per service
-
-| Service | Service-ID | Regio-code | Message VPN | SMF-hostname |
-|---|---|---|---|---|
-| AWS US East | (zie screenshots) | `eks-us-east-1a` | `ez-dadd-2026-eks-us-east-1` | `mr-connection-07w9t1ah76x.messaging.solace.cloud` |
-| Azure West Europe | `9vxfvj278k6` | `aks-westeurope` | `ez-dadd-2026-aks-westeurop` | `mr-connection-1uv2i5bgjkm.messaging.solace.cloud` |
-| STACKIT/GCP-interim | `0kc8gh43pg3` | `gke-gcp-europe-west1-b` | `ez-dadd-2026-stackit-gke-g` | `mr-connection-gp982rqw5dk.messaging.solace.cloud` |
-
-Alle drie: Enterprise, 250 connecties, 50 GB message spool, HA Group,
-broker-release 10.26 (GCP-interim: 10.26.0.8894-14), aangemaakt door Emil
-Zegers op 28/09/2026.
+Actuele host-, VPN- en service-gegevens per broker staan in
+`../local-broker/.env` en in de Terraform-output
+(`terraform output -json <service>`), niet hieronder vastgelegd -- die
+veranderen bij elke herinrichting van de services.
 
 ## Netwerktoegang: public clusters (bewuste keuze voor deze demo)
 

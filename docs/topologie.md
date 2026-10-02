@@ -3,9 +3,9 @@
 ## Overzicht
 
 Vier Solace-brokers, drie dataklassen, drie REST Delivery Points (RDP) --
-elke dataklasse mag naar precies één bestemming. (Eerder onderzocht en
-verlaten: Message VPN Bridges, die alleen kunnen *importeren* van een
-remote broker, niet exporteren -- zie "Waarom RDP's" hieronder.)
+elke dataklasse mag naar precies één bestemming. (Niet gebruikt: Message
+VPN Bridges kunnen alleen *importeren* van een remote broker, niet
+exporteren -- zie "Waarom RDP's" hieronder.)
 
 ```mermaid
 flowchart LR
@@ -60,9 +60,9 @@ doet dat. Zie `../demo-apps/README.md`.
 | # | Broker              | Type                                   | Locatie                | Rol                                  |
 |---|----------------------|-----------------------------------------|--------------------------|----------------------------------------|
 | 1 | Lokaal                | Self-managed software, single-AZ, Docker | Laptop (macOS)           | Bron van alle demo-data, exporteert via 3 REST Delivery Points |
-| 2 | AWS US East           | Solace Cloud, HA                         | AWS, US East              | Ontvangt **publieke** data              |
-| 3 | Azure West Europe    | Solace Cloud, HA                         | Azure, West Europe (NL)   | Ontvangt **niet-persoonlijke EU**-data  |
-| 4 | STACKIT eu01          | Sovereign HA (zie open punt hieronder)   | STACKIT, Duitsland        | Ontvangt **gevoelige PII**              |
+| 2 | AWS US East           | Solace Cloud                             | AWS, US East              | Ontvangt **publieke** data              |
+| 3 | Azure West Europe    | Solace Cloud                             | Azure, West Europe (NL)   | Ontvangt **niet-persoonlijke EU**-data  |
+| 4 | STACKIT eu01          | Solace Cloud, sovereign                  | STACKIT, Duitsland        | Ontvangt **gevoelige PII**              |
 
 ## Topic-taxonomie
 
@@ -89,16 +89,6 @@ endpoint van de bijbehorende cloud-broker post, op exact dezelfde topic
 (`postRequestTarget: "/${topic()}"`). Geen publieke bereikbaarheid van de
 lokale broker nodig -- de RDP dialt net als een bridge zelf uit.
 
-## Interim: STACKIT-knooppunt tijdelijk gemimickt op GCP België
-
-Tot STACKIT algemeen beschikbaar is in Solace Cloud (verwacht komende week),
-staat er op de plek van "STACKIT eu01" in dit diagram feitelijk een Solace
-Cloud HA-service op **GCP, europe-west1 (België)**. Topics, ACL-profiel en
-RDP-naam (`rdp-stackit`) blijven ongewijzigd -- alleen het fysieke
-eindpunt wisselt zodra STACKIT GA is. Zie
-`../cloud-setup/gcp-europe-west1-interim/README.md` en
-`../cloud-setup/stackit-eu01/README.md`.
-
 ## Waarom REST Delivery Points en niet "echte" `#noexport`/DMR?
 
 De presentatie noemt `#noexport` als Solace-mechanisme om data fysiek te
@@ -108,8 +98,8 @@ REST Delivery Points** met topic-scoped subscriptions: functioneel
 identiek voor deze demo (data die niet in een subtree zit, kan een RDP niet
 verlaten, want de bijbehorende queue heeft er geen subscription op), maar
 architecturaal een ander mechanisme dan DMR/`#noexport`. (Message VPN
-Bridges waren het eerst geprobeerde alternatief, maar konden -- zonder een
-publiek bereikbare lokale broker -- alleen importeren, niet exporteren; zie
-`PLAN.md` sectie 13 voor de volledige onderbouwing.) Zie `PLAN.md`, sectie
+Bridges kunnen zonder een publiek bereikbare lokale broker alleen
+importeren, niet exporteren; zie `PLAN.md` sectie 13 voor de volledige
+onderbouwing.) Zie `PLAN.md`, sectie
 "Wat ontbreekt of kan beter" voor de afweging en hoe je dit dichter bij de
 `#noexport`-demonstratie uit de slides zou brengen.

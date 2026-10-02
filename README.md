@@ -59,15 +59,11 @@ detail.
 **Aan de cloud-kant -- dit README automatiseert dit NIET:**
 
 Dit README gaat ervan uit dat de 3 Solace Cloud broker-services **al
-bestaan**: AWS (US East), Azure (West Europe) en **STACKIT (eu01, een
-eigen, echte `SolaceDedicated`-datacenter in Solace Cloud)** -- de
-tijdelijke GCP-interim-stand-in uit een eerdere fase van dit project is
-niet meer nodig en wordt niet meer gebruikt (zie
-[`cloud-setup/README.md`](cloud-setup/README.md) voor de achtergrond; de
-map [`cloud-setup/gcp-europe-west1-interim/`](cloud-setup/gcp-europe-west1-interim/README.md)
-blijft alleen staan als historische referentie). Je hebt de volgende
-gegevens per service nodig (te vinden op de Connect-tab van elke service
-in de Solace Cloud console, of in de Terraform-output, zie hieronder):
+bestaan**: AWS (US East), Azure (West Europe) en STACKIT (eu01, een
+eigen, echte `SolaceDedicated`-datacenter in Solace Cloud). Je hebt de
+volgende gegevens per service nodig (te vinden op de Connect-tab van elke
+service in de Solace Cloud console, of in de Terraform-output, zie
+hieronder):
 
 - SMF-hostname (bijv. `mr-connection-xxxxxxxxxxx.messaging.solace.cloud`,
   poort 55443/TLS).
@@ -81,7 +77,7 @@ in de Solace Cloud console, of in de Terraform-output, zie hieronder):
   `enewable/eu/pii/>` voor STACKIT).
 
 Als je deze services of credentials nog niet hebt: de aanbevolen,
-herhaalbare route is inmiddels **Terraform**
+herhaalbare route is **Terraform**
 ([`cloud-setup/terraform/README.md`](cloud-setup/terraform/README.md)) --
 dat maakt alle 3 services in één `terraform apply` aan (AWS en Azure in de
 ene Solace Cloud-organisatie, STACKIT in een andere, elk als

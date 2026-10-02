@@ -1808,6 +1808,63 @@ productieklaar systeem:
      verderop in hetzelfde bestand al de juiste informatie gaf).
      Geverifieerd met een volledige `git diff` van alle drie bestanden
      vóór commit.
+  54. **Documentatie opgeschoond: geen historische/verouderde informatie
+     meer in README.md/docs/*.md/cloud-setup/* (Emil + assistent,
+     02/10/2026).** Emil corrigeerde de stijl van punt 53: levende
+     documentatie mag GEEN geschiedenis bevatten ("was eerder", "niet meer
+     nodig", "historische referentie", gedateerde "Status (datum):"-
+     meldingen) -- dat hoort uitsluitend in git-commitberichten en in dit
+     logboek (sectie 13), niet in README.md/docs/*.md/cloud-setup/*.
+     Alle documentatie (behalve `PLAN.md`/`TODO.md`) doorgelopen op dit
+     patroon, met focus op resterende GCP-interim-verwijzingen en andere
+     niet meer actuele informatie over de huidige werking/codebase:
+     1) `README.md` -- GCP-interim-zin en "is inmiddels" uit de
+     cloud-kant-sectie; 2) `docs/cloud-brokers.md` -- de gedateerde
+     "Status (02/10/2026)"-melding en de hele GCP-interim-alinea uit de
+     STACKIT-sectie verwijderd, en de sectie "Wat de AWS-, Azure- en
+     GCP-interim-opzet ons hebben geleerd (fase 3 compleet)" plus de
+     bijbehorende per-service-tabel (beide met verouderde
+     Enterprise-250-HA-gegevens en -service-ID's van vóór de
+     Terraform-herinrichting, punt 42) vervangen door een kortere,
+     ongedateerde sectie met alleen generiek bruikbare lessen voor
+     handmatige aanmaak via de console, met een verwijzing naar
+     `local-broker/.env`/Terraform-output voor de actuele waarden i.p.v.
+     vastgelegde (en dus verouderbare) service-ID's/hostnames;
+     3) `cloud-setup/README.md` -- de GCP-interim-rij uit de tabel en de
+     gedateerde "Status (02/10/2026)"-blockquote vervangen door een platte
+     beschrijving van de huidige Terraform/Developer-100-opzet;
+     4) `cloud-setup/terraform/README.md` -- "zijn verwijderd en moeten
+     opnieuw aangemaakt worden" en de vraag "STACKIT: echt of nog
+     interim?" (inmiddels beantwoord) vervangen door platte huidige
+     feiten; 5) `cloud-setup/gcp-europe-west1-interim/README.md` volledig
+     ingekort tot een korte, platte constatering dat deze map geen deel
+     uitmaakt van de huidige topologie, met een verwijzing naar
+     `stackit-eu01/README.md`; 6) `cloud-setup/stackit-eu01/README.md`
+     herschreven van "wordt naar verwachting GA" (toekomstige
+     verwachting) naar de huidige, al bereikte situatie (eigen
+     `SolaceDedicated`-datacenter), "interim mimic op GCP"-sectie
+     verwijderd; 7) `cloud-setup/aws-us-east/README.md` en
+     `azure-west-europe/README.md` -- de doorgestreepte
+     voortgangs-checklists en de verouderde Enterprise-250-HA/
+     28-09-2026-servicegegevens (vóór de Terraform-herinrichting van punt
+     42) vervangen door een beknopte, actuele beschrijving (Developer
+     100-tier, Terraform als aanbevolen route); 8) `docs/topologie.md` --
+     de sectie "Interim: STACKIT-knooppunt tijdelijk gemimickt op GCP
+     België" verwijderd en de broker-tabel ontdaan van een ongeverifieerde
+     "HA"-claim op de Developer-100-tier; 9) `docs/lokale-broker.md` --
+     de resterende "STACKIT/GCP-interim"-vermeldingen vervangen door
+     "STACKIT", de ongeverifieerde HA-claim gecorrigeerd, en twee
+     meta-opmerkingen die zichzelf als "achterhaald" beschreven
+     verwijderd in plaats van gecorrigeerd laten staan. Buiten scope
+     gehouden: de uitgebreide testronde-log in `docs/lokale-broker.md`
+     zelf (chronologische verificatiestappen met datums) is een
+     verificatierapport, geen "huidige stand van zaken"-beschrijving, en
+     dus niet hetzelfde probleem als de overige documentatie. Nieuwe
+     conventie vastgelegd in `SKILLS.md`, "Documentatie bevat alleen de
+     huidige stand van zaken, geen geschiedenis", om deze fout niet
+     opnieuw te maken. Geverifieerd met `git diff --stat` over alle
+     gewijzigde bestanden en de soft-hyphen-sweep vóór commit.
+
 - **Geen automatische provisioning van alle 4 brokers in één commando.**
   Er is bewust voor losse, leesbare stappen gekozen (console + scripts per
   onderdeel) omdat dat beter uit te leggen en te debuggen is vóór een
