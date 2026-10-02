@@ -1738,6 +1738,44 @@ productieklaar systeem:
      detecteren; bij een pijl/lijn-vorm die richting kan omkeren altijd
      expliciet op negatieve `w`/`h` controleren, niet alleen op het
      eindresultaat vertrouwen.
+
+  52. **Dia 4 (architectuurdiagram) herontworpen op Emils feedback na het
+     eerste gebruik van de presentatie (assistent, 02/10/2026).** Emil gaf,
+     na bevestiging dat de presentatie nu goed opent, vijf concrete
+     verbeterpunten voor dia 4 en twee kleine tekstcorrecties elders:
+     1) de 3 publicerende apps (`stm CLI`, `Python-script`, `SDKPerf`) van
+     binnen de lokale-broker-doos naar een eigen kolom links ervan verplaatst,
+     elk met een eigen doos; 2) per app expliciet de 3 topic-subtrees
+     getoond waarop die publiceert (kleurgecodeerde stip + topic, dezelfde
+     kleuren als de rest van de deck), in plaats van alleen de generieke
+     tekst "publiceert op alle 3 subtrees"; 3) een gestileerde wereldkaart-
+     achtergrond toegevoegd -- twee losse, vrij-getekende continent-
+     silhouetten (Noord-Amerika en Europa, met Pillow/matplotlib + een
+     spline-afvlakking gegenereerd, dus geen downloadafhankelijkheid van
+     externe geodata) onder de AWS- resp. Azure/STACKIT-dozen, zodat AWS
+     letterlijk boven Amerika en Azure + STACKIT boven Europa staan;
+     4) de Azure-tekst "NL, maar Amerikaanse hyperscaler" veranderd naar
+     "NL op Amerikaanse hyperscaler"; 5) bij elke pijl een los label met de
+     exacte RDP-topic-subscriptie (`RDP: enewable/public/>` etc.) gezet, in
+     plaats van één gedeeld "3 x queue + REST Delivery Point"-bijschrift.
+     Daarnaast: op dia 2 "Het is een bewegingsvraagstuk" en op dia 14
+     "Soevereiniteit is een classificatievraagstuk" beide veranderd naar
+     "governancevraagstuk".
+     **Layoutprobleem onderweg gevonden en opgelost:** de eerste versie van
+     het herontwerp plaatste Azure en STACKIT naast elkaar op dezelfde
+     hoogte als AWS, met als gevolg dat de (rechte) pijlen naar Azure/
+     STACKIT dwars door de AWS-doos heen liepen -- zichtbaar in de
+     LibreOffice-rendering, dus gevangen door de visuele QA vóór levering,
+     niet door een gebruiker. Opgelost door Azure/STACKIT verticaal onder
+     AWS te positioneren zodat zowel het bron- als het doelpunt van hun
+     pijlen ruim boven de onderkant van de AWS-doos blijven (rechte lijnen
+     kruisen een doos nooit als beide uiteinden aan dezelfde kant ervan
+     liggen) -- een algemenere les voor elk vervolg-diagram met meerdere
+     pijlen die een gedeeld tussenliggend vak passeren. Geverifieerd:
+     `validate.py`, geen negatieve `cx`/`cy` (zie punt 51), en een volledige
+     visuele re-render van alle 14 dia's (dia 2, 4 en 14 individueel
+     gecontroleerd op de gevraagde wijzigingen, de overige 11 op afwezigheid
+     van regressie). Herleverd via `SendUserFile` en gecommit in `docs/`.
 - **Geen automatische provisioning van alle 4 brokers in één commando.**
   Er is bewust voor losse, leesbare stappen gekozen (console + scripts per
   onderdeel) omdat dat beter uit te leggen en te debuggen is vóór een
