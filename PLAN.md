@@ -1997,10 +1997,25 @@ productieklaar systeem:
      teruggeeft en het script specifiek op `code: 6001` matcht -- geen
      functionele wijziging op AWS/Azure, puur een loggingmismatch), en
      `configure-rdp-export.sh` opnieuw gedraaid zodat `rdp-stackit` weer
-     naar de nieuwe host wijst. Eind-tot-eind bevestigd: `rdp-stackit`
-     staat op "Up" in Broker Manager en live PII-berichten komen aan in de
-     STACKIT "Try Me!"-tab op `enewable/eu/pii/>`. De oude, verweesde
-     service `ez-dadd-2026-stackit-eu01` (op
+     naar de nieuwe host wijst. Door Emil zelf, stap voor stap in zijn
+     eigen terminal uitgevoerd (netwerktoegang naar
+     `api.solace.cloud`/broker-hostnames is vanuit deze sessie geblokkeerd,
+     zie `docs/cloud-brokers.md`): `terraform plan` (eerste, schone
+     assessment -- nul drift AWS/Azure, `+ create` STACKIT op het oude
+     datacenter); `terraform plan` (na de datacenter-correctie naar
+     `ske-eu01`, gaf de Immutable Attribute Change-fout); `terraform state
+     rm solacecloud_service.stackit_eu01`; `terraform plan` (schone `+
+     create` op `ske-eu01`); `terraform apply
+     -target=solacecloud_service.stackit_eu01` (eerste poging, faalde op de
+     naamsbotsing met de verweesde eerste service); na de hernoeming in
+     `main.tf` opnieuw `terraform plan` gevolgd door `terraform apply
+     -target=solacecloud_service.stackit_eu01` (succesvol: "Apply complete!
+     Resources: 1 added, 0 changed, 0 destroyed."); `cd ../solace-cloud-api
+     && ./configure-remote-bridge-users.sh`; en, vanuit `local-broker/`,
+     `./semp/configure-rdp-export.sh`. Eind-tot-eind bevestigd:
+     `rdp-stackit` staat op "Up" in Broker Manager en live PII-berichten
+     komen aan in de STACKIT "Try Me!"-tab op `enewable/eu/pii/>`. De oude,
+     verweesde service `ez-dadd-2026-stackit-eu01` (op
      `stackitdemo-stackit-eu01-production`, niet meer door Terraform
      gevolgd na de `state rm`) draait nog en moet handmatig via de console
      verwijderd worden. `docs/cloud-brokers.md`, `cloud-setup/README.md` en
