@@ -7,7 +7,7 @@ samen met de lokale broker de soevereine, gedistribueerde topologie vormen:
 |-----------------------------|--------------------------------------|-----------------------------------------------------|
 | `aws-us-east/`               | AWS, US East                         | Ontvangt PUBLIEKE data                              |
 | `azure-west-europe/`         | Azure, West Europe (Nederland)       | Ontvangt niet-persoonlijke EU-data                  |
-| `stackit-eu01/`               | STACKIT, Duitsland (regio `eu01`)    | Ontvangt gevoelige PII (sovereign); eigen `SolaceDedicated`-datacenter |
+| `stackit-eu01/`               | STACKIT, Duitsland (regio `eu01`)    | Ontvangt gevoelige PII (sovereign); eigen publieke `SolacePublic`-regio (`ske-eu01`) |
 
 Dit zijn de drie Solace Cloud services die samen de topologie vormen, elk
 op "Developer 100"-tier, beheerd door Solace Cloud (Mission Control). Zie

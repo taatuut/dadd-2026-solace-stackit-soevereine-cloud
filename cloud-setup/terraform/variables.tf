@@ -33,7 +33,7 @@ variable "datacenter_id_azure" {
 }
 
 variable "datacenter_id_stackit" {
-  description = "Solace Cloud datacenterId for the STACKIT service. If STACKIT is now confirmed GA as its own selectable datacenter (see TODO.md, 'STACKIT GA-check'), use the real STACKIT eu01 id. If it is NOT yet selectable, point this at a GCP europe-west1 interim datacenter id instead, exactly like the previous manually-created stand-in, and revisit once STACKIT really is available."
+  description = "Solace Cloud datacenterId for the STACKIT service. Use the genuine public StackIT region (datacenterType SolacePublic, provider \"ske\", e.g. ske-eu01 / \"Germany\") confirmed via GET {stackit_org_base_url}api/v2/missionControl/datacenters -- NOT a SolaceDedicated/organizationId-scoped datacenter (provider k8s, e.g. stackitdemo-stackit-eu01-production), which Solace Cloud's own console shows under the generic \"Private Cloud\" icon rather than the StackIT cloud-provider icon, even though it is also physically on STACKIT infrastructure."
   type        = string
 }
 

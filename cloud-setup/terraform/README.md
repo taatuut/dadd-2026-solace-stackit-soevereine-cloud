@@ -49,10 +49,14 @@ door jezelf in je eigen, gewone terminal gedraaid worden.
    NIET blindelings hergebruiken uit een oude screenshot (zelfde
    waarschuwing als altijd al in `../solace-cloud-api/create-service.sh`
    stond).
-5. **STACKIT-datacenter-id.** STACKIT heeft een eigen, echte
-   `SolaceDedicated`-datacenter (`stackitdemo-stackit-eu01-production`,
-   "StackIT Production Region") - gebruik die id voor
-   `datacenter_id_stackit`.
+5. **STACKIT-datacenter-id.** STACKIT heeft een eigen, echte publieke
+   regio: `ske-eu01` (`datacenterType SolacePublic`, provider `ske`) -
+   gebruik die id voor `datacenter_id_stackit`. Dezelfde org bevat ook
+   `stackitdemo-stackit-eu01-production` (`datacenterType
+   SolaceDedicated`, provider `k8s`), een *dedicated*, aan één
+   organisatie gebonden cluster dat in de console onder het generieke
+   "Private Cloud"-icoon staat - gebruik die NIET (zie `../../PLAN.md`
+   sectie 13, punt 58, waar dit per ongeluk gebeurde).
 6. **`service_class_id` bevestigen.** Bronnen spreken elkaar tegen over de
    exacte schrijfwijze van de "Developer 100"-klasse: de REST-API-docs
    noemen `"developer"` (kleine letters), het Terraform-provider-schema

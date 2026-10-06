@@ -7,11 +7,22 @@ naar de soevereine, Europese, niet-hyperscaler-omgeving.
 
 ## Datacenter
 
-STACKIT heeft een eigen, echte `SolaceDedicated`-datacenter
-(`stackitdemo-stackit-eu01-production`, "StackIT Production Region") in
-Solace Cloud, met dezelfde self-service deployment-ervaring als AWS en
-Azure - gewoon te kiezen als datacenter bij het aanmaken van de service,
-geen aparte Controlled-Availability/BYOK-procedure.
+STACKIT heeft een eigen, echte publieke regio in Solace Cloud:
+datacenter-id `ske-eu01` (`datacenterType SolacePublic`, provider
+`ske`, regio "Germany"), met dezelfde self-service
+deployment-ervaring als AWS en Azure - gewoon te kiezen als datacenter
+bij het aanmaken van de service, geen aparte
+Controlled-Availability/BYOK-procedure. **Gebruik uitsluitend
+`ske-eu01`.** Dezelfde Solace Cloud-organisatie bevat ook een
+`stackitdemo-stackit-eu01-production`-datacenter (`datacenterType
+SolaceDedicated`, provider `k8s`) - een *dedicated*, aan één
+organisatie gebonden cluster dat in de Solace Cloud console onder het
+generieke "Private Cloud"-icoon staat in plaats van het
+STACKIT-icoon. Dit per ongeluk gekozen leverde eerder een verkeerd
+geregionaliseerde service op (zie `../../PLAN.md`, sectie 13, punt 58)
+- controleer `datacenterType` altijd via `GET
+{stackit_org_base_url}api/v2/missionControl/datacenters` voor je een
+datacenter-id overneemt.
 
 ## Aanmaken
 
@@ -23,10 +34,12 @@ aanmaakt als "Developer 100"-tier met een EXPLICIETE Message VPN-naam
 Alternatief, handmatig via de console:
 
 1. Solace Cloud > Cluster Manager > **+ Create Service**.
-2. Cloud provider: **STACKIT**, regio: **eu01** (bevestig de exacte
-   Solace-regio-code in de dropdown).
+2. Cloud provider: **STACKIT**, regio: **eu01**, datacenter-id
+   **`ske-eu01`** (`datacenterType SolacePublic`) - niet de
+   `stackitdemo-stackit-eu01-production`-optie, die staat onder het
+   "Private Cloud"-icoon in plaats van het STACKIT-icoon.
 3. Service class: **Developer 100**.
-4. Servicenaam: `ez-dadd-2026-stackit-eu01` (zelfde stijl als de andere
+4. Servicenaam: `ez-dadd-2026-ske-eu01` (zelfde stijl als de andere
    services).
 5. Message VPN: `enewable`.
 6. Publish-client-username aanmaken (gebruikt door de REST Delivery

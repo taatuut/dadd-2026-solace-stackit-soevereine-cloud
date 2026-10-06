@@ -23,16 +23,28 @@ opdracht:
 3. **STACKIT eu01 (Duitsland)** - gevoelige PII, op een soeverein, Europees
    platform zonder Amerikaanse moederonderneming.
 
-## STACKIT: eigen, echte datacenter in Solace Cloud
+## STACKIT: publieke `SolacePublic`-regio in Solace Cloud
 
-STACKIT heeft een eigen, echte `SolaceDedicated`-datacenter
-(`stackitdemo-stackit-eu01-production`, "StackIT Production Region"), met
-dezelfde self-service deployment-ervaring als AWS en Azure - gewoon te
-kiezen als datacenter bij het aanmaken van de service, geen aparte
-Controlled-Availability/BYOK-procedure. Zie
-`../cloud-setup/terraform/README.md` voor de Terraform-opzet die de 3
-services aanmaakt, en `../cloud-setup/stackit-eu01/README.md` voor de
-STACKIT-specifieke details.
+STACKIT heeft een eigen, echte publieke regio in Solace Cloud:
+datacenter-id `ske-eu01` (`datacenterType SolacePublic`, provider `ske`
+= "StackIT Kubernetes Engine", regio "Germany"), met dezelfde
+self-service deployment-ervaring als AWS en Azure - gewoon te kiezen
+als datacenter bij het aanmaken van de service, geen aparte
+Controlled-Availability/BYOK-procedure. **Gebruik uitsluitend dit
+datacenter.** Dezelfde Solace Cloud-organisatie bevat ook een
+`stackitdemo-stackit-eu01-production`-datacenter (`datacenterType
+SolaceDedicated`, provider `k8s`) - een *dedicated*, aan één
+organisatie gebonden cluster dat in de Solace Cloud console onder het
+generieke "Private Cloud"-icoon staat in plaats van het
+STACKIT-icoon, ook al draait het fysiek ook op STACKIT-infrastructuur.
+Dit per ongeluk gekozen leverde eerder een verkeerd geregionaliseerde
+service op (zie `../PLAN.md`, sectie 13, punt 58) - controleer bij elke
+nieuwe service altijd `datacenterType` via `GET
+{stackit_org_base_url}api/v2/missionControl/datacenters` voordat je een
+datacenter-id overneemt. Zie `../cloud-setup/terraform/README.md` voor
+de Terraform-opzet die de 3 services aanmaakt, en
+`../cloud-setup/stackit-eu01/README.md` voor de STACKIT-specifieke
+details.
 
 ## Provisioning: console vs. API
 

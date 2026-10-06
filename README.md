@@ -59,8 +59,8 @@ detail.
 **Aan de cloud-kant:**
 
 De 3 Solace Cloud broker-services (AWS US East, Azure West Europe, STACKIT
-eu01 met een eigen, echte `SolaceDedicated`-datacenter) worden aangemaakt
-met **Terraform**
+eu01 met een eigen, echte publieke `SolacePublic`-regio, `ske-eu01`)
+worden aangemaakt met **Terraform**
 ([`cloud-setup/terraform/README.md`](cloud-setup/terraform/README.md)):
 dat maakt alle 3 services in één `terraform apply` aan (AWS en Azure in de
 ene Solace Cloud-organisatie, STACKIT in een andere, elk als

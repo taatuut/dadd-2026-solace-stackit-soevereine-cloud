@@ -1957,6 +1957,63 @@ productieklaar systeem:
      naar de placeholder-versie en de echte waarden alsnog in het
      (gitignored) `.env`-bestand gezet.
 
+  58. **STACKIT-service extern verwijderd, opnieuw aangemaakt via
+     Terraform, met correctie van het datacenter (Emil + assistent,
+     07/10/2026).** De STACKIT event-broker-service was buiten Terraform om
+     verwijderd (AWS en Azure ongemoeid); `terraform plan` bevestigde dit
+     meteen: nul drift op AWS/Azure, een schone `+ create` voor
+     `stackit_eu01` op het oude, in `terraform.tfvars` vastgelegde
+     datacenter (`stackitdemo-stackit-eu01-production`). De eerste
+     `terraform apply` slaagde functioneel, maar de nieuwe service
+     verscheen in de Solace Cloud console onder het generieke "Private
+     Cloud"-icoon i.p.v. het STACKIT-icoon. Uitgezocht via het al aanwezige
+     `output/datacenters-stackit.json` (geen nieuwe live call nodig):
+     `stackitdemo-stackit-eu01-production` heeft `datacenterType:
+     SolaceDedicated` (provider `k8s`) -- een aan deze ene organisatie
+     gebonden, dedicated cluster -- terwijl diezelfde lijst ook een echte
+     publieke regio bevat, `ske-eu01` (`datacenterType: SolacePublic`,
+     provider `ske` = "StackIT Kubernetes Engine", regio "Germany"). Dat
+     laatste is de juiste keuze. `variables.tf` en `terraform.tfvars`
+     aangepast naar `datacenter_id_stackit = "ske-eu01"`; `terraform plan`
+     gaf vervolgens `Error: Immutable Attribute Change` op `datacenter_id`
+     (bekende ruwe rand van deze beta-provider: zou een replace-plan moeten
+     voorstellen maar faalt hard tijdens plan-evaluatie). Opgelost met
+     `terraform state rm solacecloud_service.stackit_eu01` (stopt alleen
+     het volgen door Terraform, raakt de echte cloud-resource niet aan),
+     waarna een schone `+ create` op `ske-eu01` plan-baar was. De eerste
+     `apply` had de service al aangemaakt onder de naam
+     `ez-dadd-2026-stackit-eu01`, dus de nieuwe create botste op "name must
+     be unique"; de nieuwe service is daarom hernoemd naar
+     `ez-dadd-2026-ske-eu01` in `main.tf` (Terraform-resource-adres
+     `stackit_eu01` ongewijzigd gelaten) en succesvol aangemaakt. Daarna:
+     `local-broker/.env` bijgewerkt met de nieuwe SMF-/REST-hostnamen,
+     VPN-naam en SEMP-admin-credentials uit `terraform.tfstate` (de
+     `terraform` CLI is niet beschikbaar in de sandbox, dus rechtstreeks
+     als JSON gelezen i.p.v. via `terraform output`), een nieuw
+     bridge-wachtwoord gegenereerd en via
+     `configure-remote-bridge-users.sh` gepusht (AWS/Azure gaven daarbij
+     een cosmetische `WARN` i.p.v. de vriendelijke "already
+     exists"-melding, omdat SEMP hier `code: 10`/`ALREADY_EXISTS`
+     teruggeeft en het script specifiek op `code: 6001` matcht -- geen
+     functionele wijziging op AWS/Azure, puur een loggingmismatch), en
+     `configure-rdp-export.sh` opnieuw gedraaid zodat `rdp-stackit` weer
+     naar de nieuwe host wijst. Eind-tot-eind bevestigd: `rdp-stackit`
+     staat op "Up" in Broker Manager en live PII-berichten komen aan in de
+     STACKIT "Try Me!"-tab op `enewable/eu/pii/>`. De oude, verweesde
+     service `ez-dadd-2026-stackit-eu01` (op
+     `stackitdemo-stackit-eu01-production`, niet meer door Terraform
+     gevolgd na de `state rm`) draait nog en moet handmatig via de console
+     verwijderd worden. `docs/cloud-brokers.md`, `cloud-setup/README.md` en
+     `cloud-setup/stackit-eu01/README.md` gecorrigeerd: de eerdere aanname
+     dat `stackitdemo-stackit-eu01-production` "STACKIT's eigen, echte
+     datacenter" was, was onjuist -- dat is de
+     SolaceDedicated/Private-Cloud-cluster, niet de publieke regio -- en
+     bijgewerkt naar de nieuwe servicenaam.
+     `docs/Plan-van-aanpak-DADD2026-Enewable.docx` bevat geen van de
+     specifieke termen die hier wijzigen (alleen een generieke
+     "datacenter"-vermelding) en is daarom niet opnieuw gegenereerd voor
+     deze fix.
+
 - **Geen automatische provisioning van alle 4 brokers in één commando.**
   Er is bewust voor losse, leesbare stappen gekozen (console + scripts per
   onderdeel) omdat dat beter uit te leggen en te debuggen is vóór een

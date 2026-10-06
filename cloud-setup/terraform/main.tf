@@ -30,7 +30,7 @@ resource "solacecloud_service" "azure_west_europe" {
 
 resource "solacecloud_service" "stackit_eu01" {
   provider         = solacecloud.stackit_org
-  name             = "${var.name_prefix}-stackit-eu01"
+  name             = "${var.name_prefix}-ske-eu01"
   datacenter_id    = var.datacenter_id_stackit
   service_class_id = var.service_class_id
   message_vpn_name = var.message_vpn_name

@@ -14,16 +14,17 @@ niet in `PLAN.md`.
   bouwen zijn ontdekt (testmethodes, tool-vlaggen, gotchas) -- check dit
   vóórdat je een probleem opnieuw uitzoekt dat hier al is opgelost.
 
-Laatst bijgewerkt: 02/10/2026.
+Laatst bijgewerkt: 07/10/2026.
 
 ## Blokkerend -- eerst dit (services verwijderd, nu opnieuw aangemaakt)
 
 - [x] **De 3 Solace Cloud event broker services opnieuw aangemaakt**
       (AWS, Azure, STACKIT) via `cloud-setup/terraform/` -- alle drie
       `Running` (02/10/2026). STACKIT bleek inmiddels een eigen, echte
-      `SolaceDedicated`-datacenter te hebben (geen GCP-interim meer
-      nodig); `service_class_id = "DEVELOPER"` bevestigd juist.
-      (`PLAN.md` sectie 13, punt 42.)
+      publieke `SolacePublic`-regio te hebben (`ske-eu01`, geen
+      GCP-interim meer nodig); `service_class_id = "DEVELOPER"`
+      bevestigd juist. (`PLAN.md` sectie 13, punt 42; regio-correctie
+      naar `ske-eu01` later, zie punt 58.)
 - [x] **`local-broker/.env` bijgewerkt**: nieuwe SMF/SEMP-hostnames
       (let op -- STACKIT's domein is nu `messaging.maasgo.net`, niet
       `messaging.solace.cloud`), alle 3 `*_REMOTE_VPN` naar `enewable`,
@@ -37,6 +38,20 @@ Laatst bijgewerkt: 02/10/2026.
       credentials staan -- zie `PLAN.md` sectie 13, punt 43). Na de fix:
       `stm-public/publish-public.sh` bevestigd op alle 3 cloud-brokers,
       elk op zijn eigen topic (`PLAN.md` sectie 13, punt 44).
+- [x] **STACKIT-service opnieuw extern verwijderd, opnieuw aangemaakt
+      via Terraform (07/10/2026)** -- dit keer alleen STACKIT geraakt
+      (AWS/Azure ongemoeid, bevestigd met `terraform plan`: nul
+      drift). Daarbij bleek de eerder aangenomen
+      `stackitdemo-stackit-eu01-production` een `SolaceDedicated`/
+      Private-Cloud-cluster te zijn, niet de echte publieke
+      STACKIT-regio -- gecorrigeerd naar `ske-eu01` (`SolacePublic`).
+      Nieuwe servicenaam: `ez-dadd-2026-ske-eu01`. End-to-end
+      herbevestigd via de STACKIT "Try Me!"-tab. (`PLAN.md` sectie 13,
+      punt 58.)
+- [ ] **Verweesde service `ez-dadd-2026-stackit-eu01` opruimen** (op
+      `stackitdemo-stackit-eu01-production`, draait nog maar wordt
+      niet meer door Terraform gevolgd) -- handmatig verwijderen via
+      de Solace Cloud console. (`PLAN.md` sectie 13, punt 58.)
 
 ## Moet vóór DADD
 
