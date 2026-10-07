@@ -2107,9 +2107,11 @@ productieklaar systeem:
      heeft geen GitHub-credentials). Zie `SKILLS.md`, "Gevoelige blobs met
      git-filter-repo uit de hele geschiedenis verwijderen" voor de
      volledige methode.
-     **Resultaat:** repo gepusht met schone geschiedenis, klaar om door
-     Emil op GitHub van privé naar publiek gezet te worden (nog open, zie
-     `TODO.md`).
+     **Resultaat:** repo gepusht met schone geschiedenis; Emil heeft de
+     repo daarna op GitHub van privé naar publiek gezet (07/10/2026),
+     bevestigd doordat een anonieme `git fetch` tegen origin - die zonder
+     credentials alleen op een publieke repo werkt - exact de geredigeerde
+     geschiedenis teruggaf.
 
 - **Geen automatische provisioning van alle 4 brokers in één commando.**
   Er is bewust voor losse, leesbare stappen gekozen (console + scripts per

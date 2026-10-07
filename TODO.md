@@ -102,9 +102,11 @@ Laatst bijgewerkt: 07/10/2026.
       originele waarden nergens meer terug te vinden zijn -- gepusht met git push
       --force (assistent + Emil, 07/10/2026). (`PLAN.md` sectie 13, punt 59;
       `SKILLS.md`.)
-- [ ] **Repo op GitHub van privé naar publiek zetten**: nu de opschoning van
-      punt 59 is gepusht, resteert alleen nog de zichtbaarheid wijzigen in de
-      GitHub-repo-instellingen (Emil). (`PLAN.md` sectie 13, punt 59.)
+- [x] **Repo op GitHub van privé naar publiek gezet** (Emil, 07/10/2026) -
+      bevestigd met een anonieme `git fetch` tegen origin (werkt nu zonder
+      credentials, wat alleen kan op een publieke repo) dat de remote-HEAD
+      exact overeenkomt met de geredigeerde geschiedenis van punt 59.
+      (`PLAN.md` sectie 13, punt 59.)
 
 Zie [`docs/demo-notes.md`](docs/demo-notes.md) voor de twee punten die
 expliciet in de talk zelf benoemd moeten worden (Azure = Amerikaanse
