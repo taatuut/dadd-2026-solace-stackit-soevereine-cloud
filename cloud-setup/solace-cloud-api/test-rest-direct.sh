@@ -66,7 +66,7 @@ test_one() {
 {
   test_one "AWS US East"         "${AWS_REMOTE_REST_HOST}"     "${AWS_REMOTE_REST_PORT}"     "${AWS_BRIDGE_USER}"     "${AWS_BRIDGE_PASSWORD}"     "enewable/public/test-direct"
   test_one "Azure West Europe"   "${AZURE_REMOTE_REST_HOST}"   "${AZURE_REMOTE_REST_PORT}"   "${AZURE_BRIDGE_USER}"   "${AZURE_BRIDGE_PASSWORD}"   "enewable/eu/ops/test-direct"
-  test_one "STACKIT/GCP-interim" "${STACKIT_REMOTE_REST_HOST}" "${STACKIT_REMOTE_REST_PORT}" "${STACKIT_BRIDGE_USER}" "${STACKIT_BRIDGE_PASSWORD}" "enewable/eu/pii/test-direct"
+  test_one "STACKIT eu01"        "${STACKIT_REMOTE_REST_HOST}" "${STACKIT_REMOTE_REST_PORT}" "${STACKIT_BRIDGE_USER}" "${STACKIT_BRIDGE_PASSWORD}" "enewable/eu/pii/test-direct"
 } | tee "${OUT_FILE}"
 
 cat <<INFO

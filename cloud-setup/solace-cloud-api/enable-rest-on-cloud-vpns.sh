@@ -91,7 +91,7 @@ check_and_enable() {
 {
   check_and_enable "AWS US East"          "${AWS_SEMP_HOST}"     "${AWS_SEMP_ADMIN_USER}"     "${AWS_SEMP_ADMIN_PASSWORD}"     "${AWS_REMOTE_VPN}"
   check_and_enable "Azure West Europe"    "${AZURE_SEMP_HOST}"   "${AZURE_SEMP_ADMIN_USER}"   "${AZURE_SEMP_ADMIN_PASSWORD}"   "${AZURE_REMOTE_VPN}"
-  check_and_enable "STACKIT/GCP-interim"  "${STACKIT_SEMP_HOST}" "${STACKIT_SEMP_ADMIN_USER}" "${STACKIT_SEMP_ADMIN_PASSWORD}" "${STACKIT_REMOTE_VPN}"
+  check_and_enable "STACKIT eu01"         "${STACKIT_SEMP_HOST}" "${STACKIT_SEMP_ADMIN_USER}" "${STACKIT_SEMP_ADMIN_PASSWORD}" "${STACKIT_REMOTE_VPN}"
 } | tee "${OUT_FILE}"
 
 cat <<INFO

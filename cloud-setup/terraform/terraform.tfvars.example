@@ -9,7 +9,7 @@ stackit_org_base_url  = "https://api.solace.cloud/" # confirm Home Cloud base UR
 
 datacenter_id_aws     = "CHANGEME" # GET {aws_azure_org_base_url}api/v2/missionControl/datacenters (aws_azure_org token)
 datacenter_id_azure   = "CHANGEME" # idem
-datacenter_id_stackit = "CHANGEME" # GET {stackit_org_base_url}api/v2/missionControl/datacenters (stackit_org token) -- real STACKIT eu01 if GA, else the GCP europe-west1 interim id
+datacenter_id_stackit = "CHANGEME" # GET {stackit_org_base_url}api/v2/missionControl/datacenters (stackit_org token) -- use ske-eu01 (datacenterType SolacePublic), NOT the SolaceDedicated stackitdemo-stackit-eu01-production cluster, see ../stackit-eu01/README.md
 
 service_class_id = "DEVELOPER" # confirm exact string before apply, see variables.tf
 message_vpn_name = "enewable"

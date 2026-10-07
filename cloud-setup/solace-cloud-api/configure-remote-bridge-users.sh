@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Creates a scoped publish-client-username + ACL profile on each of the 3
-# remote Solace Cloud brokers (AWS, Azure, STACKIT/GCP-interim), via each
+# remote Solace Cloud brokers (AWS, Azure, STACKIT), via each
 # broker's OWN SEMP v2 Config API -- i.e. the same kind of call that
 # local-broker/semp/configure-local-broker.sh makes against the local broker,
 # just pointed at a remote host each time.

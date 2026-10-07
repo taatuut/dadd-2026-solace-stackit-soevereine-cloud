@@ -46,7 +46,7 @@ Alternatief, handmatig via de console:
    Point's REST-consumer), ACL-profiel dat **alleen publiceren** toestaat
    op `enewable/eu/pii/>`, SMF- en REST-host:port noteren.
 7. Maak screenshots van elke stap in
-   `../../screenshots/STACKIT-of-GCP-interim/`.
+   `../../screenshots/STACKIT/`.
 8. `STACKIT_*`-variabelen in `../../local-broker/.env` bijwerken en
    `../../local-broker/semp/configure-local-broker.sh` en
    `configure-rdp-export.sh` opnieuw draaien (idempotent).

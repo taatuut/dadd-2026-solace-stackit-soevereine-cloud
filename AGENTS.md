@@ -98,6 +98,24 @@ git-geschiedenis, niet alleen HEAD) uitgevoerd; zie `SKILLS.md`, "Een repo
 controleren op gevoelige data vóór het publiek maken" voor de methode en
 `PLAN.md` sectie 13, punt 59 voor de uitvoering.
 
+## Ongebruikte code en configuratie verwijderen
+
+Code, configuratie en documentatie-vermeldingen die niet meer gebruikt
+worden (bijv. een broker/omgeving die is afgebouwd, een workaround die
+niet meer nodig is) worden verwijderd - niet uitgecommentarieerd en niet
+"voor de zekerheid" laten staan. Reden: git history (de commit-message)
+en, voor grotere wijzigingen, het genummerde logboek in `PLAN.md` sectie
+13 bewaren altijd waarom iets bestond en wanneer/waarom het is
+verwijderd - er is dus geen informatieverlies, alleen minder ruis in de
+actuele stand van de repo. Verwijder ook de vermeldingen ervan in
+MD-bestanden en scripts/configuratie netjes, zodat er geen losse
+verwijzingen naar iets niet-bestaands overblijven en scripts blijven
+werken (`bash -n` ter controle). De permanente, genummerde geschiedenis
+in `PLAN.md` sectie 13 zelf wordt hierbij NIET aangepast of gewist - zie
+"Documentatie- en commit-conventie" hierboven. Zie `PLAN.md` sectie 13,
+punt 60 (verwijdering van de GCP-interim-broker) voor een toepassing van
+deze regel.
+
 ## Stapsgewijze procedures (installaties, deploys, console-acties)
 
 Wanneer Emil door een procedure geleid wordt die hij zelf moet uitvoeren

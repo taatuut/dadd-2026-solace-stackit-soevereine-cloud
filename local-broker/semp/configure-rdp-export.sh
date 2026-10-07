@@ -257,8 +257,6 @@ create_export_route "q-export-public"  "enewable/public/>" "rdp-aws"     "consum
 create_export_route "q-export-eu-ops"  "enewable/eu/ops/>" "rdp-azure"   "consumer-azure"   \
   "${AZURE_REMOTE_REST_HOST}"   "${AZURE_REMOTE_REST_PORT}"   "${AZURE_BRIDGE_USER}"   "${AZURE_BRIDGE_PASSWORD}"
 
-# NOTE: STACKIT_* currently points at the interim GCP europe-west1 stand-in
-# until STACKIT is GA in Solace Cloud -- see ../../cloud-setup/stackit-eu01/README.md
 create_export_route "q-export-eu-pii"  "enewable/eu/pii/>" "rdp-stackit" "consumer-stackit" \
   "${STACKIT_REMOTE_REST_HOST}" "${STACKIT_REMOTE_REST_PORT}" "${STACKIT_BRIDGE_USER}" "${STACKIT_BRIDGE_PASSWORD}"
 

@@ -12,11 +12,11 @@ alleen wat gepland was.
 
 | Onderdeel | Status | Details |
 |---|---|---|
-| Fase 1 -- STACKIT-beschikbaarheid | Interim actief | Uitgangspunt: STACKIT GA komende week; tot dan interim-broker op GCP europe-west1, zie fase 3 |
+| Fase 1 -- STACKIT-beschikbaarheid | ✅ Gereed | STACKIT heeft een eigen, echte publieke regio in Solace Cloud (datacenter-id `ske-eu01`), zie fase 3 |
 | Fase 2 -- Solace Cloud account/token | ✅ Gereed | API-token `dadd-2026` aangemaakt (alle permissies); staat in `token-dadd-2026.txt` (genegeerd door git) |
 | Fase 3 -- AWS US East | ✅ Aangemaakt | Service `ez-dadd-2026-eks-us-east-1a`, zie [`cloud-setup/aws-us-east/README.md`](cloud-setup/aws-us-east/README.md) en `screenshots/AWS/` |
 | Fase 3 -- Azure West Europe | ✅ Aangemaakt | Service `ez-dadd-2026-aks-westeurope`, zie [`cloud-setup/azure-west-europe/README.md`](cloud-setup/azure-west-europe/README.md) en `screenshots/Azure/` |
-| Fase 3 -- STACKIT / GCP-interim | ✅ Aangemaakt | Service `ez-dadd-2026-STACKIT-gke-gcp-europe-west1-b` (interim op GCP europe-west1), zie [`cloud-setup/gcp-europe-west1-interim/README.md`](cloud-setup/gcp-europe-west1-interim/README.md) en `screenshots/STACKIT-of-GCP-interim/` -- alle 3 cloud-broker services zijn nu aangemaakt |
+| Fase 3 -- STACKIT eu01 | ✅ Aangemaakt | Service `ez-dadd-2026-ske-eu01`, zie [`cloud-setup/stackit-eu01/README.md`](cloud-setup/stackit-eu01/README.md) en `screenshots/STACKIT/` -- alle 3 cloud-broker services zijn nu aangemaakt |
 | Fase 4 -- Lokale broker + RDP-export | ✅✅ VOLLEDIG WERKEND, end-to-end bevestigd | Na de rdp-deliver-profiel-fix: alle 3 queue-bindings up:true met bindSuccessCount:1, RDP-aws leverde daadwerkelijk 21 berichten af (httpResponseSuccessRxMsgCount:21) en AWS "Try Me!" toont het echte bericht aankomen op enewable/public/market/price. Zie PLAN.md sectie 13, punt 28. Klaar voor volledige testronde (fase 5) |
 | Fase 5 -- Demo-apps valideren | ✅✅ 3/3 geslaagd | stm-public (AWS) ✅, python-eu-nonpersonal (Azure) ✅ (na een zsh-commentaar-instructiefout, zie sectie 13 punt 29), sdkperf-pii (STACKIT) ✅ (na een SDKPERF_BIN-fix, zie sectie 13 punt 30) -- volledige testronde afgerond. Sindsdien versterkt (punt 32): elke app publiceert nu alle 3 klassen per invocatie, dus elke app raakt inmiddels alle 3 doelbrokers, niet meer uitsluitend zijn eigen |
 | Fase 6 -- Draaiboek + fallback | Nog te doen | |
@@ -108,14 +108,11 @@ overlap.
 - **Solace Cloud console als primaire weg** om de 3 cloud-services aan te
   maken, met een REST API-script als optioneel alternatief -- zie
   [`docs/cloud-brokers.md`](docs/cloud-brokers.md).
-- **STACKIT-broker: uitgangspunt is GA komende week**, met dezelfde
-  self-service deployment als AWS/Azure/GCP -- zie
+- **STACKIT-broker eu01**: eigen, echte publieke regio in Solace Cloud
+  (datacenter-id `ske-eu01`), met dezelfde self-service
+  deployment-ervaring als AWS en Azure -- zie
   [`cloud-setup/stackit-eu01/README.md`](cloud-setup/stackit-eu01/README.md).
-  Tot het zover is, mimicken we het sovereign-knooppunt met een Solace Cloud
-  HA-service op **GCP, europe-west1 (België)** -- zie
-  [`cloud-setup/gcp-europe-west1-interim/README.md`](cloud-setup/gcp-europe-west1-interim/README.md).
-  Topics, ACL's en bridge-naam blijven ongewijzigd bij de overstap. Zie
-  sectie 10, fase 1 en fase 3.
+  Zie sectie 10, fase 1 en fase 3.
 - **Alle cloud-broker services staan in public clusters** (gekozen voor
   gemak/snelheid van de demo-opzet). In een real-life inrichting zouden
   dit private clusters zijn met verdergaande netwerkbeveiliging (VPC
@@ -185,7 +182,7 @@ Zie [`docs/demo-apps.md`](docs/demo-apps.md) en [`demo-apps/`](demo-apps/)
 |-- screenshots/                    <- bewijs/documentatie van elke aanmaak-stap
 |   |-- AWS/                       (ez-dadd-2026-eks-us-east-1a)
 |   |-- Azure/                     (ez-dadd-2026-aks-westeurope)
-|   `-- STACKIT-of-GCP-interim/     (ez-dadd-2026-STACKIT-gke-gcp-europe-west1-b)
+|   `-- STACKIT/                   (ez-dadd-2026-ske-eu01)
 |-- topology/
 |   `-- topologie.mmd              <- Mermaid-brondiagram
 |-- local-broker/
@@ -205,7 +202,6 @@ Zie [`docs/demo-apps.md`](docs/demo-apps.md) en [`demo-apps/`](demo-apps/)
 |   |-- aws-us-east/README.md
 |   |-- azure-west-europe/README.md
 |   |-- stackit-eu01/README.md
-|   |-- gcp-europe-west1-interim/README.md
 |   `-- solace-cloud-api/
 |       |-- create-service.sh
 |       |-- configure-remote-bridge-users.sh   <- creates publish client-usernames + ACL's on the 3 cloud brokers (now consumed by the RDP's REST-consumer)
@@ -237,10 +233,10 @@ nooit gecommit -- alleen `.env.example`-bestanden zitten in de repo.)
 | Fase | Wat | Actie | Wanneer (t.o.v. DADD 2026) |
 |---|---|---|---|
 | 0 | Dit plan | Reviewen, akkoord geven of bijsturen | Nu |
-| 1 | STACKIT-beschikbaarheid | ✅ Interim-broker op GCP europe-west1 (België) aangemaakt als stand-in; vlak vóór repetitie/DADD controleren of STACKIT al als datacenter-optie zichtbaar is en zo ja, overstappen | Interim: gereed; overstap-check: kort vóór fase 5/6 |
+| 1 | STACKIT-beschikbaarheid | ✅ STACKIT heeft een eigen, echte publieke regio (`ske-eu01`) in Solace Cloud, met dezelfde self-service deployment als AWS/Azure | Gereed |
 | 2 | Solace Cloud account | Account + API-token aanmaken (indien nog niet aanwezig) | Week na fase 0 |
-| 3 | Cloud-brokers aanmaken | ✅ Alle 3 gereed: AWS (`ez-dadd-2026-eks-us-east-1a`), Azure (`ez-dadd-2026-aks-westeurope`), STACKIT/GCP-interim (`ez-dadd-2026-STACKIT-gke-gcp-europe-west1-b`); sovereign-node blijft STACKIT zodra GA, tot dan GCP europe-west1 interim | Gereed |
-| 4 | Lokale broker + RDP-export | ✅✅ Volledig werkend, end-to-end bevestigd op alle 3 cloud-brokers (AWS, Azure, STACKIT/GCP-interim) | Fase 5 afgerond: volledige testronde met alle 3 demo-apps (stm/python/sdkperf) op alle 3 topic-subtrees, 3/3 geslaagd. Volgende: sectie 14, stap 7 (draaiboek + fallback-opname) |
+| 3 | Cloud-brokers aanmaken | ✅ Alle 3 gereed: AWS (`ez-dadd-2026-eks-us-east-1a`), Azure (`ez-dadd-2026-aks-westeurope`), STACKIT eu01 (`ez-dadd-2026-ske-eu01`) | Gereed |
+| 4 | Lokale broker + RDP-export | ✅✅ Volledig werkend, end-to-end bevestigd op alle 3 cloud-brokers (AWS, Azure, STACKIT) | Fase 5 afgerond: volledige testronde met alle 3 demo-apps (stm/python/sdkperf) op alle 3 topic-subtrees, 3/3 geslaagd. Volgende: sectie 14, stap 7 (draaiboek + fallback-opname) |
 | 5 | Demo-apps valideren | ✅✅ Alle 3 demo-apps bevestigd (stm-public/AWS, python-eu-nonpersonal/Azure, sdkperf-pii/STACKIT), elk uitsluitend op de eigen doelbroker | Herhalen vóór DADD zelf als extra zekerheid, niet pas op de dag zelf |
 | 6 | Draaiboek + fallback-opname | Live-timing oefenen, schermopname als fallback maken | Week vóór DADD |
 | 7 | Op de dag zelf | `docker-run.sh` + `configure-local-broker.sh` (of al draaiend laten staan), demo-apps klaarzetten | Vlak voor het slot |
@@ -283,13 +279,6 @@ ACL-configuratie, en sowieso nog een keer vlak voor DADD:
 Expliciet, zoals gevraagd -- dit is een eerste plan/scaffold, geen
 productieklaar systeem:
 
-- **STACKIT GA-timing is een restrisico, niet meer de kernonzekerheid.**
-  Uitgangspunt is nu dat STACKIT komende week algemeen beschikbaar is met
-  dezelfde self-service flow als AWS/Azure/GCP (zie sectie 4 en 10, fase 1).
-  Mocht die planning schuiven, dan draait de demo gewoon door op de
-  GCP-europe-west1-interim-broker (zie
-  `cloud-setup/gcp-europe-west1-interim/README.md`) -- controleer dit kort
-  vóór de repetitie/DADD zelf, niet pas op de dag zelf.
 - **Public clusters in plaats van private/VPC-gepeerd.** Alle drie (straks
   vier) cloud-broker services zijn bewust in public clusters aangemaakt,
   puur voor het gemak en de snelheid van deze demo-opzet. Een real-life
@@ -2062,7 +2051,7 @@ productieklaar systeem:
      achter "via:" in de 3 "Bridges"-screenshots
      (`screenshots/localhost/`); de DMR Cluster "Hostname"- en "Cluster
      Name"-velden in de 3 service-status-screenshots
-     (AWS/Azure/STACKIT-of-GCP-interim); en Emils echte lokale Mac-pad
+     (AWS/Azure/STACKIT); en Emils echte lokale Mac-pad
      (`/Users/emilzegers/...`) in zowel `local-broker/.env.example` als
      `PLAN.md` zelf.
      **Bewust ongemoeid gelaten, op Emils expliciete instructie:** "Created
@@ -2113,6 +2102,51 @@ productieklaar systeem:
      credentials alleen op een publieke repo werkt - exact de geredigeerde
      geschiedenis teruggaf.
 
+  60. **GCP-interim-broker (europe-west1) en alle vermeldingen ervan uit de
+     repo verwijderd, op verzoek (Emil + assistent, 07/10/2026).** Deze
+     broker was al sinds punt 42/58 feitelijk niet meer in gebruik --
+     STACKIT bleek een eigen, echte 'SolacePublic'-regio te hebben
+     (`ske-eu01`) -- maar de map en losse vermeldingen stonden nog in de
+     repo. Verwijderd: de hele map `cloud-setup/gcp-europe-west1-interim/`
+     (`git rm -r`); `screenshots/STACKIT-of-GCP-interim/` hernoemd naar
+     `screenshots/STACKIT/` (`git mv`, git detecteerde dit correct als 5
+     renames). Vermeldingen opgeschoond in
+     `cloud-setup/solace-cloud-api/configure-remote-bridge-users.sh`
+     (commentaarregel), `enable-rest-on-cloud-vpns.sh` en
+     `test-rest-direct.sh` (labels 'STACKIT/GCP-interim' -> 'STACKIT eu01',
+     met behoud van de kolom-uitlijning met de AWS/Azure-regels),
+     `local-broker/semp/configure-rdp-export.sh` (obsolete 2-regelige
+     NOTE-comment verwijderd), `local-broker/.env.example` (hele
+     STACKIT-commentaarblok herschreven naar dezelfde schone stijl als de
+     AWS/Azure-secties, voorbeeldwaarde `STACKIT_REMOTE_VPN` bijgewerkt
+     naar `enewable`) en `cloud-setup/terraform/terraform.tfvars.example`
+     (commentaar bij `datacenter_id_stackit` gewezen op `ske-eu01` i.p.v.
+     de GCP-interim-id). `cloud-setup/stackit-eu01/README.md` stap 7
+     gewezen naar het hernoemde screenshot-pad. In `PLAN.md` zelf: de
+     Voortgangsstatus-tabel (fase 1 en fase 3), de STACKIT-bullet in sectie
+     4, de repo-structuurboom in sectie 9, de fase 1/3/4-rijen in sectie
+     10, sectie 14 punt 2, en de parenthese bij punt 59 bijgewerkt naar de
+     huidige situatie (geen interim meer); de losse, inmiddels achterhaalde
+     "STACKIT GA-timing is een restrisico"-bullet in sectie 13 is volledig
+     verwijderd (geen openstaand risico meer, niet een vastgelegde
+     gebeurtenis). **De genummerde geschiedenis hierboven (punten 29-54
+     e.a.) is bewust NIET aangepast** -- dat is het permanente logboek van
+     wat er feitelijk gebeurd is, ook al verwijzen die punten naar iets dat
+     nu niet meer bestaat; zie "Documentatie bevat alleen de huidige stand
+     van zaken, geen geschiedenis" in `SKILLS.md`. `local-broker/.env`
+     (echt, gitignored) en `output/*.json` (ruwe Solace Cloud
+     API-datacenter-catalogus met incidentele "gcp"-strings van andere
+     providers) vielen buiten scope -- geen onderdeel van de repo resp.
+     geen vermelding van de interim-broker. Vastgelegd als algemene regel
+     in `AGENTS.md`, "Ongebruikte code en configuratie verwijderen":
+     ongebruikte code/configuratie/documentatie-vermeldingen worden
+     voortaan verwijderd, niet uitgecommentarieerd of laten staan, omdat
+     git history en commit-messages (en dit logboek) het altijd
+     terugvindbaar houden. Geverifieerd: `bash -n` op alle 4 gewijzigde
+     scripts (syntax OK), een repo-brede grep-sweep bevestigt dat alleen de
+     beschermde genummerde geschiedenis nog GCP/interim-vermeldingen bevat,
+     en de gebruikelijke soft-hyphen-sweep vóór het committen.
+
 - **Geen automatische provisioning van alle 4 brokers in één commando.**
   Er is bewust voor losse, leesbare stappen gekozen (console + scripts per
   onderdeel) omdat dat beter uit te leggen en te debuggen is vóór een
@@ -2156,7 +2190,7 @@ lijst per stap; nieuwe/openstaande acties worden vanaf nu primair in
 
 1. ~~Dit plan doornemen en de STACKIT-beslissing (sectie 4/10) maken.~~ ✅
 2. ~~De 3 Solace Cloud-services daadwerkelijk aanmaken.~~ ✅ AWS, Azure en
-   STACKIT/GCP-interim staan alle drie op "Running".
+   STACKIT staan alle drie op "Running".
 3. ~~Bridge-client-username `enewable-local-bridge` aanmaken op elke
    cloud-broker en `configure-local-broker.sh` valideren.~~ ✅ (bridges
    draaien schoon; export via bridges bleek architecturaal niet mogelijk
