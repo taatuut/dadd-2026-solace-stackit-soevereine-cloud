@@ -145,7 +145,7 @@ zie `PLAN.md` sectie 13, punt 11 voor de volledige onderbouwing.
 
 **Bevestigd correct (28/09/2026):** de aanname "zelfde hostname als SMF,
 poort 9443" is juist - de Connect-tab van de AWS-service toont exact
-`https://mr-connection-07w9t1ah76x.messaging.solace.cloud:9443` onder
+`https://mr-connection-xxxxxxxxxxx.messaging.solace.cloud:9443` onder
 "Solace REST Messaging API".
 
 **⛔ Vernauwd: de queue-binding faalt met HTTP 503 "Service Unavailable"**

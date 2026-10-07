@@ -581,7 +581,7 @@ productieklaar systeem:
      (screenshot, Clients > REST > RDPs). Eén mogelijke oorzaak alvast
      **uitgesloten**: de aanname "zelfde hostname als SMF, poort 9443" is
      bevestigd correct via de Connect-tab van de AWS-service zelf
-     (screenshot toont exact `https://mr-connection-07w9t1ah76x.messaging.
+     (screenshot toont exact `https://mr-connection-xxxxxxxxxxx.messaging.
      solace.cloud:9443` onder "Solace REST Messaging API") -- dit is dus
      geen host/poort-probleem. Broker Manager geeft, net als eerder bij de
      bridges (zie punt 6/7 hierboven), geen down-reden. Nieuw, analoog
@@ -985,12 +985,12 @@ productieklaar systeem:
      repo-bug (Emil, 28/09/2026).** `demo-apps/sdkperf-pii/publish-pii.sh`
      gaat er standaard van uit dat `sdkperf_java.sh` op de PATH staat
      (`: "${SDKPERF_BIN:=sdkperf_java.sh}"`); bij Emil staat het echte
-     binary op `/Users/emilzegers/sdkperf/sdkperf-jcsmp-8.4.17.5/sdkperf_java.sh`,
+     binary op `~/sdkperf/sdkperf-jcsmp-8.4.17.5/sdkperf_java.sh`,
      niet op de PATH. Het script ondersteunt hiervoor al een
      `SDKPERF_BIN`-override, en source't `local-broker/.env` ook al
      automatisch bij elke run (`[[ -f ".../.env" ]] && source ...`) --
      een handmatige `source .env`-stap is dus niet nodig. **Fix:** de
-     regel `SDKPERF_BIN=/Users/emilzegers/sdkperf/sdkperf-jcsmp-8.4.17.5/sdkperf_java.sh`
+     regel `SDKPERF_BIN=~/sdkperf/sdkperf-jcsmp-8.4.17.5/sdkperf_java.sh`
      toegevoegd aan Emils echte (git-genegeerde) `local-broker/.env`, en
      als gedocumenteerd voorbeeld (met de generieke default
      `sdkperf_java.sh`) aan `local-broker/.env.example`. Script simpelweg
@@ -1447,34 +1447,36 @@ productieklaar systeem:
      achter (opgeruimd); vastgelegd als extra regel in `AGENTS.md`: nooit
      een inline `#`-commentaar op een regel die Emil moet kopiëren-plakken.
 
-  42. **De 3 services succesvol aangemaakt met Terraform; `local-broker/.env`
-     volledig bijgewerkt (Emil + assistent, 02/10/2026).** Stapsgewijs (zie
-     punt 41) de resterende invoer verzameld: STACKIT-org blijkt een eigen
-     console/API-domein te hebben (`staging-console.maasgo.net` /
-     `staging-api.maasgo.net`, i.p.v. `*.solace.cloud`) -- ontdekt via de
-     DevTools Network-tab, want niet te raden. De 3 `datacenterId`'s
-     opgezocht via `missionControl/datacenters` (token-naar-bestand-script,
-     nooit in de chat getoond): `eks-us-east-1a` (AWS), `aks-westeurope`
-     (Azure), en een verrassing -- STACKIT heeft inmiddels een **eigen,
-     echte `SolaceDedicated`-datacenter** (`stackitdemo-stackit-eu01-production`,
+  42. **De 3 services succesvol aangemaakt met Terraform;
+     `local-broker/.env` volledig bijgewerkt (Emil + assistent,
+     02/10/2026).** Stapsgewijs (zie punt 41) de resterende invoer
+     verzameld: STACKIT-org blijkt een eigen console/API-domein te hebben
+     (`staging-console.maasgo.net` / `staging-api.maasgo.net`, i.p.v.
+     `*.solace.cloud`) -- ontdekt via de DevTools Network-tab, want niet te
+     raden. De 3 `datacenterId`'s opgezocht via
+     `missionControl/datacenters` (token-naar-bestand-script, nooit in de
+     chat getoond): `eks-us-east-1a` (AWS), `aks-westeurope` (Azure), en
+     een verrassing -- STACKIT heeft inmiddels een **eigen, echte
+     `SolaceDedicated`-datacenter** (`stackitdemo-stackit-eu01-production`,
      "StackIT Production Region"), dus geen GCP-interim-stand-in meer nodig
      (de aanname in punt 40/`TODO.md` was voorzichtigheidshalve nog
      interim). Alle drie datacenters tonen `"DEVELOPER"` (hoofdletters) in
      hun `supportedServiceClasses` -- bevestigt definitief de juiste
      schrijfwijze van `service_class_id`, die bij `terraform plan` ook
-     zonder validatiefout bleek. `terraform init` + `plan` + `apply`
-     (door Emil, eigen terminal) zijn alle drie zonder fouten geslaagd:
-     3 services `Running` (AWS id `fagb5x8a2rd`, Azure id `56tdd0ahgcm`,
-     STACKIT id `t5ushg0cbk8`), elk met expliciete `message_vpn_name =
-     "enewable"` (dus dit keer geen auto-afgekapte VPN-naam-verwarring,
-     zie `cloud-setup/terraform/README.md`). `terraform output -json`
-     van alle 3 naar het (gitignored) `output/`-folder geschreven en door
-     de assistent zelf ingelezen (nooit in de chat geplakt). Daarmee
-     `local-broker/.env` bijgewerkt: nieuwe SMF/SEMP-hostnames (let op --
-     STACKIT's hostname-domein is `messaging.maasgo.net`, niet
-     `messaging.solace.cloud`), alle 3 `*_REMOTE_VPN` naar `enewable`, en
-     de 3 nieuwe `*_SEMP_ADMIN_PASSWORD`-waarden (SEMP-manager-credential
-     uit de Terraform-output, file-naar-file, nooit getoond). De oude
+     zonder validatiefout bleek. `terraform init` + `plan` + `apply` (door
+     Emil, eigen terminal) zijn alle drie zonder fouten geslaagd: 3
+     services `Running` (service-id's bewust niet hier vermeld, zie `git
+     log`/`terraform.tfstate` indien nodig), elk met expliciete
+     `message_vpn_name = "enewable"` (dus dit keer geen auto-afgekapte
+     VPN-naam-verwarring, zie `cloud-setup/terraform/README.md`).
+     `terraform output -json` van alle 3 naar het (gitignored)
+     `output/`-folder geschreven en door de assistent zelf ingelezen (nooit
+     in de chat geplakt). Daarmee `local-broker/.env` bijgewerkt: nieuwe
+     SMF/SEMP-hostnames (let op -- STACKIT's hostname-domein is
+     `messaging.maasgo.net`, niet `messaging.solace.cloud`), alle 3
+     `*_REMOTE_VPN` naar `enewable`, en de 3 nieuwe
+     `*_SEMP_ADMIN_PASSWORD`-waarden (SEMP-manager-credential uit de
+     Terraform-output, file-naar-file, nooit getoond). De oude
      `*_BRIDGE_PASSWORD`-waarden horen bij de verwijderde services en zijn
      dus ongeldig -- gezet op een expliciete `CHANGEME`-placeholder totdat
      `configure-remote-bridge-users.sh` (volgende stap) een nieuwe
