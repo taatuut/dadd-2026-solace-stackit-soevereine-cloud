@@ -92,6 +92,20 @@ Laatst bijgewerkt: 07/10/2026.
       reparatiescherm). Gefixt met `Math.abs()`, deck volledig herbouwd,
       geverifieerd en herleverd. (`PLAN.md` sectie 13, punt 51.)
 
+- [x] **Vóór het publiek maken: volledige audit + opschoning (tekst,
+      screenshots, git-geschiedenis)**: de 3 echte Solace Cloud
+      mr-connection-hostnamen en 3 echte AWS/Azure/STACKIT-service-ID's uit
+      PLAN.md/docs/lokale-broker.md/local-broker/.env.example gehaald, het echte
+      IP-adres in de 3 "Bridges"-screenshots en de DMR Cluster
+      hostname/cluster-name-velden in de 3 status-screenshots afgedekt, en de
+      volledige git-geschiedenis herschreven met git-filter-repo zodat de
+      originele waarden nergens meer terug te vinden zijn -- gepusht met git push
+      --force (assistent + Emil, 07/10/2026). (`PLAN.md` sectie 13, punt 59;
+      `SKILLS.md`.)
+- [ ] **Repo op GitHub van privé naar publiek zetten**: nu de opschoning van
+      punt 59 is gepusht, resteert alleen nog de zichtbaarheid wijzigen in de
+      GitHub-repo-instellingen (Emil). (`PLAN.md` sectie 13, punt 59.)
+
 Zie [`docs/demo-notes.md`](docs/demo-notes.md) voor de twee punten die
 expliciet in de talk zelf benoemd moeten worden (Azure = Amerikaanse
 hyperscaler ondanks EU-locatie; cloud-brokers bewust in public clusters)

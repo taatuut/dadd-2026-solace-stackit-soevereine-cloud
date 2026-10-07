@@ -164,6 +164,10 @@ Zie [`docs/demo-apps.md`](docs/demo-apps.md) en [`demo-apps/`](demo-apps/)
   nadenken over of topic/queue-namen zelf gevoelige metadata lekken.
 - **Geen productie-credentials of -klantdata** worden ooit in deze repo of
   demo gebruikt.
+- **Vóór het publiek maken van de repo** is een volledige audit gedaan op
+  gevoelige data, zowel in de huidige stand als in de VOLLEDIGE
+  git-geschiedenis (niet alleen HEAD) -- inclusief screenshots, niet alleen
+  tekst. Zie sectie 13, punt 59 en `SKILLS.md` voor de methode.
 
 ## 9. Repo-structuur
 
@@ -2030,6 +2034,82 @@ productieklaar systeem:
      specifieke termen die hier wijzigen (alleen een generieke
      "datacenter"-vermelding) en is daarom niet opnieuw gegenereerd voor
      deze fix.
+
+  59. **Vóór het publiek maken van de GitHub-repo: volledige audit op
+     gevoelige data (tekst, screenshots, git-geschiedenis) en opschoning
+     (assistent + Emil, 07/10/2026).** Emil wil de repo van privé naar
+     publiek zetten op GitHub; op zijn verzoek eerst een volledige audit op
+     alles wat daarbij niet hoort te lekken -- uitdrukkelijk niet alleen de
+     huidige HEAD-stand, maar de VOLLEDIGE git-geschiedenis (73 commits),
+     inclusief bestanden die later weer zijn verwijderd. Methode: `git log
+     --all --name-only --diff-filter=A` voor elke bestandsnaam die ooit is
+     toegevoegd, en `git log --all -p | grep -inE <patroon>` voor
+     secret-achtige content (Bearer-tokens, AKIA-sleutels,
+     private-key-headers, toegekende wachtwoorden/tokens) over elke
+     historische diff, niet alleen HEAD -- bevestigd: in geen van de 73
+     commits is ooit een echt, live secret gecommit (alle `.env`-bestanden
+     zaten al vanaf het begin in `.gitignore`, conform `AGENTS.md`, sectie
+     "Secrets"). Ook de Office-documenten (`docs/*.pptx`/`.docx`)
+     gecontroleerd op verborgen metadata/PII via hun XML
+     (`docProps/core.xml`/`app.xml` plus alle slide-/notes-tekst) --
+     schoon. Alle 24 screenshots onder `screenshots/` stuk voor stuk
+     visueel geïnspecteerd, niet alleen op bestandsnaam.
+     **Bevindingen die actie vereisten:** 3 echte Solace Cloud
+     `mr-connection-*`-hostnamen en 3 echte AWS/Azure/STACKIT-service-ID's,
+     uitgeschreven in `PLAN.md`, `docs/lokale-broker.md` en
+     `local-broker/.env.example` (in plaats van het placeholderpatroon dat
+     `README.md` daar al voor gebruikte); het echte publieke IP-adres
+     achter "via:" in de 3 "Bridges"-screenshots
+     (`screenshots/localhost/`); de DMR Cluster "Hostname"- en "Cluster
+     Name"-velden in de 3 service-status-screenshots
+     (AWS/Azure/STACKIT-of-GCP-interim); en Emils echte lokale Mac-pad
+     (`/Users/emilzegers/...`) in zowel `local-broker/.env.example` als
+     `PLAN.md` zelf.
+     **Bewust ongemoeid gelaten, op Emils expliciete instructie:** "Created
+     By" (naam + e-mailadres) in de status-screenshots, Service ID, de
+     Router Names, en het domein `maasgo.net` zelf (niet gevoelig) --
+     alleen de DMR Cluster hostname/cluster-name-velden zijn afgedekt, niet
+     het hele scherm. Afweging live-vs-stale: AWS en Azure zijn sinds punt
+     42 (02/10/2026) niet opnieuw aangemaakt, dus hun
+     service-ID's/hostnamen waren op het moment van deze audit mogelijk nog
+     actueel; STACKIT is op 07/10/2026 opnieuw aangemaakt (punt 58), dus
+     die hostname/ID was al stale -- toch zijn alle drie gelijk behandeld,
+     voor consistentie en omdat "mogelijk nog actueel" al genoeg reden is.
+     **Fix, stap 1 (tekst):** de 3 hostnamen en 3 service-ID's vervangen
+     door hetzelfde `xxxxxxxxxxx`-placeholderpatroon dat `README.md` al
+     gebruikte; het lokale pad vervangen door de `~`-notatie
+     (`~/sdkperf/sdkperf-jcsmp-8.4.17.5/sdkperf_java.sh`). Geverifieerd met
+     een residu-`grep` over de 3 betrokken bestanden (schoon) en de
+     gebruikelijke soft-hyphen-sweep vóór het committen.
+     **Fix, stap 2 (screenshots):** de 6 betrokken PNG's pixel-precies
+     geredigeerd met Pillow (een dekkend rechthoekig vlak op exact gemeten
+     coördinaten) -- zie `SKILLS.md`, "Screenshots pixel-precies
+     anonimiseren met Pillow" voor de meetmethode, inclusief een eerste, te
+     smalle poging die een stukje tekst liet lekken.
+     **Git-geschiedenis herschreven, niet alleen HEAD gewijzigd:** omdat
+     elk van de 6 originele, ongeredigeerde screenshot-blobs precies één
+     keer in de geschiedenis voorkwam, is de VOLLEDIGE geschiedenis
+     herschreven met `git-filter-repo` (een `--blob-callback` die een blob
+     met een bekend, origineel blob-ID vervangt door de geredigeerde
+     bestandsinhoud). Vooraf een volledige kopie van `.git` gemaakt als
+     veiligheidsnet. Resultaat geverifieerd: alle 6 originele blob-ID's
+     bestaan nergens meer in de object-store (`git cat-file -e <hash>`
+     faalt voor elk), `git fsck --unreachable --no-reflog` toont niets, en
+     de werkmap komt byte-voor-byte overeen met de geredigeerde bestanden.
+     De apart gecommitte "screenshots geredigeerd"-commit werd door
+     `git-filter-repo` automatisch gepruned (werd leeg, want de inhoud was
+     na de herschrijving al identiek aan de commit die de bestanden
+     oorspronkelijk toevoegde) -- 75 commits werden 74. `git-filter-repo`
+     verwijdert standaard de `origin`-remote als eigen
+     veiligheidsmaatregel; die is na afloop opnieuw toegevoegd.
+     Uiteindelijk gepusht met `git push --force origin main` -- vanaf Emils
+     eigen terminal, niet vanuit de sandbox-shell van de coding-agent (die
+     heeft geen GitHub-credentials). Zie `SKILLS.md`, "Gevoelige blobs met
+     git-filter-repo uit de hele geschiedenis verwijderen" voor de
+     volledige methode.
+     **Resultaat:** repo gepusht met schone geschiedenis, klaar om door
+     Emil op GitHub van privé naar publiek gezet te worden (nog open, zie
+     `TODO.md`).
 
 - **Geen automatische provisioning van alle 4 brokers in één commando.**
   Er is bewust voor losse, leesbare stappen gekozen (console + scripts per

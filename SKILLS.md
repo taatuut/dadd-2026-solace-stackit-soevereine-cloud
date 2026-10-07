@@ -282,6 +282,118 @@ uit `terraform output -json <service>` (state moet actueel zijn, dus na
 een recente `apply`/`refresh`), niet via een curl naar de Mission Control
 API. Zie `cloud-setup/solace-cloud-api/get-broker-manager-credentials.sh`.
 
+## Een repo controleren op gevoelige data vóór het publiek maken (volledige geschiedenis, niet alleen HEAD)
+
+Vóór een repo van privé naar publiek gaat, scan niet alleen de huidige
+HEAD-stand maar de VOLLEDIGE git-geschiedenis - een bestand dat ooit even
+gecommit en later weer verwijderd is, staat nog gewoon in oudere commits en is
+met `git show <oude-commit>:<pad>` of een volledige clone alsnog op te vragen.
+
+1. **Welke bestanden zijn ooit toegevoegd**, ook als ze nu niet meer bestaan:
+   `git log --all --name-only --diff-filter=A`.
+2. **Secret-achtige content in elke historische diff**, niet alleen de huidige
+   inhoud: `git log --all -p | grep -inE '<patroon>'`, met een patroon dat
+   bekende vormen dekt (Bearer-tokens, AKIA-sleutels, `-----BEGIN ... PRIVATE
+   KEY-----`-headers, toegekende wachtwoorden/tokens in configuratie).
+3. **Office-documenten (`.pptx`/`.docx`) apart controleren**: open als zip en
+   lees zowel `docProps/core.xml`/`app.xml` (metadata: auteur, laatst bewerkt
+   door) als alle slide-/notes-XML-tekst - een losse tekst-extractie (bijv.
+   `markitdown`) mist de metadata vaak.
+4. **Elke afbeelding/screenshot ook echt visueel bekijken**, niet alleen de
+   bestandsnaam beoordelen - een hostnaam, IP-adres of klant-ID in een
+   UI-screenshot wordt door geen enkele tekst-scan gevonden.
+5. **Onderscheid live vs. stale identifiers**: een service-ID/hostname die
+   sinds de audit niet opnieuw is aangemaakt, is mogelijk nog actueel en dus
+   net zo gevoelig als een actief wachtwoord - behandel "mogelijk nog actueel"
+   hetzelfde als "zeker actueel".
+
+Zie `PLAN.md` sectie 13, punt 59 voor een concrete toepassing (deze repo, vóór
+het publiek maken op GitHub).
+
+## Screenshots pixel-precies anonimiseren met Pillow
+
+Een PNG-screenshot bevat soms gevoelige tekst (een hostnaam, IP-adres,
+cluster-naam) die je moet afdekken zonder de rest van het scherm te verminken.
+Pillow (`PIL.Image`/`ImageDraw`) volstaat, maar de coördinaten exact raken
+vergt een iteratieve meting, niet een eenmalige schatting:
+
+1. Crop een ruime regio rond de tekst en zoom 2x in.
+2. Teken een pixel-gelabeld rooster overheen (verticale lijnen om de 10-50px
+   voor x, horizontale om de 10-20px voor y, elk met het absolute pixelgetal
+   als label) en bekijk dat met de `Read`-tool.
+3. Lees de exacte linker-/rechterrand van de te redigeren tekst af - niet
+   schatten op een kleine thumbnail. Deze repo's screenshots zijn 3456px breed;
+   een paar procent afwijking is al tientallen pixels.
+4. Teken het dekkende vlak (`ImageDraw.Draw(im).rectangle(box, fill=kleur)`)
+   met een kleur die bij de omliggende UI past (donkere achtergrond ->
+   donkergrijs i.p.v. zuiver zwart; witte achtergrond -> zwart is prima als
+   duidelijk opzettelijke redactie).
+5. **Verifieer altijd met een gecropte preview, niet het volledige beeld** -
+   een te smal vlak laat de laatste tekens (bijv. het einde van een IP-adres of
+   een slotletter) net buiten de rand staan, onzichtbaar in een
+   overzichtsscreenshot maar wel nog leesbaar bij inzoomen.
+
+**Concrete valkuil die hier optrad:** een eerste poging schatte de breedte van
+een "via: <ip>:<poort>"-regel te krap in (gebaseerd op een niet-ingezoomd
+rooster); de laatste 2-3 cijfers van het poortnummer bleven net na de rand van
+het vlak zichtbaar. Pas na een opnieuw gemeten, 2x ingezoomd rooster specifiek
+op die ene tekstregel kwam de echte breedte naar voren, en is het vlak zowel
+breder als met een beter passende vulkleur opnieuw getekend. Zie `PLAN.md`
+sectie 13, punt 59.
+
+## Gevoelige blobs met git-filter-repo uit de hele geschiedenis verwijderen
+
+Als een gevoelige waarde (secret, IP-adres, naam) in een OUD commit staat -
+niet alleen HEAD - volstaat een nieuwe commit die het bestand aanpast niet: de
+oude inhoud blijft via `git show <oude-commit>:<pad>` of een volledige clone
+gewoon opvraagbaar. Om de inhoud overal in de geschiedenis te vervangen, niet
+alleen te verwijderen:
+
+1. **Eerst back-uppen**: `cp -r .git ../backup.git` (of vergelijkbaar) - dit
+   herschrijft de geschiedenis destructief, zonder noodgreep ben je afhankelijk
+   van een eerder gepushte remote-kopie.
+2. `pip install --user git-filter-repo` - geen standaard `git`-subcommando, een
+   losse Python-package.
+3. Bepaal het exacte blob-ID van elke te vervangen bestandsversie: `git log
+   --all --format='%H' -- <pad>` voor de commits, dan `git rev-parse
+   <commit>:<pad>` per commit voor het blob-ID. Bevestig dat het bestand maar
+   in één (oude) commit voorkwam voordat je aanneemt dat één vervanging
+   volstaat.
+4. Schrijf een `--blob-callback`-script dat `blob.original_id` (hex-string)
+   vergelijkt met de bekende oude blob-ID's en bij een match `blob.data`
+   vervangt door de nieuwe, geredigeerde bestandsinhoud:
+   ```python
+   oid = blob.original_id
+   if isinstance(oid, bytes):
+       oid = oid.decode()
+   if oid in mapping:  # oude-blob-ID (hex) -> pad naar vervangend bestand
+       with open(mapping[oid], "rb") as f:
+           blob.data = f.read()
+   ```
+5. Draai `git filter-repo --force --blob-callback "$(cat script.py)"` -
+   `--force` is nodig zodra de repo al een remote heeft, dus geen "verse clone"
+   meer is.
+6. **Verifieer grondig, niet aannemen dat het werkte:** `git cat-file -e
+   <oude-blob-ID>` moet voor elke oude waarde falen (object bestaat niet meer);
+   `git fsck --unreachable --no-reflog` mag niets tonen; de checked-out
+   bestanden moeten byte-voor-byte overeenkomen met de bedoelde, geredigeerde
+   inhoud (`sha256sum`).
+7. **Let op bijwerkingen:** als de enige wijziging in een later commit precies
+   was dat deze waarde werd aangepast, wordt die commit na de herschrijving
+   leeg (de inhoud is nu overal gelijk) en automatisch gepruned door
+   `filter-repo` - dat is correct gedrag, geen bug. `filter-repo` verwijdert
+   bovendien standaard de `origin`-remote als veiligheidsmaatregel; voeg die na
+   afloop zelf opnieuw toe (`git remote add origin <url>`).
+8. **Push is destructief voor iedereen met een bestaande clone**: `git push
+   --force` is nodig om de herschreven geschiedenis naar de remote te krijgen,
+   en iedere bestaande lokale clone (ook van anderen) moet daarna opnieuw
+   geclonet of hard gereset worden. Laat dit soort force-push altijd door de
+   eigenaar van de repo zelf vanaf zijn eigen, geauthenticeerde terminal
+   draaien, niet vanuit een sandbox-omgeving zonder diens GitHub-credentials.
+
+Zie `PLAN.md` sectie 13, punt 59 voor de concrete toepassing in deze repo (6
+screenshot-bestanden, 75 commits werden 74).
+
 ## Vóór elke commit
 
 `grep -rlP "\xc2\xad" --include="*.md" --include="*.sh" --include="*.py" .`

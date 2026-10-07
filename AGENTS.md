@@ -87,6 +87,17 @@ sleutel (met een placeholder) toe aan het bijbehorende `.env.example` EN
 vraag de gebruiker om de echte waarde in zijn eigen `.env` te zetten -
 schrijf zelf nooit een verzonnen waarde in een echt `.env`-bestand.
 
+Dit geldt ook buiten `.env`-bestanden: zet geen echte Solace Cloud
+hostnamen/service-ID's in `PLAN.md`/`docs/*.md`/`README.md` (gebruik hetzelfde
+placeholderpatroon als de rest van die bestanden), en controleer elke nieuwe
+screenshot onder `screenshots/` op zichtbare echte IP-adressen, hostnamen of
+cluster-namen vóór je committen - een screenshot wordt door geen enkele
+tekst-gebaseerde check gevonden. Vóór deze repo voor het eerst publiek werd
+gezet, is zo'n volledige audit (tekst + screenshots + volledige
+git-geschiedenis, niet alleen HEAD) uitgevoerd; zie `SKILLS.md`, "Een repo
+controleren op gevoelige data vóór het publiek maken" voor de methode en
+`PLAN.md` sectie 13, punt 59 voor de uitvoering.
+
 ## Stapsgewijze procedures (installaties, deploys, console-acties)
 
 Wanneer Emil door een procedure geleid wordt die hij zelf moet uitvoeren
